@@ -1,0 +1,20 @@
+body {
+
+}
+
+.skus {
+background-color: green;
+border: none;
+color: white;
+padding: 10px 20px;
+text-decoration: none;
+border-radius: 5px;
+cursor: pointer;
+}
+
+.bedkod {
+width: 500px;
+}
+img {
+    width: 500px;
+}
