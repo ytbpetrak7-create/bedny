@@ -12,7 +12,7 @@ function overitkod() {
             return;
         }
             localStorage.setItem("kodPouzit", "true");
-        window.location = './1bed.html';
+        window.location = './prbedna.html';
     } else if (kod.value =="") {
         window.location = './1bed.html';
     } else if (kod.value =="") {
