@@ -2,8 +2,8 @@ const items = [
     {Image: "125a28f5-dea6-4922-b8a3-02493aecd3db.png", chance: 30, name : "item1"},
     {Image: "", chance: 30, name : "item2"},
     {Image: "", chance: 30, name : "item3"},
-    {Image: "", chance: 30, name : "item4"},
-    {Image: "", chance: 30, name : "item5"}
+    {Image: "", chance: 5, name : "m4a1-s"},
+    {Image: "", chance: 2, name : "awp"}
 ]
 
 function pickitem() {
