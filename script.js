@@ -13,8 +13,8 @@ function overitkod() {
         }
             localStorage.setItem("kodPouzit", "true");
         window.location = './prbenda.html';
-    } else if (kod.value =="") {
-        window.location = './1bed.html';
+    } else if (kod.value =="test") {
+        window.location = './prbenda.html';
     } else if (kod.value =="") {
         window.location = './1bed.html';
     }

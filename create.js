@@ -1,9 +1,11 @@
 const items = [
-    {Image: "125a28f5-dea6-4922-b8a3-02493aecd3db.png", chance: 30, name : "item1"},
-    {Image: "", chance: 30, name : "item2"},
-    {Image: "", chance: 30, name : "item3"},
-    {Image: "", chance: 5, name : "m4a1-s"},
-    {Image: "", chance: 2, name : "awp"}
+    {Image: "mandrel nov.jpg", chance: 30, name : "nova Mandrel"},
+    {Image: "m249.jpg", chance: 30, name : "M249 Sage Camo"},
+    {Image: "snad spryvny glock.png", chance: 20, name : "Glock-18 Ocean Topo"},
+    {Image: "usps.png", chance: 15, name : "usp-s PC-GRN"},
+    {Image: "eagle.png", chance: 15, name : "desert eagle Tilted"},
+    {Image: "emka.png", chance: 5, name : "m4a1-s Nitro"},
+    {Image: "acheron awp.jpg", chance: 2, name : "awp Acheron"},
 ]
 
 function pickitem() {
@@ -31,13 +33,3 @@ document.querySelector(".open").addEventListener("click", () => {
         .then(response => response.text())
         .then(data => console.log(data));
 })
-function spin() {
-  const itemWidth = 150; // Šířka itemu + margin
-  const winningIndex = 40; // Index vyhraného předmětu
-  const offset = 300; // Polovina šířky okna, aby byl vítěz uprostřed
-  
-  // Výpočet finální pozice s mírnou náhodností, aby to nekončilo vždy přesně ve středu karty
-  const landingPosition = (winningIndex * itemWidth) - offset + (Math.random() * 80);
-  
-  document.getElementById('cardList').style.transform = `translateX(-${landingPosition}px)`;
-}
