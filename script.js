@@ -20,3 +20,13 @@ function overitkod() {
     }
 } 
 
+function spin() {
+  const itemWidth = 150; // Šířka itemu + margin
+  const winningIndex = 40; // Index vyhraného předmětu
+  const offset = 300; // Polovina šířky okna, aby byl vítěz uprostřed
+  
+  // Výpočet finální pozice s mírnou náhodností, aby to nekončilo vždy přesně ve středu karty
+  const landingPosition = (winningIndex * itemWidth) - offset + (Math.random() * 80);
+  
+  document.getElementById('cardList').style.transform = `translateX(-${landingPosition}px)`;
+}
