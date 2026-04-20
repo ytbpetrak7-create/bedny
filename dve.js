@@ -1,11 +1,11 @@
 const items = [
-    {Image: "mandrel nov.jpg", chance: 25, name : "nova Mandrel"},
-    {Image: "m249.jpg", chance: 25, name : "M249 Sage Camo"},
-    {Image: "snad spryvny glock.png", chance: 20, name : "Glock-18 Ocean Topo"},
-    {Image: "usps.png", chance: 15, name : "usp-s PC-GRN"},
-    {Image: "eagle.png", chance: 15, name : "desert eagle Tilted"},
-    {Image: "emka.png", chance: 5, name : "m4a1-s Nitro"},
-    {Image: "acheron awp.jpg", chance: 2, name : "awp Acheron"},
+    {Image: "mac 10 ens.png", chance: 25, name : "mac 10 Ensnared"},
+    {Image: "", chance: 25, name : "M4A4 | Etch Lord"},
+    {Image: "", chance: 20, name : "Desert Eagle | Urban Rubble"},
+    {Image: "", chance: 15, name : "M4A1-S | Night Terror"},
+    {Image: "", chance: 15, name : ""},
+    {Image: "", chance: 5, name : ""},
+    {Image: "", chance: 2, name : ""},
 ]
 
 function pickitem() {

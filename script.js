@@ -5,7 +5,7 @@ function rozbalit() {
 
 function overitkod() {
     let kod = document.getElementById("kod");
-    if (kod.value =="kamos") { 
+    if (kod.value =="nicnepadne") { 
         let KodPouzit = localStorage.getItem("kodPouzit");
         if (KodPouzit === "true") {
             alert("Tento kod jsi již použil");
@@ -15,8 +15,14 @@ function overitkod() {
         window.location = './prbenda.html';
     } else if (kod.value =="test") {
         window.location = './prbenda.html';
-    } else if (kod.value =="") {
-        window.location = './1bed.html';
+    
+            } else if (kod.value =="test2") {
     }
-} 
-
+                let KodPouzit = localStorage.getItem("kodPouzit");
+        if (KodPouzit === "true") {
+            alert("Tento kod jsi již použil");
+            return;
+        }
+        localStorage.setItem("kodPouzit", "true");
+        window.location = './dvebed.html';
+    }
