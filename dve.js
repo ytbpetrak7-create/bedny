@@ -3,9 +3,11 @@ const items = [
     {Image: "", chance: 25, name : "M4A4 | Etch Lord"},
     {Image: "", chance: 20, name : "Desert Eagle | Urban Rubble"},
     {Image: "", chance: 15, name : "M4A1-S | Night Terror"},
-    {Image: "", chance: 15, name : ""},
-    {Image: "", chance: 5, name : ""},
-    {Image: "", chance: 2, name : ""},
+    {Image: "", chance: 15, name : "MAC-10 | Light Box"},
+    {Image: "", chance: 5, name : "Glock-18 | Winterized"},
+    {Image: "", chance: 2, name : "CZ75-Auto | Copper Fiber"},
+    
+
 ]
 
 function pickitem() {

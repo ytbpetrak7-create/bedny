@@ -13,7 +13,7 @@ function overitkod() {
         }
             localStorage.setItem("kodPouzit", "true");
         window.location = './prbenda.html';
-    } else if (kod.value =="test") {
+    } else if (kod.value =="kkt") {
         window.location = './prbenda.html';
     
             } else if (kod.value =="test2") {
