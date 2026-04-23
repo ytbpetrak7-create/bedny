@@ -17,6 +17,7 @@ function overitkod() {
         window.location = './prbenda.html';
     
             } else if (kod.value =="proc") {
+            } else if (kod.value =="test2") {
     }
                 let KodPouzit = localStorage.getItem("kodPouzit");
         if (KodPouzit === "true") {
