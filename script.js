@@ -5,18 +5,24 @@ function rozbalit() {
 
 function overitkod() {
     let kod = document.getElementById("kod");
-    if (kod.value =="kamos") { 
+    if (kod.value =="nicnepadne") { 
         let KodPouzit = localStorage.getItem("kodPouzit");
         if (KodPouzit === "true") {
             alert("Tento kod jsi již použil");
             return;
         }
             localStorage.setItem("kodPouzit", "true");
-        window.location = './1bed.html';
-    } else if (kod.value =="") {
-        window.location = './1bed.html';
-    } else if (kod.value =="") {
-        window.location = './1bed.html';
+        window.location = './prbenda.html';
+    } else if (kod.value =="kkt") {
+        window.location = './prbenda.html';
+    
+            } else if (kod.value =="proc") {
     }
-} 
-
+                let KodPouzit = localStorage.getItem("kodPouzit");
+        if (KodPouzit === "true") {
+            alert("Tento kod jsi již použil");
+            return;
+        }
+        localStorage.setItem("kodPouzit", "true");
+        window.location = './dvebed.html';
+    }
