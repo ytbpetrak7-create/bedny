@@ -1,20 +1,60 @@
-body {
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
+body {
+    background-color: #1a1a2e;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 40px;
+    padding: 40px;
+}
+
+a {
+    text-decoration: none;
+    transition: transform 0.3s ease, filter 0.3s ease;
+    display: block;
+}
+
+a:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 20px rgba(0, 255, 150, 0.5));
+}
+
+img {
+    width: 400px;
+    border-radius: 15px;
+    border: 3px solid #16213e;
+    transition: border-color 0.3s ease;
+}
+
+a:hover img {
+    border-color: #00ff96;
 }
 
 .skus {
-background-color: green;
-border: none;
-color: white;
-padding: 10px 20px;
-text-decoration: none;
-border-radius: 5px;
-cursor: pointer;
+    background-color: #00ff96;
+    border: none;
+    color: #1a1a2e;
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.skus:hover {
+    background-color: #00cc78;
 }
 
 .bedkod {
-width: 500px;
-}
-img {
     width: 500px;
 }
