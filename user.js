@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwI7pHAWX-V8dN4ATWdTHSlZIaPXCPX-0wfAi2sWB35BIpLarE5Bm3gcxd6FtTkzUZDTQ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDGR71IHnnDsdAsUeFph2EO1RfA7_dNuX_oshtVPzUb1bmBKGQf5VcTiNELnGLBjnZdw/exec";
 
 let userid = localStorage.getItem("userid");
 if (!userid) {
@@ -31,7 +31,8 @@ async function useCode(code) {
   return await callScript("useCode", { code: code, userid: uid });
 }
 
-async function open() {
+async function open(boxName) {
   const uid = localStorage.getItem("userid");
-  return await callScript("open", { userid: uid });
+  return await callScript("open", { userid: uid, box: boxName });
 }
+// openbox zapise do listu Drops jmeno itemu  userid a datum otevreni bedny

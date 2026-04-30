@@ -14,7 +14,7 @@ function doGet(e) {
   } else if (action == "useCode") {
     result = useCode(e.parameter.code, e.parameter.userid);
   } else if (action == "open") {
-    result = openBox(e.parameter.userid);
+    result = openBox(e.parameter.userid, e.parameter.box);
   } else {
     result = " Neznámá akce";
   }
@@ -95,7 +95,39 @@ function useCode(code, userid) {
   return "Kód nenalezen";
 }
 
-function openBox(userid) {
+function pickItem(sheetName) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
+  
+  if (!sheet) return null;
+  
+  var data = sheet.getDataRange().getValues();
+  var items = [];
+  for (var i = 1; i < data.length; i++) {
+    items.push({
+      image: data[i][0],
+      chance: data[i][1],
+      name: data[i][2]
+    });
+  }
+  
+  if (items.length === 0) return null;
+  
+  var value = Math.random() * 1000;
+  var finalItem;
+  while (true) {
+    var item = items.pop();
+    items.unshift(item);
+    value -= item.chance;
+    if (value <= 0) {
+      finalItem = item;
+      break;
+    }
+  }
+  return finalItem;
+}
+
+function openBox(userid, boxName) {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var usersSheet = ss.getSheetByName(SHEET_USERS);
   
@@ -117,25 +149,17 @@ function openBox(userid) {
     return "Nedostatek bodů";
   }
   
-  var boxesSheet = ss.getSheetByName(SHEET_BOXES);
-  if (!boxesSheet) {
-    var items = ["item1", "item2", "item3", "item4", "item5", "item6", "item7"];
-    boxesSheet = ss.insertSheet(SHEET_BOXES);
-    boxesSheet.appendRow(["item"]);
-    for (var k = 0; k < items.length; k++) {
-      boxesSheet.appendRow([items[k]]);
-    }
-  }
-  
-  var itemsData = boxesSheet.getDataRange().getValues();
-  var itemsList = [];
-  for (var j = 1; j < itemsData.length; j++) {
-    itemsList.push(itemsData[j][0]);
-  }
-  
-  var randomItem = itemsList[Math.floor(Math.random() * itemsList.length)];
+  var pickedItem = pickItem(boxName);
+  if (!pickedItem) return "List nenalezen";
   
   usersSheet.getRange(userRow, 3).setValue(userPoints - 2);
   
-  return randomItem;
+  var dropsSheet = ss.getSheetByName("Drops");
+  if (!dropsSheet) {
+    dropsSheet = ss.insertSheet("Drops");
+    dropsSheet.appendRow(["item", "userid", "datum"]);
+  }
+  dropsSheet.appendRow([pickedItem.name, userid, new Date()]);
+  
+  return pickedItem.name + "|" + pickedItem.image;
 }

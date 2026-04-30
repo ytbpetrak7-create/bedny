@@ -3,27 +3,16 @@ function rozbalit() {
         .classList.toggle("rozbaleno")
 }
 
-function overitkod() {
+async function overitkod() {
     let kod = document.getElementById("kod");
-    if (kod.value =="nicnepadne") { 
-        let KodPouzit = localStorage.getItem("kodPouzit");
-        if (KodPouzit === "true") {
-            alert("Tento kod jsi již použil");
-            return;
-        }
-            localStorage.setItem("kodPouzit", "true");
-        window.location = './prbenda.html';
-    } else if (kod.value =="kkt") {
-        window.location = './prbenda.html';
-    
-            } else if (kod.value =="proc") {
-            } else if (kod.value =="test2") {
+    let okButton = document.getElementById("ok-button") ;
+    okButton.disabled = true; // Deaktivace tlačítka
+    let odpoved = await useCode(kod.value);
+    okButton.disabled = false; // Aktivace tlačítka
+    if (isNaN(odpoved)) {
+        alert(odpoved + ". Zkuste to znovu.");
+        kod.value = "";
+    } else {
+        alert("body přidány: " + odpoved);
     }
-                let KodPouzit = localStorage.getItem("kodPouzit");
-        if (KodPouzit === "true") {
-            alert("Tento kod jsi již použil");
-            return;
-        }
-        localStorage.setItem("kodPouzit", "true");
-        window.location = './dvebed.html';
-    }
+}
