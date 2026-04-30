@@ -1,21 +1,25 @@
 <html>
 <body>
-<button class="open" type="button">otevri</button>
+<button class="open" type="button" id="openBoxButton">otevri</button>
 
-<img id="item">
+<img id="itemimg">
 <p id="itemname"></p>
 
-
-
-
-
 <link rel="stylesheet" href="1bed.css">
-  </body>
-  <script src="dve.js"></script>
-
-
-
-
-<script src="user.js"></script>
 </body>
+<script src="user.js"></script>
+<script>
+createPointsDisplay();
+document.getElementById("openBoxButton").addEventListener("click", async () => {
+    const result = await open("Boxes2");
+    if (result.includes("|")) {
+        const parts = result.split("|");
+        document.getElementById("itemimg").src = parts[1];
+        document.getElementById("itemname").innerText = parts[0];
+    } else {
+        document.getElementById("itemname").innerText = result;
+    }
+    updatePoints();
+});
+</script>
 </html>

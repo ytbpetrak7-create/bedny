@@ -95,11 +95,51 @@ function useCode(code, userid) {
   return "Kód nenalezen";
 }
 
+function initBoxSheet(sheetName) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
+  if (sheet) return;
+  
+  sheet = ss.insertSheet(sheetName);
+  sheet.appendRow(["image", "chance", "name"]);
+  
+  if (sheetName == "Boxes1") {
+    var items = [
+      ["mandrel nov.jpg", 25, "nova Mandrel"],
+      ["m249.jpg", 25, "M249 Sage Camo"],
+      ["snad spryvny glock.png", 20, "Glock-18 Ocean Topo"],
+      ["usps.png", 15, "usp-s PC-GRN"],
+      ["eagle.png", 15, "desert eagle Tilted"],
+      ["emka.png", 5, "m4a1-s Nitro"],
+      ["acheron awp.jpg", 2, "awp Acheron"]
+    ];
+    for (var i = 0; i < items.length; i++) {
+      sheet.appendRow(items[i]);
+    }
+  } else if (sheetName == "Boxes2") {
+    var items2 = [
+      ["mac 10 ens.png", 25, "mac 10 Ensnared"],
+      ["", 25, "M4A4 | Etch Lord"],
+      ["", 20, "Desert Eagle | Urban Rubble"],
+      ["", 15, "M4A1-S | Night Terror"],
+      ["", 15, "MAC-10 | Light Box"],
+      ["", 5, "Glock-18 | Winterized"],
+      ["", 2, "CZ75-Auto | Copper Fiber"]
+    ];
+    for (var j = 0; j < items2.length; j++) {
+      sheet.appendRow(items2[j]);
+    }
+  }
+}
+
 function pickItem(sheetName) {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(sheetName);
   
-  if (!sheet) return null;
+  if (!sheet) {
+    initBoxSheet(sheetName);
+    sheet = ss.getSheetByName(sheetName);
+  }
   
   var data = sheet.getDataRange().getValues();
   var items = [];
@@ -127,11 +167,35 @@ function pickItem(sheetName) {
   return finalItem;
 }
 
+function getBoxPrice(boxName) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName("BoxConfig");
+  
+  if (!sheet) {
+    sheet = ss.insertSheet("BoxConfig");
+    sheet.appendRow(["name", "price"]);
+    sheet.appendRow(["Boxes1", 2]);
+    sheet.appendRow(["Boxes2", 5]);
+    return boxName == "Boxes2" ? 5 : 2;
+  }
+  
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] == boxName) {
+      return data[i][1];
+    }
+  }
+  
+  return 2;
+}
+
 function openBox(userid, boxName) {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var usersSheet = ss.getSheetByName(SHEET_USERS);
   
   if (!usersSheet) return "Uživatel nenalezen";
+  
+  var priceFromSheet = getBoxPrice(boxName);
   
   var usersData = usersSheet.getDataRange().getValues();
   var userPoints = 0;
@@ -145,14 +209,19 @@ function openBox(userid, boxName) {
     }
   }
   
-  if (userPoints < 2) {
+  if (userPoints < priceFromSheet) {
     return "Nedostatek bodů";
   }
   
   var pickedItem = pickItem(boxName);
-  if (!pickedItem) return "List nenalezen";
+  if (!pickedItem) {
+    if (ss.getSheetByName(boxName)) {
+      return "Sheet '" + boxName + "' vytvořen. Přidej položky (image, chance, name).";
+    }
+    return "List nenalezen";
+  }
   
-  usersSheet.getRange(userRow, 3).setValue(userPoints - 2);
+  usersSheet.getRange(userRow, 3).setValue(userPoints - priceFromSheet);
   
   var dropsSheet = ss.getSheetByName("Drops");
   if (!dropsSheet) {
