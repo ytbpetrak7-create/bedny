@@ -15,6 +15,8 @@ function doGet(e) {
     result = useCode(e.parameter.code, e.parameter.userid);
   } else if (action == "open") {
     result = openBox(e.parameter.userid, e.parameter.box);
+  } else if (action == "getInventory") {
+    result = getInventory(e.parameter.userid);
   } else {
     result = " Neznámá akce";
   }
@@ -93,6 +95,26 @@ function useCode(code, userid) {
   }
   
   return "Kód nenalezen";
+}
+
+function getInventory(userid) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName("Drops");
+  
+  if (!sheet) return "[]";
+  
+  var data = sheet.getDataRange().getValues();
+  var items = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][1] == userid) {
+      items.push({
+        name: data[i][0],
+        date: data[i][2]
+      });
+    }
+  }
+  
+  return JSON.stringify(items);
 }
 
 function initBoxSheet(sheetName) {

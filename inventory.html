@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<body>
+<a href="index.html" class="back-link">← Zpět</a>
+<h1>Inventář</h1>
+<div id="inventory"></div>
+
+<link rel="stylesheet" href="1bed.css">
+<link rel="stylesheet" href="inventory.css">
+</body>
+<script src="user.js"></script>
+<script>
+createPointsDisplay();
+
+async function loadInventory() {
+  var result = await getInventory();
+  var items = JSON.parse(result);
+  var container = document.getElementById("inventory");
+  
+  if (items.length === 0) {
+    container.innerHTML = "<p>Zatím nemáš žádné předměty</p>";
+    return;
+  }
+  
+  items.forEach(function(item) {
+    var div = document.createElement("div");
+    div.className = "inventory-item";
+    div.innerHTML = "<p>" + item.name + "</p><span>" + new Date(item.date).toLocaleDateString() + "</span>";
+    container.appendChild(div);
+  });
+}
+
+loadInventory();
+</script>
+</html>

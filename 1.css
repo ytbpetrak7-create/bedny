@@ -18,6 +18,22 @@
     z-index: 1000;
 }
 
+#inventoryLink {
+    position: fixed;
+    top: 75px;
+    right: 20px;
+    color: #00ff96;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: bold;
+    transition: transform 0.2s ease;
+    z-index: 1001;
+}
+
+#inventoryLink:hover {
+    transform: translateX(5px);
+}
+
 body {
     background-color: #1a1a2e;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
