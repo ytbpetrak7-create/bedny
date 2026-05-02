@@ -10,7 +10,11 @@
 </body>
 <script src="user.js"></script>
 <script>
-createPointsDisplay();
+if (!getCurrentUser()) {
+  window.location.href = "login.html";
+} else {
+  createPointsDisplay();
+}
 
 async function loadInventory() {
   var result = await getInventory();

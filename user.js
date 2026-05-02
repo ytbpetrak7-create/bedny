@@ -1,10 +1,16 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUc5iolEv9NkfKbC6C4m3FiHRBByPE68CX1aLJ26qtaFPkkIz6seLORBssZic00acLeA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWqOQNl5R4_TgsRSASBjjvLmm3HGc-d1bpVw5WaGoPuyxBi0554Y0OXK0G2iuMtE8lWw/exec";
 
-let userid = localStorage.getItem("userid");
-if (!userid) {
-  userid = Math.random().toString(36).substring(2);
-  localStorage.setItem("userid", userid);
-  registerUser(userid);
+function getCurrentUser() {
+  const user = localStorage.getItem("user");
+  return user ? JSON.parse(user) : null;
+}
+
+function setCurrentUser(username) {
+  localStorage.setItem("user", JSON.stringify({ username: username }));
+}
+
+function clearUser() {
+  localStorage.removeItem("user");
 }
 
 async function callScript(action, params = {}) {
@@ -13,45 +19,75 @@ async function callScript(action, params = {}) {
   for (const key in params) {
     url.searchParams.set(key, params[key]);
   }
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), {
+    redirect: 'follow'
+  });
   return response.text();
 }
 
-async function registerUser(uid) {
-  return await callScript("registerUser", { userid: uid });
+async function register(username, password) {
+  return await callScript("register", { username: username, password: password });
+}
+
+async function login(username, password) {
+  return await callScript("login", { username: username, password: password });
 }
 
 async function getPoints() {
-  const uid = localStorage.getItem("userid");
-  return await callScript("getPoints", { userid: uid });
+  const user = getCurrentUser();
+  if (!user) return "0";
+  return await callScript("getPoints", { username: user.username });
 }
 
 async function useCode(code) {
-  const uid = localStorage.getItem("userid");
-  return await callScript("useCode", { code: code, userid: uid });
+  const user = getCurrentUser();
+  if (!user) return "Not logged in";
+  return await callScript("useCode", { code: code, username: user.username });
 }
 
 async function open(boxName) {
-  const uid = localStorage.getItem("userid");
-  return await callScript("open", { userid: uid, box: boxName });
+  const user = getCurrentUser();
+  if (!user) return "Not logged in";
+  return await callScript("open", { username: user.username, box: boxName });
 }
 
 async function getInventory() {
-  const uid = localStorage.getItem("userid");
-  return await callScript("getInventory", { userid: uid });
+  const user = getCurrentUser();
+  if (!user) return "[]";
+  return await callScript("getInventory", { username: user.username });
+}
+
+async function addToInventory(itemName) {
+  const user = getCurrentUser();
+  if (!user) return "Not logged in";
+  return await callScript("addToInventory", { username: user.username, item: itemName });
 }
 
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
   pointsDiv.id = "pointsDisplay";
+  pointsDiv.textContent = "Body: Načítání...";
   document.body.prepend(pointsDiv);
-  updatePoints();
   
-  var invLink = document.createElement("a");
-  invLink.href = "inventory.html";
-  invLink.id = "inventoryLink";
-  invLink.textContent = "Inventář";
-  document.body.appendChild(invLink);
+  var logoutBtn = document.createElement("a");
+  logoutBtn.href = "#";
+  logoutBtn.id = "logoutLink";
+  logoutBtn.textContent = "Odhlásit";
+  logoutBtn.style.position = "fixed";
+  logoutBtn.style.bottom = "20px";
+  logoutBtn.style.right = "20px";
+  logoutBtn.style.color = "#ff4444";
+  logoutBtn.style.textDecoration = "none";
+  logoutBtn.style.fontSize = "14px";
+  logoutBtn.style.fontWeight = "bold";
+  logoutBtn.onclick = function(e) {
+    e.preventDefault();
+    clearUser();
+    window.location.href = "login.html";
+  };
+  document.body.appendChild(logoutBtn);
+  
+  updatePoints();
 }
 
 async function updatePoints() {

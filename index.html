@@ -16,6 +16,12 @@
 <link rel="stylesheet" href="1.css">
 <script src="script.js"></script>
 <script src="user.js"></script>
-<script>createPointsDisplay();</script>
+<script>
+if (!getCurrentUser()) {
+  window.location.href = "login.html";
+} else {
+  createPointsDisplay();
+}
+</script>
 </body>
 </html>
