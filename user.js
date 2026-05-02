@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWqOQNl5R4_TgsRSASBjjvLmm3HGc-d1bpVw5WaGoPuyxBi0554Y0OXK0G2iuMtE8lWw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-GevnjXbo3CX0UuRPmBCr0nw6dkP6Trlane3shNnRIHDEUEKP9AGH2-WzNAGDVhDfAA/exec";
 
 function getCurrentUser() {
   const user = localStorage.getItem("user");
@@ -20,8 +20,12 @@ async function callScript(action, params = {}) {
     url.searchParams.set(key, params[key]);
   }
   const response = await fetch(url.toString(), {
+    method: 'GET',
     redirect: 'follow'
   });
+  if (!response.ok) {
+    throw new Error('Chyba spojení: ' + response.status);
+  }
   return response.text();
 }
 

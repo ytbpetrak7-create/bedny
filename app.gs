@@ -1,27 +1,43 @@
 function doGet(e) {
+  return ContentService.createTextOutput("OK");
+}
+
+function doPost(e) {
+  if (!e || !e.parameter) {
+    return ContentService.createTextOutput("OK");
+  }
   const action = e.parameter.action;
   const params = e.parameter;
   
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
+  let result = "Unknown action";
+  
   switch (action) {
     case "register":
-      return register(ss, params.username, params.password);
+      result = register(ss, params.username, params.password);
+      break;
     case "login":
-      return login(ss, params.username, params.password);
+      result = login(ss, params.username, params.password);
+      break;
     case "getPoints":
-      return getPoints(ss, params.username);
+      result = getPoints(ss, params.username);
+      break;
     case "useCode":
-      return useCode(ss, params.username, params.code);
+      result = useCode(ss, params.username, params.code);
+      break;
     case "open":
-      return openBox(ss, params.username, params.box);
+      result = openBox(ss, params.username, params.box);
+      break;
     case "getInventory":
-      return getInventory(ss, params.username);
+      result = getInventory(ss, params.username);
+      break;
     case "addToInventory":
-      return addToInventory(ss, params.username, params.item);
-    default:
-      return ContentService.createTextOutput("Unknown action");
+      result = addToInventory(ss, params.username, params.item);
+      break;
   }
+  
+  return ContentService.createTextOutput(result);
 }
 
 function getSheet(ss, name) {
