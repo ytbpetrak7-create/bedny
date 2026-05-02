@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-GevnjXbo3CX0UuRPmBCr0nw6dkP6Trlane3shNnRIHDEUEKP9AGH2-WzNAGDVhDfAA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySDn3of-ofSTDapJUuOpDMnHLkWJp-7bWCCNNOMtLV3Tn7RAZugPhxiKBdIdo9KUZDqg/exec";
 
 function getCurrentUser() {
   const user = localStorage.getItem("user");
