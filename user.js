@@ -1,10 +1,15 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUc5iolEv9NkfKbC6C4m3FiHRBByPE68CX1aLJ26qtaFPkkIz6seLORBssZic00acLeA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-GevnjXbo3CX0UuRPmBCr0nw6dkP6Trlane3shNnRIHDEUEKP9AGH2-WzNAGDVhDfAA/exec";
 
-let userid = localStorage.getItem("userid");
-if (!userid) {
-  userid = Math.random().toString(36).substring(2);
-  localStorage.setItem("userid", userid);
-  registerUser(userid);
+let username = localStorage.getItem("username");
+if (!username) {
+  username = prompt("Zadejte své uživatelské jméno:");
+  while (!username || username.trim() === "") {
+    alert("Uživatelské jméno nesmí být prázdné!");
+    username = prompt("Zadejte své uživatelské jméno:");
+  }
+  username = username.trim();
+  localStorage.setItem("username", username);
+  registerUser(username);
 }
 
 async function callScript(action, params = {}) {
@@ -14,31 +19,40 @@ async function callScript(action, params = {}) {
     url.searchParams.set(key, params[key]);
   }
   const response = await fetch(url.toString());
+  if (response.redirected) {
+    console.warn("Request was redirected, possible old URL");
+  }
   return response.text();
 }
 
-async function registerUser(uid) {
-  return await callScript("registerUser", { userid: uid });
+function getUsername() {
+  return localStorage.getItem("username");
+}
+
+async function registerUser(uname) {
+  const response = await callScript("registerUser", { userid: uname });
+  console.log("Registrace:", response);
+  return response;
 }
 
 async function getPoints() {
-  const uid = localStorage.getItem("userid");
-  return await callScript("getPoints", { userid: uid });
+  const uname = getUsername();
+  return await callScript("getPoints", { userid: uname });
 }
 
 async function useCode(code) {
-  const uid = localStorage.getItem("userid");
-  return await callScript("useCode", { code: code, userid: uid });
+  const uname = getUsername();
+  return await callScript("useCode", { code: code, userid: uname });
 }
 
 async function open(boxName) {
-  const uid = localStorage.getItem("userid");
-  return await callScript("open", { userid: uid, box: boxName });
+  const uname = getUsername();
+  return await callScript("open", { userid: uname, box: boxName });
 }
 
 async function getInventory() {
-  const uid = localStorage.getItem("userid");
-  return await callScript("getInventory", { userid: uid });
+  const uname = getUsername();
+  return await callScript("getInventory", { userid: uname });
 }
 
 function createPointsDisplay() {
@@ -56,8 +70,13 @@ function createPointsDisplay() {
 
 async function updatePoints() {
   var points = await getPoints();
+  console.log("updatePoints: body =", points);
   var el = document.getElementById("pointsDisplay");
   if (el) {
-    el.textContent = "Body: " + points;
+    if (isNaN(points) || points === "OK" || points === "Odpověď: OK") {
+      el.textContent = "Body: načítání...";
+    } else {
+      el.textContent = "Body: " + points;
+    }
   }
 }
