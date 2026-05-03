@@ -122,28 +122,16 @@ async function addToInventory(itemName) {
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
   pointsDiv.id = "pointsDisplay";
-  pointsDiv.textContent = "Body: Načítání...";
+  pointsDiv.style.cssText = "position:fixed;top:10px;right:10px;background:#333;color:#fff;padding:10px;z-index:9999;font-size:16px;";
   document.body.prepend(pointsDiv);
-  
-  var logoutBtn = document.createElement("a");
-  logoutBtn.href = "#";
-  logoutBtn.id = "logoutLink";
-  logoutBtn.textContent = "Odhlásit";
-  logoutBtn.style.position = "fixed";
-  logoutBtn.style.bottom = "20px";
-  logoutBtn.style.right = "20px";
-  logoutBtn.style.color = "#ff4444";
-  logoutBtn.style.textDecoration = "none";
-  logoutBtn.style.fontSize = "14px";
-  logoutBtn.style.fontWeight = "bold";
-  logoutBtn.onclick = function(e) {
-    e.preventDefault();
-    clearUser();
-    window.location.href = "login.html";
-  };
-  document.body.appendChild(logoutBtn);
-  
   updatePoints();
+  
+  var invLink = document.createElement("a");
+  invLink.href = "inventory.html";
+  invLink.id = "inventoryLink";
+  invLink.textContent = "Inventář";
+  invLink.style.cssText = "position:fixed;top:50px;right:10px;color:#fff;background:#007bff;padding:8px 16px;text-decoration:none;z-index:9999;font-size:14px;";
+  document.body.appendChild(invLink);
 }
 
 async function updatePoints() {
