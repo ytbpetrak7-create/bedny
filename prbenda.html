@@ -10,16 +10,22 @@
 </body>
 <script src="user.js?ver=2"></script>
 <script>
-createPointsDisplay();
+if (!getCurrentUser()) {
+  window.location.href = "login.html";
+} else {
+  createPointsDisplay();
+}
 document.getElementById("openBoxButton").addEventListener("click", async () => {
     const result = await open("Boxes1");
+    let itemName;
     if (result.includes("|")) {
         const parts = result.split("|");
         document.getElementById("itemimg").src = parts[1];
-        document.getElementById("itemname").innerText = parts[0];
+        itemName = parts[0];
     } else {
-        document.getElementById("itemname").innerText = result;
+        itemName = result;
     }
+    document.getElementById("itemname").innerText = itemName;
     updatePoints();
 });
 </script>

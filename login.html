@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Přihlášení</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Bedny</h1>
+    
+    <div id="loginForm">
+      <h2>Přihlášení</h2>
+      <input type="text" id="loginUsername" placeholder="Uživatelské jméno">
+      <input type="password" id="loginPassword" placeholder="Heslo">
+      <button onclick="handleLogin()">Přihlásit se</button>
+      <p class="switch">Nemáš účet? <a href="#" onclick="showRegister()">Registrace</a></p>
+    </div>
+
+    <div id="registerForm" style="display: none;">
+      <h2>Registrace</h2>
+      <input type="text" id="regUsername" placeholder="Uživatelské jméno">
+      <input type="password" id="regPassword" placeholder="Heslo">
+      <input type="password" id="regPasswordConfirm" placeholder="Potvrď heslo">
+      <button onclick="handleRegister()">Registrovat se</button>
+      <p class="switch">Máš účet? <a href="#" onclick="showLogin()">Přihlášení</a></p>
+    </div>
+  </div>
+
+  <script src="user.js"></script>
+  <script>
+    const user = getCurrentUser();
+    if (user) {
+      window.location.href = "index.html";
+    }
+
+    function showRegister() {
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("registerForm").style.display = "block";
+    }
+
+    function showLogin() {
+      document.getElementById("registerForm").style.display = "none";
+      document.getElementById("loginForm").style.display = "block";
+    }
+
+    async function handleLogin() {
+      const username = document.getElementById("loginUsername").value;
+      const password = document.getElementById("loginPassword").value;
+      const result = await login(username, password);
+      if (result === "OK") {
+        setCurrentUser(username);
+        window.location.href = "index.html";
+      } else {
+        alert("Špatné jméno nebo heslo");
+      }
+    }
+
+    async function handleRegister() {
+      const username = document.getElementById("regUsername").value;
+      const password = document.getElementById("regPassword").value;
+      const confirm = document.getElementById("regPasswordConfirm").value;
+      if (!username || !password) {
+        alert("Vyplň jméno a heslo");
+        return;
+      }
+      if (password !== confirm) {
+        alert("Hesla se neshodují");
+        return;
+      }
+      try {
+        const result = await register(username, password);
+        alert("Odpověď: " + result);
+        if (result === "OK") {
+          setCurrentUser(username);
+          window.location.href = "index.html";
+        } else {
+          alert("Registrace selhala: " + result);
+        }
+      } catch (e) {
+        alert("Chyba spojení: " + e.message);
+      }
+    }
+  </script>
+</body>
+</html>
