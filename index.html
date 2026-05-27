@@ -26,14 +26,8 @@
     </div>
   </div>
 
-<<<<<<< HEAD
   <script src="user.js"></script>
   <script>
-    const user = getCurrentUser();
-    if (user) {
-      window.location.href = "hlav.html";
-    }
-
     function showRegister() {
       document.getElementById("loginForm").style.display = "none";
       document.getElementById("registerForm").style.display = "block";
@@ -50,7 +44,7 @@
       const result = await login(username, password);
       if (result === "OK") {
         setCurrentUser(username);
-        window.location.href = "index.html";
+        window.location.href = "hlav.html";
       } else {
         alert("Špatné jméno nebo heslo");
       }
@@ -73,7 +67,7 @@
         alert("Odpověď: " + result);
         if (result === "OK") {
           setCurrentUser(username);
-          window.location.href = "index.html";
+          window.location.href = "hlav.html";
         } else {
           alert("Registrace selhala: " + result);
         }
@@ -82,19 +76,5 @@
       }
     }
   </script>
-=======
-<link rel="stylesheet" href="1.css">
-<script src="script.js"></script>
-<script src="user.js?ver=3"></script>
-<script>createPointsDisplay();</script>
-<script src="user.js"></script>
-<script>
-if (!getCurrentUser()) {
-  window.location.href = "login.html";
-} else {
-  createPointsDisplay();
-}
-</script>
->>>>>>> 28c18e4dfea2eac50e0b7a8447e4744a5c68d1ab
 </body>
 </html>

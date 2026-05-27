@@ -1,5 +1,5 @@
 function doGet(e) {
-  return ContentService.createTextOutput("OK");
+  return doPost(e);
 }
 
 function doPost(e) {

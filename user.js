@@ -1,16 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-GevnjXbo3CX0UuRPmBCr0nw6dkP6Trlane3shNnRIHDEUEKP9AGH2-WzNAGDVhDfAA/exec";
-
-let username = localStorage.getItem("username");
-if (!username) {
-  username = prompt("Zadejte své uživatelské jméno:");
-  while (!username || username.trim() === "") {
-    alert("Uživatelské jméno nesmí být prázdné!");
-    username = prompt("Zadejte své uživatelské jméno:");
-  }
-  username = username.trim();
-  localStorage.setItem("username", username);
-  registerUser(username);
-}
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTWIPIsOFQ3zKVLE9yh4ibIdSKOdjLk5Z3BVUTcPkvXpWLf14xU5hyVBfMa5FKwYkgCw/exec";
 
 async function callScript(action, params = {}) {
   const url = new URL(SCRIPT_URL);
@@ -18,8 +6,16 @@ async function callScript(action, params = {}) {
   for (const key in params) {
     url.searchParams.set(key, params[key]);
   }
-  const response = await fetch(url.toString(), { method: "POST" });
+  const response = await fetch(url.toString());
   return response.text();
+}
+
+function getCurrentUser() {
+  return localStorage.getItem("username");
+}
+
+function setCurrentUser(name) {
+  localStorage.setItem("username", name);
 }
 
 function getUsername() {
@@ -27,29 +23,37 @@ function getUsername() {
 }
 
 async function registerUser(uname) {
-  const response = await callScript("registerUser", { userid: uname });
+  const response = await callScript("register", { username: uname });
   console.log("Registrace:", response);
   return response;
 }
 
+async function register(username, password) {
+  return await callScript("register", { username: username, password: password });
+}
+
+async function login(username, password) {
+  return await callScript("login", { username: username, password: password });
+}
+
 async function getPoints() {
   const uname = getUsername();
-  return await callScript("getPoints", { userid: uname });
+  return await callScript("getPoints", { username: uname });
 }
 
 async function useCode(code) {
   const uname = getUsername();
-  return await callScript("useCode", { code: code, userid: uname });
+  return await callScript("useCode", { code: code, username: uname });
 }
 
 async function open(boxName) {
   const uname = getUsername();
-  return await callScript("open", { userid: uname, box: boxName });
+  return await callScript("open", { username: uname, box: boxName });
 }
 
 async function getInventory() {
   const uname = getUsername();
-  return await callScript("getInventory", { userid: uname });
+  return await callScript("getInventory", { username: uname });
 }
 
 function createPointsDisplay() {
