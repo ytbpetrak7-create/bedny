@@ -18,7 +18,7 @@ async function callScript(action, params = {}) {
   for (const key in params) {
     url.searchParams.set(key, params[key]);
   }
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), { method: "POST" });
   return response.text();
 }
 
@@ -72,10 +72,11 @@ async function updatePoints() {
   console.log("updatePoints: body =", points);
   var el = document.getElementById("pointsDisplay");
   if (el) {
-    if (isNaN(points) || points === "OK" || points === "Odpověď: OK") {
+    var trimmed = points.trim();
+    if (isNaN(trimmed) || trimmed === "OK" || trimmed === "Odpověď: OK") {
       el.textContent = "Body: načítání...";
     } else {
-      el.textContent = "Body: " + points;
+      el.textContent = "Body: " + trimmed;
     }
   }
 }

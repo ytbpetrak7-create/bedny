@@ -1,32 +1,85 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <title>Přihlášení</title>
+  <link rel="stylesheet" href="login.css">
+</head>
 <body>
-    <a href="zamobr.html">
-    <img  class="1" src="125a28f5-dea6-4922-b8a3-02493aecd3db.png"></a>
-                    <a href="prbenda.html">
-    <img  class="1" src="Snímek obrazovky 2026-04-23 174559.png"></a>
-<a href="dvebed.html">
-    <img class="1" src="emka.png"></a>
-                    <a href="inventory.html">
-    <img class="1" src="eagle.png"></a>
-
+  <div class="container">
+    <h1>Bedny</h1>
     
+    <div id="loginForm">
+      <h2>Přihlášení</h2>
+      <input type="text" id="loginUsername" placeholder="Uživatelské jméno">
+      <input type="password" id="loginPassword" placeholder="Heslo">
+      <button onclick="handleLogin()">Přihlásit se</button>
+      <p class="switch">Nemáš účet? <a href="#" onclick="showRegister()">Registrace</a></p>
+    </div>
 
+    <div id="registerForm" style="display: none;">
+      <h2>Registrace</h2>
+      <input type="text" id="regUsername" placeholder="Uživatelské jméno">
+      <input type="password" id="regPassword" placeholder="Heslo">
+      <input type="password" id="regPasswordConfirm" placeholder="Potvrď heslo">
+      <button onclick="handleRegister()">Registrovat se</button>
+      <p class="switch">Máš účet? <a href="#" onclick="showLogin()">Přihlášení</a></p>
+    </div>
+  </div>
 
-<link rel="stylesheet" href="1.css">
-<script src="script.js"></script>
-<<<<<<< HEAD
-<script src="user.js?ver=3"></script>
-<script>createPointsDisplay();</script>
-=======
-<script src="user.js"></script>
-<script>
-if (!getCurrentUser()) {
-  window.location.href = "login.html";
-} else {
-  createPointsDisplay();
-}
-</script>
->>>>>>> 84dbbd4f7d28b93ce6018d36f618e1b94473f755
+  <script src="user.js"></script>
+  <script>
+    const user = getCurrentUser();
+    if (user) {
+      window.location.href = "hlav.html";
+    }
+
+    function showRegister() {
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("registerForm").style.display = "block";
+    }
+
+    function showLogin() {
+      document.getElementById("registerForm").style.display = "none";
+      document.getElementById("loginForm").style.display = "block";
+    }
+
+    async function handleLogin() {
+      const username = document.getElementById("loginUsername").value;
+      const password = document.getElementById("loginPassword").value;
+      const result = await login(username, password);
+      if (result === "OK") {
+        setCurrentUser(username);
+        window.location.href = "index.html";
+      } else {
+        alert("Špatné jméno nebo heslo");
+      }
+    }
+
+    async function handleRegister() {
+      const username = document.getElementById("regUsername").value;
+      const password = document.getElementById("regPassword").value;
+      const confirm = document.getElementById("regPasswordConfirm").value;
+      if (!username || !password) {
+        alert("Vyplň jméno a heslo");
+        return;
+      }
+      if (password !== confirm) {
+        alert("Hesla se neshodují");
+        return;
+      }
+      try {
+        const result = await register(username, password);
+        alert("Odpověď: " + result);
+        if (result === "OK") {
+          setCurrentUser(username);
+          window.location.href = "index.html";
+        } else {
+          alert("Registrace selhala: " + result);
+        }
+      } catch (e) {
+        alert("Chyba spojení: " + e.message);
+      }
+    }
+  </script>
 </body>
 </html>
