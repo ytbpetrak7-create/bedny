@@ -1,3 +1,5 @@
+const SHEET_ID = "1K5T_SGfE-krTwfAluVsXv8VqPRl5GaPT1S2vf8f3ezw";
+
 function doGet(e) {
   return doPost(e);
 }
@@ -9,7 +11,7 @@ function doPost(e) {
   const action = e.parameter.action;
   const params = e.parameter;
   
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(SHEET_ID);
   
   let result = "Unknown action";
   
@@ -35,6 +37,9 @@ function doPost(e) {
     case "addToInventory":
       result = addToInventory(ss, params.username, params.item);
       break;
+    case "getBoxInfo":
+      result = getBoxInfo(ss, params.box);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -56,14 +61,16 @@ function register(ss, username, password) {
     usersSheet.appendRow(["username", "password", "points", "registered"]);
   }
   
+  usersSheet.getRange("C:C").setNumberFormat("0");
+  
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === username) {
-      return ContentService.createTextOutput("EXISTS");
+    if (data[i][0].toString().trim() === username.trim()) {
+      return "EXISTS";
     }
   }
   
-  usersSheet.appendRow([username, password, 0, new Date()]);
-  return ContentService.createTextOutput("OK");
+  usersSheet.appendRow([username.trim(), password, 0, new Date()]);
+  return "OK";
 }
 
 function login(ss, username, password) {
@@ -71,12 +78,12 @@ function login(ss, username, password) {
   const data = usersSheet.getDataRange().getValues();
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === username && data[i][1] === password) {
-      return ContentService.createTextOutput("OK");
+    if (data[i][0].toString().trim() === username.trim() && data[i][1].toString().trim() === password.trim()) {
+      return "OK";
     }
   }
   
-  return ContentService.createTextOutput("FAIL");
+  return "FAIL";
 }
 
 function getPoints(ss, username) {
@@ -85,11 +92,11 @@ function getPoints(ss, username) {
   
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === username) {
-      return ContentService.createTextOutput(data[i][2].toString());
+      return data[i][2].toString();
     }
   }
   
-  return ContentService.createTextOutput("0");
+  return "0";
 }
 
 function useCode(ss, username, code) {
@@ -98,7 +105,7 @@ function useCode(ss, username, code) {
   
   if (data.length === 0) {
     codesSheet.appendRow(["code", "points", "status", "usedBy"]);
-    return ContentService.createTextOutput("INVALID");
+    return "INVALID";
   }
   
   for (let i = 1; i < data.length; i++) {
@@ -112,15 +119,15 @@ function useCode(ss, username, code) {
           usersSheet.getRange(j + 1, 3).setValue(userData[j][2] + points);
           codesSheet.getRange(i + 1, 3).setValue("USED");
           codesSheet.getRange(i + 1, 4).setValue(username);
-          return ContentService.createTextOutput(points.toString());
+          return points.toString();
         }
       }
       
-      return ContentService.createTextOutput("USER_NOT_FOUND");
+      return "USER_NOT_FOUND";
     }
   }
   
-  return ContentService.createTextOutput("INVALID");
+  return "INVALID";
 }
 
 function openBox(ss, username, box) {
@@ -138,7 +145,7 @@ function openBox(ss, username, box) {
     }
   }
   
-  if (boxItems.length === 0) return ContentService.createTextOutput("EMPTY_BOX");
+  if (boxItems.length === 0) return "EMPTY_BOX";
   
   const costMap = { "Boxes1": 100, "Boxes2": 250 };
   const cost = costMap[box] || 0;
@@ -157,7 +164,7 @@ function openBox(ss, username, box) {
   }
   
   if (userPoints < cost) {
-    return ContentService.createTextOutput("NOT_ENOUGH");
+    return "NOT_ENOUGH";
   }
   
   usersSheet.getRange(userRow, 3).setValue(userPoints - cost);
@@ -178,7 +185,7 @@ function openBox(ss, username, box) {
   
   addToInventory(ss, username, selectedItem.name);
   
-  return ContentService.createTextOutput(selectedItem.name + "|" + selectedItem.image);
+  return selectedItem.name + "|" + selectedItem.image;
 }
 
 function getInventory(ss, username) {
@@ -195,7 +202,7 @@ function getInventory(ss, username) {
     }
   }
   
-  return ContentService.createTextOutput(JSON.stringify(items));
+  return JSON.stringify(items);
 }
 
 function addToInventory(ss, username, item) {
@@ -207,5 +214,19 @@ function addToInventory(ss, username, item) {
   }
   
   invSheet.appendRow([username, item, new Date()]);
-  return ContentService.createTextOutput("ADDED");
+  return "ADDED";
+}
+
+function getBoxInfo(ss, box) {
+  const boxesSheet = getSheet(ss, "Boxes");
+  const data = boxesSheet.getDataRange().getValues();
+  const items = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === box) {
+      items.push({ name: data[i][1], image: data[i][2], chance: Number(data[i][3]) });
+    }
+  }
+  
+  return JSON.stringify(items);
 }

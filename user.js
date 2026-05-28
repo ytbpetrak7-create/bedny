@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTWIPIsOFQ3zKVLE9yh4ibIdSKOdjLk5Z3BVUTcPkvXpWLf14xU5hyVBfMa5FKwYkgCw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxF8Vm0vTqj6cd6w85MspViOwxaia0Mjs3c8eVeBiwiwktV06RWLDeIdtfs4tRtMGBOYQ/exec";
 
 async function callScript(action, params = {}) {
   const url = new URL(SCRIPT_URL);
@@ -56,6 +56,10 @@ async function getInventory() {
   return await callScript("getInventory", { username: uname });
 }
 
+async function getBoxInfo(boxName) {
+  return await callScript("getBoxInfo", { box: boxName });
+}
+
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
   pointsDiv.id = "pointsDisplay";
@@ -67,7 +71,7 @@ function createPointsDisplay() {
   invLink.href = "inventory.html";
   invLink.id = "inventoryLink";
   invLink.textContent = "Inventář";
-  invLink.style.cssText = "position:fixed;top:50px;right:10px;color:#fff;background:#007bff;padding:8px 16px;text-decoration:none;z-index:9999;font-size:14px;border-radius:5px;";
+  invLink.style.cssText = "position:fixed;top:80px;right:10px;color:#fff;background:#007bff;padding:8px 16px;text-decoration:none;z-index:9999;font-size:14px;border-radius:5px;";
   document.body.appendChild(invLink);
 }
 

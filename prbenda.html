@@ -6,15 +6,33 @@
 <img id="itemimg">
 <p id="itemname"></p>
 
+<div id="chances"></div>
+
 <link rel="stylesheet" href="1bed.css">
 </body>
-<script src="user.js?ver=3"></script>
+<script src="user.js"></script>
 <script>
 if (!getCurrentUser()) {
-  window.location.href = "login.html";
+  window.location.href = "index.html";
 } else {
   createPointsDisplay();
 }
+
+async function showChances() {
+  var result = await getBoxInfo("Boxes1");
+  var items = JSON.parse(result);
+  var total = items.reduce(function(sum, item) { return sum + item.chance; }, 0);
+  var html = "<h3>Šance:</h3><ul>";
+  items.forEach(function(item) {
+    var pct = ((item.chance / total) * 100).toFixed(1);
+    html += "<li>" + item.name + ": " + pct + "%</li>";
+  });
+  html += "</ul>";
+  document.getElementById("chances").innerHTML = html;
+}
+
+showChances();
+
 document.getElementById("openBoxButton").addEventListener("click", async () => {
     const result = await open("Boxes1");
     let itemName;
