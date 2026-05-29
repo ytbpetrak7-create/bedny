@@ -196,8 +196,8 @@ function getInventory(ss, username) {
   const data = invSheet.getDataRange().getValues();
   const items = [];
   
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0].toString().trim() === username.trim()) {
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
       items.push({
         name: data[i][1],
         date: data[i][2]
