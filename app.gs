@@ -13,6 +13,11 @@ function doPost(e) {
   
   const ss = SpreadsheetApp.openById(SHEET_ID);
   
+  var userSheet = ss.getSheetByName("Users");
+  if (userSheet) {
+    userSheet.getRange("C:C").setNumberFormat("0");
+  }
+  
   let result = "Unknown action";
   
   switch (action) {
@@ -91,7 +96,7 @@ function getPoints(ss, username) {
   const data = usersSheet.getDataRange().getValues();
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === username) {
+    if (data[i][0].toString().trim() === username.trim()) {
       return data[i][2].toString();
     }
   }
@@ -115,8 +120,8 @@ function useCode(ss, username, code) {
       const usersSheet = getSheet(ss, "Users");
       const userData = usersSheet.getDataRange().getValues();
       for (let j = 1; j < userData.length; j++) {
-        if (userData[j][0] === username) {
-          usersSheet.getRange(j + 1, 3).setValue(userData[j][2] + points);
+        if (userData[j][0].toString().trim() === username.trim()) {
+          usersSheet.getRange(j + 1, 3).setValue(Number(userData[j][2]) + Number(points));
           codesSheet.getRange(i + 1, 3).setValue("USED");
           codesSheet.getRange(i + 1, 4).setValue(username);
           return points.toString();
@@ -156,7 +161,7 @@ function openBox(ss, username, box) {
   let userPoints = 0;
   
   for (let j = 1; j < userData.length; j++) {
-    if (userData[j][0] === username) {
+    if (userData[j][0].toString().trim() === username.trim()) {
       userRow = j + 1;
       userPoints = userData[j][2];
       break;
@@ -194,7 +199,7 @@ function getInventory(ss, username) {
   const items = [];
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === username) {
+    if (data[i][0].toString().trim() === username.trim()) {
       items.push({
         name: data[i][1],
         date: data[i][2]
