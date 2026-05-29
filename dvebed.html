@@ -1,16 +1,20 @@
+<!DOCTYPE html>
 <html>
 <body>
-<button class="open" type="button" id="openBoxButton">otevri</button>
+<a href="hlav.html" class="back-link">← Zpět</a>
+<h1>Boxes2</h1>
 
+<button class="open" type="button" id="openBoxButton">otevri</button>
 <img id="itemimg">
 <p id="itemname"></p>
 
+<link rel="stylesheet" href="inventory.css">
 <link rel="stylesheet" href="1bed.css">
 </body>
 <script src="user.js?ver=3"></script>
 <script>
 if (!getCurrentUser()) {
-  window.location.href = "login.html";
+  window.location.href = "index.html";
 } else {
   createPointsDisplay();
 }

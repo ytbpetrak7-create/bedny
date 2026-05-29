@@ -1,16 +1,19 @@
+<!DOCTYPE html>
 <html>
 <body>
-<link rel="stylesheet" href="zam obr.css">
+<a href="hlav.html" class="back-link">← Zpět</a>
+<h1>Kód</h1>
 
 <p>Zadej kod nize</p>
+<input class="intex" type="text" id="kod">
+<input class="inok" type="button" value="ok" id="ok-button" onclick="overitkod()">
 
-<input class="intex" type="text"  id="kod">
-<input class="inok" type="button" value="ok" id="ok-button"
-onclick="overitkod(kod.value)">
-
+<link rel="stylesheet" href="zam obr.css">
+<link rel="stylesheet" href="inventory.css">
+<link rel="stylesheet" href="1bed.css">
 </body>
 <script src="script.js"></script>
-<script src="user.js"></script>
+<script src="user.js?ver=3"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
