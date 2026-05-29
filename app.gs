@@ -136,23 +136,21 @@ function useCode(ss, username, code) {
 }
 
 function openBox(ss, username, box) {
-  const boxesSheet = getSheet(ss, "Boxes");
+  const boxesSheet = getSheet(ss, "Boxes1");
   const data = boxesSheet.getDataRange().getValues();
   const boxItems = [];
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === box) {
-      boxItems.push({
-        name: data[i][1],
-        image: data[i][2],
-        chance: Number(data[i][3])
-      });
-    }
+    boxItems.push({
+      name: data[i][2],
+      image: data[i][0],
+      chance: Number(data[i][1])
+    });
   }
   
   if (boxItems.length === 0) return "EMPTY_BOX";
   
-  const costMap = { "Boxes1": 100, "Boxes2": 250 };
+  const costMap = { "Boxes1": 2, "Boxes2": 250 };
   const cost = costMap[box] || 0;
   
   const usersSheet = getSheet(ss, "Users");
@@ -223,13 +221,13 @@ function addToInventory(ss, username, item) {
 }
 
 function getBoxInfo(ss, box) {
-  const boxesSheet = getSheet(ss, "Boxes");
+  const boxesSheet = getSheet(ss, "Boxes1");
   const data = boxesSheet.getDataRange().getValues();
   const items = [];
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === box) {
-      items.push({ name: data[i][1], image: data[i][2], chance: Number(data[i][3]) });
+    if (data[i][0] && data[i][1] && data[i][2]) {
+      items.push({ name: data[i][2], image: data[i][0], chance: Number(data[i][1]) });
     }
   }
   
