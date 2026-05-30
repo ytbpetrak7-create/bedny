@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyOR_AOhBxLvnPnk5LMaVibsOGbBjL3xJRq2sdyq8uHAcBQ_D3zeBBPl63GdeTOHyuU/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNrEKVcrblSA7CfG8XCq9vc7lueOi5O6OFKFc7tkHu3bjbuy_MRCuGv9r0NzOlL_RrXw/exec";
 
 async function callScript(action, params = {}) {
   const url = new URL(SCRIPT_URL);
@@ -58,6 +58,11 @@ async function getInventory() {
 
 async function getBoxInfo(boxName) {
   return await callScript("getBoxInfo", { box: boxName });
+}
+
+async function deleteInventoryItem(item, row) {
+  const uname = getUsername();
+  return await callScript("deleteInventoryItem", { username: uname, item: item, row: row });
 }
 
 function createPointsDisplay() {

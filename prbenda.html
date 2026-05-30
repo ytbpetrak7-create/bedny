@@ -11,6 +11,7 @@
 
 <link rel="stylesheet" href="inventory.css">
 <link rel="stylesheet" href="1bed.css">
+<style>body{padding:40px;padding-top:20px;} h1{font-size:24px;margin-bottom:10px;}</style>
 </body>
 <script src="user.js?ver=3"></script>
 <script>
@@ -24,10 +25,11 @@ async function showChances() {
   var result = await getBoxInfo("Boxes1");
   var items = JSON.parse(result);
   var total = items.reduce(function(sum, item) { return sum + item.chance; }, 0);
-  var html = "<h3>Šance:</h3><ul>";
+  var html = '<h3 style="color:#0f0;font-size:14px;margin:5px 0 2px;">Šance:</h3><ul style="color:#fff;font-size:12px;list-style:none;padding:0;margin:0;">';
   items.forEach(function(item) {
     var pct = ((item.chance / total) * 100).toFixed(1);
-    html += "<li>" + item.name + ": " + pct + "%</li>";
+    var odds = Math.round(total / item.chance);
+    html += '<li style="padding:1px 0;">' + item.name + ': ' + pct + '% (1 z ' + odds + ')</li>';
   });
   html += "</ul>";
   document.getElementById("chances").innerHTML = html;

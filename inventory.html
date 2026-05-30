@@ -29,9 +29,19 @@ async function loadInventory() {
   items.forEach(function(item) {
     var div = document.createElement("div");
     div.className = "inventory-item";
-    div.innerHTML = "<p>" + item.name + "</p><span>" + new Date(item.date).toLocaleDateString() + "</span>";
+    div.innerHTML = "<p>" + item.name + "</p><span>" + new Date(item.date).toLocaleDateString() + "</span> <button onclick='removeItem(\"" + item.name + "\"," + item.row + ")' style='background:#f44;color:#fff;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;'>X</button>";
     container.appendChild(div);
   });
+}
+
+async function removeItem(name, row) {
+  if (!confirm("Smazat " + name + " z inventáře?")) return;
+  var res = await deleteInventoryItem(name, row);
+  if (res === "DELETED") {
+    loadInventory();
+  } else {
+    alert("Chyba: " + res);
+  }
 }
 
 loadInventory();

@@ -45,6 +45,9 @@ function doPost(e) {
     case "getBoxInfo":
       result = getBoxInfo(ss, params.box);
       break;
+    case "deleteInventoryItem":
+      result = deleteInventoryItem(ss, params.username, params.item, params.row);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -200,7 +203,8 @@ function getInventory(ss, username) {
     if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
       items.push({
         name: data[i][1],
-        date: data[i][2]
+        date: data[i][2],
+        row: i + 1
       });
     }
   }
@@ -232,4 +236,10 @@ function getBoxInfo(ss, box) {
   }
   
   return JSON.stringify(items);
+}
+
+function deleteInventoryItem(ss, username, item, row) {
+  const invSheet = getSheet(ss, "Inventory");
+  invSheet.deleteRow(Number(row));
+  return "DELETED";
 }
