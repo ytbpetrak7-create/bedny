@@ -344,9 +344,7 @@ function saveTradeLink(ss, username, link) {
 }
 
 function steamLoginComplete(ss, steamId, name, pic) {
-  var result = findOrCreateSteamUser(ss, steamId, name, pic);
-  if (result.indexOf("ERROR:") === 0) return result;
-  return "OK";
+  return findOrCreateSteamUser(ss, steamId, name, pic);
 }
 
 function fetchSteamPlayer(steamId) {
