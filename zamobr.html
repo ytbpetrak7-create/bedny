@@ -46,15 +46,13 @@ function showTab(tab) {
 }
 
 async function loadTradeLink() {
-  var res = await getProfile();
-  if (res === "NOT_FOUND") return;
-  var data = JSON.parse(res);
+  var adminLink = await getAdminTradeLink();
   var info = document.getElementById("tradeInfo");
-  if (data.tradeLink) {
-    info.innerHTML = '<p style="color:#aaa;font-size:14px;">Tvůj trade link: <a href="' + data.tradeLink + '" target="_blank" style="color:#00ff96;">otevřít</a></p>';
-    document.getElementById("tradeBtn").onclick = function() { window.open(data.tradeLink, "_blank"); };
+  if (adminLink && adminLink !== "NOT_SET") {
+    info.innerHTML = '<p style="color:#aaa;font-size:14px;">Pošli skin sem: <a href="' + adminLink + '" target="_blank" style="color:#00ff96;">otevřít trade</a></p>';
+    document.getElementById("tradeBtn").onclick = function() { window.open(adminLink, "_blank"); };
   } else {
-    info.innerHTML = '<p style="color:#f80;font-size:14px;">Nejprve nastav trade link v <a href="profil.html" style="color:#00ff96;">profilu</a></p>';
+    info.innerHTML = '<p style="color:#f80;font-size:14px;">Admin trade link není nastaven, kontaktuj admina</p>';
     document.getElementById("tradeBtn").disabled = true;
     document.getElementById("tradeBtn").style.opacity = "0.5";
   }

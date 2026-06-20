@@ -85,6 +85,10 @@ async function saveTradeLink(link) {
   return await callScript("saveTradeLink", { username: uname, link: link });
 }
 
+async function getAdminTradeLink() {
+  return await callScript("getAdminTradeLink");
+}
+
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
   var profilLink = document.createElement("a");
