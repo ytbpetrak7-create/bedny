@@ -76,6 +76,9 @@ function doPost(e) {
     case "getTradeOffers":
       result = getTradeOffers();
       break;
+    case "sellItem":
+      result = sellItem(ss, params.username, params.row, params.price);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -175,7 +178,8 @@ function openBox(ss, username, box) {
     boxItems.push({
       name: data[i][2],
       image: data[i][0],
-      chance: Number(data[i][1])
+      chance: Number(data[i][1]),
+      sellPrice: Number(data[i][3]) || 0
     });
   }
   
@@ -219,7 +223,7 @@ function openBox(ss, username, box) {
   
   addToInventory(ss, username, selectedItem.name);
   
-  return selectedItem.name + "|" + selectedItem.image;
+  return selectedItem.name + "|" + selectedItem.image + "|" + selectedItem.sellPrice;
 }
 
 function getInventory(ss, username) {
@@ -259,7 +263,7 @@ function getBoxInfo(ss, box) {
   
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] && data[i][1] && data[i][2]) {
-      items.push({ name: data[i][2], image: data[i][0], chance: Number(data[i][1]) });
+      items.push({ name: data[i][2], image: data[i][0], chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0 });
     }
   }
   
@@ -326,6 +330,36 @@ function saveProfilePic(ss, username, url) {
   }
   
   return "NOT_FOUND";
+}
+
+function sellItem(ss, username, row, price) {
+  const invSheet = getSheet(ss, "Inventory");
+  const invData = invSheet.getDataRange().getValues();
+  
+  var itemName = "";
+  var foundRow = -1;
+  for (var i = 1; i < invData.length; i++) {
+    if (invData[i][0] && invData[i][0].toString().trim() === username.trim() && (i + 1) === Number(row)) {
+      itemName = invData[i][1];
+      foundRow = i + 1;
+      break;
+    }
+  }
+  
+  if (foundRow === -1) return "NOT_FOUND";
+  
+  invSheet.deleteRow(foundRow);
+  
+  const usersSheet = getSheet(ss, "Users");
+  const userData = usersSheet.getDataRange().getValues();
+  for (var j = 1; j < userData.length; j++) {
+    if (userData[j][0].toString().trim() === username.trim()) {
+      usersSheet.getRange(j + 1, 3).setValue(Number(userData[j][2]) + Number(price));
+      break;
+    }
+  }
+  
+  return "SOLD";
 }
 
 function saveTradeLink(ss, username, link) {

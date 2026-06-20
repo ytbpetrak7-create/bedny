@@ -7,6 +7,10 @@
 <button class="open" type="button" id="openBoxButton">otevri</button>
 <img id="itemimg">
 <p id="itemname"></p>
+<div id="itemActions" style="display:none;margin-top:10px;">
+  <button onclick="sellCurrentItem()" id="sellBtn" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-right:10px;"></button>
+  <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Otevřít znova</button>
+</div>
 
 <link rel="stylesheet" href="inventory.css">
 <link rel="stylesheet" href="1bed.css">
@@ -18,18 +22,50 @@ if (!getCurrentUser()) {
 } else {
   createPointsDisplay();
 }
+
+var lastItemRow = null;
+var lastItemPrice = 0;
+
 document.getElementById("openBoxButton").addEventListener("click", async () => {
+    document.getElementById("itemActions").style.display = "none";
     const result = await open("Boxes2");
-    let itemName;
-    if (result.includes("|")) {
-        const parts = result.split("|");
-        document.getElementById("itemimg").src = parts[1];
-        itemName = parts[0];
-    } else {
-        itemName = result;
-    }
+    let itemName, itemImg, itemPrice;
+    var parts = result.split("|");
+    itemName = parts[0];
+    itemImg = parts[1] || "";
+    itemPrice = Number(parts[2]) || 0;
+    document.getElementById("itemimg").src = itemImg;
     document.getElementById("itemname").innerText = itemName;
+    
+    lastItemPrice = itemPrice;
+    
+    var inv = JSON.parse(await getInventory());
+    var found = inv.filter(function(x) { return x.name === itemName; });
+    lastItemRow = found.length > 0 ? found[found.length - 1].row : null;
+    
+    if (itemPrice > 0 && lastItemRow) {
+      document.getElementById("sellBtn").textContent = "Prodat za " + itemPrice + " bodů";
+      document.getElementById("itemActions").style.display = "block";
+    }
     updatePoints();
 });
+
+async function sellCurrentItem() {
+  if (!lastItemRow) return;
+  var res = await sellItem(lastItemRow, lastItemPrice);
+  if (res === "SOLD") {
+    alert("Item prodán za " + lastItemPrice + " bodů");
+    document.getElementById("itemActions").style.display = "none";
+    document.getElementById("itemimg").src = "";
+    document.getElementById("itemname").innerText = "";
+    updatePoints();
+  }
+}
+
+function openAgain() {
+  document.getElementById("itemActions").style.display = "none";
+  document.getElementById("itemimg").src = "";
+  document.getElementById("itemname").innerText = "";
+}
 </script>
 </html>

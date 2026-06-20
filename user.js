@@ -93,6 +93,11 @@ async function getTradeOffers() {
   return await callScript("getTradeOffers");
 }
 
+async function sellItem(row, price) {
+  const uname = getUsername();
+  return await callScript("sellItem", { username: uname, row: row, price: price });
+}
+
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
   var profilLink = document.createElement("a");
