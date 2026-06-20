@@ -1,14 +1,94 @@
 <!DOCTYPE html>
 <html>
+<head>
+<style>
+body{padding:40px;padding-top:20px;}
+h1{font-size:24px;margin-bottom:10px;}
+.box-container {
+  position:relative;
+  width:200px;height:200px;
+  margin:20px auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+#boxCrate {
+  width:160px;height:160px;
+  background:linear-gradient(135deg,#8B4513,#D2691E);
+  border-radius:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:60px;
+  color:#fff;
+  box-shadow:0 10px 30px rgba(0,0,0,0.5);
+  transition:all 0.5s ease;
+}
+#boxCrate.spin {
+  animation: spin 0.8s ease-in-out infinite;
+}
+#boxCrate.reveal {
+  animation: reveal 0.6s ease-out forwards;
+}
+@keyframes spin {
+  0%{transform:rotate(0deg) scale(1);}
+  25%{transform:rotate(90deg) scale(1.05);}
+  50%{transform:rotate(180deg) scale(1);}
+  75%{transform:rotate(270deg) scale(1.05);}
+  100%{transform:rotate(360deg) scale(1);}
+}
+@keyframes reveal {
+  0%{transform:scale(0) rotate(720deg);opacity:0;}
+  60%{transform:scale(1.2) rotate(-10deg);opacity:1;}
+  100%{transform:scale(1) rotate(0deg);opacity:1;}
+}
+#itemimg {
+  max-width:180px;max-height:180px;
+  border-radius:15px;
+  display:none;
+  animation: fadeIn 0.5s ease;
+}
+@keyframes fadeIn {
+  from{opacity:0;transform:scale(0.5);}
+  to{opacity:1;transform:scale(1);}
+}
+#itemname {
+  color:#fff;
+  font-size:22px;
+  font-weight:bold;
+  text-align:center;
+  margin:10px 0;
+}
+.open-btn-wrap { text-align:center; }
+#openBoxButton {
+  padding:15px 50px;
+  font-size:20px;
+  font-weight:bold;
+  background:linear-gradient(135deg,#00ff96,#00cc78);
+  border:none;border-radius:15px;
+  color:#1a1a2e;
+  cursor:pointer;
+  box-shadow:0 4px 20px rgba(0,255,150,0.3);
+  transition:transform 0.2s;
+}
+#openBoxButton:hover{transform:scale(1.05);}
+#openBoxButton:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+</style>
+</head>
 <body>
 <a href="hlav.html" class="back-link">← Zpět</a>
 <h1>Boxes2</h1>
 
-<button class="open" type="button" id="openBoxButton">otevri</button>
-<img id="itemimg">
+<div class="open-btn-wrap">
+  <button type="button" id="openBoxButton">Otevřít</button>
+</div>
+<div class="box-container">
+  <div id="boxCrate">📦</div>
+  <img id="itemimg">
+</div>
 <p id="itemname"></p>
-<div id="itemActions" style="display:none;margin-top:10px;">
-  <button onclick="sellCurrentItem()" id="sellBtn" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-right:10px;"></button>
+<div id="itemActions" style="display:none;text-align:center;margin-top:10px;">
+  <button onclick="sellCurrentItem()" id="sellBtn" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-right:10px;box-shadow:0 4px 15px rgba(255,68,68,0.3);"></button>
   <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Otevřít znova</button>
 </div>
 
@@ -28,13 +108,35 @@ var lastItemPrice = 0;
 
 document.getElementById("openBoxButton").addEventListener("click", async () => {
     document.getElementById("itemActions").style.display = "none";
+    document.getElementById("itemimg").style.display = "none";
+    var crate = document.getElementById("boxCrate");
+    crate.style.display = "flex";
+    crate.textContent = "📦";
+    crate.className = "spin";
+    document.getElementById("openBoxButton").disabled = true;
+    
     const result = await open("Boxes2");
+    
+    crate.className = "";
+    
     let itemName, itemImg, itemPrice;
     var parts = result.split("|");
     itemName = parts[0];
     itemImg = parts[1] || "";
     itemPrice = Number(parts[2]) || 0;
-    document.getElementById("itemimg").src = itemImg;
+    
+    if (itemImg) {
+      crate.style.display = "none";
+      document.getElementById("itemimg").src = itemImg;
+      document.getElementById("itemimg").style.display = "block";
+      document.getElementById("itemimg").className = "";
+      void document.getElementById("itemimg").offsetWidth;
+      document.getElementById("itemimg").className = "reveal";
+    } else {
+      crate.textContent = itemName.charAt(0).toUpperCase();
+      crate.style.background = "linear-gradient(135deg,#6f42c1,#9b59b6)";
+      crate.className = "reveal";
+    }
     document.getElementById("itemname").innerText = itemName;
     
     lastItemPrice = itemPrice;
@@ -47,6 +149,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       document.getElementById("sellBtn").textContent = "Prodat za " + itemPrice + " bodů";
       document.getElementById("itemActions").style.display = "block";
     }
+    document.getElementById("openBoxButton").disabled = false;
     updatePoints();
 });
 
@@ -56,7 +159,10 @@ async function sellCurrentItem() {
   if (res === "SOLD") {
     alert("Item prodán za " + lastItemPrice + " bodů");
     document.getElementById("itemActions").style.display = "none";
-    document.getElementById("itemimg").src = "";
+    document.getElementById("itemimg").style.display = "none";
+    document.getElementById("boxCrate").style.display = "flex";
+    document.getElementById("boxCrate").textContent = "📦";
+    document.getElementById("boxCrate").className = "";
     document.getElementById("itemname").innerText = "";
     updatePoints();
   }
@@ -64,7 +170,11 @@ async function sellCurrentItem() {
 
 function openAgain() {
   document.getElementById("itemActions").style.display = "none";
-  document.getElementById("itemimg").src = "";
+  document.getElementById("itemimg").style.display = "none";
+  var crate = document.getElementById("boxCrate");
+  crate.style.display = "flex";
+  crate.textContent = "📦";
+  crate.className = "";
   document.getElementById("itemname").innerText = "";
 }
 </script>
