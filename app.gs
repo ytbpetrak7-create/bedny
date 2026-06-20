@@ -64,7 +64,7 @@ function doPost(e) {
       result = saveProfilePic(ss, params.username, params.url);
       break;
     case "steamLoginComplete":
-      result = steamLoginComplete(ss, params.steamId);
+      result = "DP:" + steamLoginComplete(ss, params.steamId);
       break;
   }
   
