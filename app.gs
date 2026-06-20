@@ -19,7 +19,7 @@ function doPost(e) {
     userSheet.getRange("C:C").setNumberFormat("0");
   }
   
-  let result = "Unknown action";
+  let result = "Unknown action: " + action;
   
   switch (action) {
     case "register":
