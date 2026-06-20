@@ -1,6 +1,13 @@
 const SHEET_ID = "1K5T_SGfE-krTwfAluVsXv8VqPRl5GaPT1S2vf8f3ezw";
+const STEAM_API_KEY = "9BF03DB2AF38585766A60108DE4F66A1";
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.action === "steam_login") {
+    return steamLogin();
+  }
+  if (e && e.parameter && e.parameter.action === "steam_callback") {
+    return steamCallback(e);
+  }
   return doPost(e);
 }
 
@@ -56,6 +63,9 @@ function doPost(e) {
       break;
     case "saveProfilePic":
       result = saveProfilePic(ss, params.username, params.url);
+      break;
+    case "steamLoginComplete":
+      result = steamLoginComplete(ss, params.steamId);
       break;
   }
   
@@ -274,9 +284,13 @@ function getProfile(ss, username) {
   
   for (let i = 0; i < data.length; i++) {
     if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      var pts = data[i][2];
+      if (pts instanceof Date) {
+        pts = (pts.getTime() / 86400000) + 25569;
+      }
       return JSON.stringify({
         username: data[i][0],
-        points: data[i][2],
+        points: Number(pts),
         registered: data[i][3],
         profilePic: data[i][4] || ""
       });
@@ -290,6 +304,10 @@ function saveProfilePic(ss, username, url) {
   const usersSheet = getSheet(ss, "Users");
   const data = usersSheet.getDataRange().getValues();
   
+  if (data.length > 0 && data[0].length < 5) {
+    usersSheet.getRange(1, 5).setValue("profilePic");
+  }
+  
   for (let i = 0; i < data.length; i++) {
     if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
       usersSheet.getRange(i + 1, 5).setValue(url);
@@ -298,4 +316,104 @@ function saveProfilePic(ss, username, url) {
   }
   
   return "NOT_FOUND";
+}
+
+function steamLogin() {
+  var url = ScriptApp.getService().getUrl();
+  var returnTo = url + "?action=steam_callback";
+  
+  var steamUrl = "https://steamcommunity.com/openid/login?" +
+    "openid.ns=" + encodeURIComponent("http://specs.openid.net/auth/2.0") +
+    "&openid.mode=" + encodeURIComponent("checkid_setup") +
+    "&openid.return_to=" + encodeURIComponent(returnTo) +
+    "&openid.realm=" + encodeURIComponent(url) +
+    "&openid.identity=" + encodeURIComponent("http://specs.openid.net/auth/2.0/identifier_select") +
+    "&openid.claimed_id=" + encodeURIComponent("http://specs.openid.net/auth/2.0/identifier_select");
+  
+  return HtmlService.createHtmlOutput(
+    '<html><body><script>window.location.href="' + steamUrl + '";</script></body></html>'
+  );
+}
+
+function steamCallback(e) {
+  var params = e.parameter;
+  var claimedId = params["openid.claimed_id"] || "";
+  var steamId = claimedId.substring(claimedId.lastIndexOf("/") + 1);
+  
+  var html = '<html><head><script>';
+  html += 'window.location.href = "hlav.html?steamId=' + steamId + '";';
+  html += '</scr' + 'ipt></head><body></body></html>';
+  
+  return HtmlService.createHtmlOutput(html);
+}
+
+function steamLoginComplete(ss, steamId) {
+  return findOrCreateSteamUser(steamId);
+}
+
+function fetchSteamPlayer(steamId) {
+  try {
+    var apiUrl = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" +
+      STEAM_API_KEY + "&steamids=" + steamId;
+    var apiRes = UrlFetchApp.fetch(apiUrl, { muteHttpExceptions: true });
+    var apiData = JSON.parse(apiRes.getContentText());
+    if (apiData.response && apiData.response.players && apiData.response.players.length > 0) {
+      return apiData.response.players[0];
+    }
+  } catch (e) {
+  }
+  return null;
+}
+
+function findOrCreateSteamUser(steamId) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  
+  if (data.length === 0) {
+    usersSheet.appendRow(["username", "password", "points", "registered", "profilePic", "steamId"]);
+  } else if (data[0].length < 6) {
+    usersSheet.getRange(1, 6).setValue("steamId");
+  }
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][5] && data[i][5].toString().trim() === steamId.toString().trim()) {
+      if (STEAM_API_KEY) {
+        var player = fetchSteamPlayer(steamId);
+        if (player && player.avatarfull && player.avatarfull !== (data[i][4] || "")) {
+          usersSheet.getRange(i + 1, 5).setValue(player.avatarfull);
+        }
+      }
+      return data[i][0] + "|" + (data[i][4] || "");
+    }
+  }
+  
+  var personaName = steamId;
+  var avatarUrl = "";
+  
+  if (STEAM_API_KEY) {
+    var player = fetchSteamPlayer(steamId);
+    if (player) {
+      personaName = player.personaname || steamId;
+      avatarUrl = player.avatarfull || "";
+    }
+  }
+  
+  var baseName = personaName;
+  var suffix = 1;
+  while (true) {
+    var found = false;
+    for (var j = 1; j < data.length; j++) {
+      if (data[j][0] && data[j][0].toString().trim() === personaName.trim()) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) break;
+    personaName = baseName + suffix;
+    suffix++;
+  }
+  
+  usersSheet.appendRow([personaName, "", 0, new Date(), avatarUrl, steamId.toString()]);
+  return personaName + "|" + avatarUrl;
 }

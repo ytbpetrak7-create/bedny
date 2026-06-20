@@ -1,5 +1,5 @@
 const items = [
-    {Image: "mac 10 ens.png", chance: 25, name : "mac 10 Ensnared"},
+    {Image: "mac 10 ens.avif", chance: 25, name : "mac 10 Ensnared"},
     {Image: "", chance: 25, name : "M4A4 | Etch Lord"},
     {Image: "", chance: 20, name : "Desert Eagle | Urban Rubble"},
     {Image: "", chance: 15, name : "M4A1-S | Night Terror"},

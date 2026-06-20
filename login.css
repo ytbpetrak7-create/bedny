@@ -71,6 +71,18 @@ button {
     box-shadow: 0 4px 15px rgba(0, 255, 150, 0.3);
 }
 
+.steam-btn {
+  margin-top: 10px;
+  background: linear-gradient(135deg, #1b2838 0%, #2a475e 100%);
+  box-shadow: 0 4px 15px rgba(27, 40, 56, 0.5);
+  color: #c6d4df;
+}
+
+.steam-btn:hover {
+  background: linear-gradient(135deg, #2a475e 0%, #3a5a7e 100%);
+  box-shadow: 0 6px 20px rgba(27, 40, 56, 0.7);
+}
+
 button:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 255, 150, 0.5);

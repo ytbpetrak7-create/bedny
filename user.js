@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFD1qCiJlHfmXW6pIIZMgAwbw2ZYwuPP6NZC-AUxEMq2C8AicK9K6fgiG3drOiGjSlw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsGilckWX9LmfHWkBuF_hhd8acnNibYCa5DzeqgyWGkBqfFXXn32wwqQbi7biP6jjxtA/exec";
 
 async function callScript(action, params = {}) {
   const url = new URL(SCRIPT_URL);

@@ -14,6 +14,7 @@
       <input type="password" id="loginPassword" placeholder="Heslo">
       <span onclick="togglePassword('loginPassword', this)" style="cursor:pointer;user-select:none;">👁️</span>
       <button onclick="handleLogin()">Přihlásit se</button>
+      <button class="steam-btn" onclick="steamLogin()">Přihlásit se přes Steam</button>
       <p class="switch">Nemáš účet? <a href="#" onclick="showRegister()">Registrace</a></p>
     </div>
 
@@ -30,6 +31,17 @@
 
   <script src="user.js"></script>
   <script>
+    function steamLogin() {
+      var returnTo = SCRIPT_URL + "?action=steam_callback";
+      var steamUrl = "https://steamcommunity.com/openid/login?" +
+        "openid.ns=" + encodeURIComponent("http://specs.openid.net/auth/2.0") +
+        "&openid.mode=" + encodeURIComponent("checkid_setup") +
+        "&openid.return_to=" + encodeURIComponent(returnTo) +
+        "&openid.realm=" + encodeURIComponent(SCRIPT_URL) +
+        "&openid.identity=" + encodeURIComponent("http://specs.openid.net/auth/2.0/identifier_select") +
+        "&openid.claimed_id=" + encodeURIComponent("http://specs.openid.net/auth/2.0/identifier_select");
+      window.location.href = steamUrl;
+    }
     function togglePassword(id, el) {
       var input = document.getElementById(id);
       if (input.type === "password") {

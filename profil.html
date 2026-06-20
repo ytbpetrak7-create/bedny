@@ -46,7 +46,9 @@ async function loadProfile() {
     return;
   }
   var data = JSON.parse(res);
+  console.log("Profil data:", data);
   var pts = Number(data.points);
+  console.log("Body:", pts, "Level:", getLevel(pts));
   var lvl = getLevel(pts);
   var bounds = getLevelBounds(lvl);
   var progress = ((pts - bounds.min) / (bounds.max - bounds.min)) * 100;
