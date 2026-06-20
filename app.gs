@@ -64,7 +64,7 @@ function doPost(e) {
       result = saveProfilePic(ss, params.username, params.url);
       break;
     case "steamLoginComplete":
-      result = steamLoginComplete(ss, params.steamId);
+      result = steamLoginComplete(ss, params.steamId, params.name, params.pic);
       break;
   }
   
@@ -317,8 +317,10 @@ function saveProfilePic(ss, username, url) {
   return "NOT_FOUND";
 }
 
-function steamLoginComplete(ss, steamId) {
-  return findOrCreateSteamUser(ss, steamId);
+function steamLoginComplete(ss, steamId, name, pic) {
+  var result = findOrCreateSteamUser(ss, steamId, name, pic);
+  if (result.indexOf("ERROR:") === 0) return result;
+  return "OK";
 }
 
 function fetchSteamPlayer(steamId) {
@@ -335,7 +337,7 @@ function fetchSteamPlayer(steamId) {
   return null;
 }
 
-function findOrCreateSteamUser(ss, steamId) {
+function findOrCreateSteamUser(ss, steamId, clientName, clientPic) {
   var usersSheet = getSheet(ss, "Users");
   var data = usersSheet.getDataRange().getValues();
   
@@ -349,31 +351,42 @@ function findOrCreateSteamUser(ss, steamId) {
     if (data[i][5] && data[i][5].toString().trim() === steamId.toString().trim()) {
       var pic = data[i][4] || "";
       var name = data[i][0];
+      var updated = false;
       if (STEAM_API_KEY) {
         var player = fetchSteamPlayer(steamId);
         if (player) {
           if (player.avatarfull && player.avatarfull !== pic) {
             usersSheet.getRange(i + 1, 5).setValue(player.avatarfull);
             pic = player.avatarfull;
+            updated = true;
           }
           if (player.personaname && player.personaname !== name) {
             usersSheet.getRange(i + 1, 1).setValue(player.personaname);
             name = player.personaname;
+            updated = true;
           }
         }
+      }
+      if (!updated && clientName && clientName !== name) {
+        usersSheet.getRange(i + 1, 1).setValue(clientName);
+        name = clientName;
+      }
+      if (!updated && clientPic && clientPic !== pic) {
+        usersSheet.getRange(i + 1, 5).setValue(clientPic);
+        pic = clientPic;
       }
       return name + "|" + pic;
     }
   }
   
-  var personaName = steamId;
-  var avatarUrl = "";
+  var personaName = clientName || steamId;
+  var avatarUrl = clientPic || "";
   
   if (STEAM_API_KEY) {
     var player = fetchSteamPlayer(steamId);
     if (player) {
-      personaName = player.personaname || steamId;
-      avatarUrl = player.avatarfull || "";
+      personaName = player.personaname || personaName;
+      avatarUrl = player.avatarfull || avatarUrl;
     }
   }
   
