@@ -26,7 +26,11 @@ async function loadOffers() {
   div.innerHTML = "<p style='color:#aaa;'>Načítám nabídky...</p>";
   var res = await getTradeOffers();
   if (res === "NO_KEY" || res.indexOf("ERROR:") === 0) {
-    div.innerHTML = "<p style='color:#f80;'>Chyba: " + res + "</p>";
+    var msg = res;
+    if (res.indexOf("script.external_request") > -1) {
+      msg = "Chybí autorizace Steam API. Otevři GAS editor → Spustit → authorizeExternalRequest → Povolit.";
+    }
+    div.innerHTML = "<p style='color:#f80;'>" + msg + "</p>";
     return;
   }
   try {

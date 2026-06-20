@@ -542,3 +542,9 @@ function findOrCreateSteamUser(ss, steamId, clientName, clientPic) {
   usersSheet.appendRow([personaName, "", 0, new Date(), avatarUrl, steamId.toString()]);
   return personaName + "|" + avatarUrl;
 }
+
+function authorizeExternalRequest() {
+  if (!STEAM_API_KEY) return;
+  var res = UrlFetchApp.fetch("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + STEAM_API_KEY + "&steamids=76561197960435530");
+  Logger.log("Auth OK: " + res.getResponseCode());
+}
