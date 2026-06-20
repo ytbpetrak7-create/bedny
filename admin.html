@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <html>
+<head><style>
+body{padding:40px;padding-top:20px;}
+h1{font-size:24px;margin-bottom:10px;}
+h2{color:#fff;font-size:18px;margin:20px 0 10px;}
+.req-item{background:#1a1a2e;border:1px solid #0f3460;border-radius:10px;padding:15px;margin:10px 0;}
+.req-item p{margin:4px 0;}
+.btn-app{background:#00ff96;color:#1a1a2e;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:bold;}
+.btn-done{background:#555;color:#aaa;border:none;border-radius:6px;padding:8px 16px;}
+</style></head>
 <body>
 <a href="hlav.html" class="back-link">← Zpět</a>
 <h1>Admin</h1>
@@ -16,46 +25,81 @@ if (!getCurrentUser()) {
       window.location.href = "hlav.html";
     } else {
       createPointsDisplay();
-      loadOffers();
+      loadAll();
     }
   });
 }
 
-async function loadOffers() {
+async function loadAll() {
   var div = document.getElementById("adminContent");
-  div.innerHTML = "<p style='color:#aaa;'>Načítám nabídky...</p>";
+  div.innerHTML = "<p style='color:#aaa;'>Načítám...</p>";
+  
+  var html = "<h2>Žádosti o výběr</h2>";
+  var wRes = await callScript("getWithdrawals");
+  try {
+    var wItems = JSON.parse(wRes);
+    if (wItems.length === 0) {
+      html += "<p style='color:#aaa;'>Žádné pending žádosti</p>";
+    } else {
+      for (var wi = 0; wi < wItems.length; wi++) {
+        var w = wItems[wi];
+        var statusColor = w.status === "approved" ? "#ffd700" : w.status === "done" ? "#00ff96" : "#ff8800";
+        html += '<div class="req-item">';
+        html += '<p style="color:#fff;font-weight:bold;">' + w.item + '</p>';
+        html += '<p style="color:#aaa;font-size:13px;">Uživatel: ' + w.username + ' | ' + new Date(w.date).toLocaleString() + '</p>';
+        html += '<p style="color:' + statusColor + ';font-size:12px;">Stav: ' + w.status + '</p>';
+        if (w.status === "pending") {
+          html += '<button class="btn-app" onclick="approve(' + w.row + ')">Schválit</button>';
+        } else if (w.status === "approved") {
+          html += '<button class="btn-done" disabled>Čeká na bota</button>';
+        } else if (w.status === "done") {
+          html += '<button class="btn-done" disabled>Hotovo</button>';
+        }
+        html += '</div>';
+      }
+    }
+  } catch (e) {
+    html += "<p style='color:#f80;'>Chyba: " + e.message + "</p>";
+  }
+  
+  html += "<h2>Příchozí trade offeary</h2>";
   var res = await getTradeOffers();
   if (res === "NO_KEY" || res.indexOf("ERROR:") === 0) {
     var msg = res;
     if (res.indexOf("script.external_request") > -1) {
-      msg = "Chybí autorizace Steam API. Otevři GAS editor → Spustit → authorizeExternalRequest → Povolit.";
+      msg = "Chybí autorizace Steam API.";
     }
-    div.innerHTML = "<p style='color:#f80;'>" + msg + "</p>";
-    return;
+    html += "<p style='color:#f80;'>" + msg + "</p>";
+  } else {
+    try {
+      var data = JSON.parse(res);
+      var offers = data.response && data.response.trade_offers ? data.response.trade_offers : [];
+      if (offers.length === 0) {
+        html += "<p style='color:#aaa;'>Žádné aktivní nabídky</p>";
+      } else {
+        for (var i = 0; i < offers.length; i++) {
+          var o = offers[i];
+          var itemsGive = o.items_to_give ? o.items_to_give.map(function(x) { return x.market_hash_name || "?"; }).join(", ") : "";
+          var itemsReceive = o.items_to_receive ? o.items_to_receive.map(function(x) { return x.market_hash_name || "?"; }).join(", ") : "";
+          html += '<div class="req-item">';
+          html += '<p style="color:#fff;font-weight:bold;">Nabídka #' + o.tradeofferid + '</p>';
+          if (itemsGive) html += '<p style="color:#00ff96;font-size:14px;">Dává: ' + itemsGive + '</p>';
+          if (itemsReceive) html += '<p style="color:#f80;font-size:14px;">Dostává: ' + itemsReceive + '</p>';
+          html += '<p style="color:#aaa;font-size:12px;">Stav: ' + o.state + ' | <a href="https://steamcommunity.com/tradeoffer/' + o.tradeofferid + '" target="_blank" style="color:#00ff96;">Zobrazit na Steamu</a></p>';
+          html += '</div>';
+        }
+      }
+    } catch (e) {
+      html += "<p style='color:#f80;'>Chyba parsování: " + e.message + "</p>";
+    }
   }
-  try {
-    var data = JSON.parse(res);
-    var offers = data.response && data.response.trade_offers ? data.response.trade_offers : [];
-    if (offers.length === 0) {
-      div.innerHTML = "<p style='color:#aaa;'>Žádné aktivní obchodní nabídky</p>";
-      return;
-    }
-    var html = "<h2 style='color:#fff;'>Příchozí nabídky (" + offers.length + ")</h2>";
-    for (var i = 0; i < offers.length; i++) {
-      var o = offers[i];
-      var itemsGive = o.items_to_give ? o.items_to_give.map(function(x) { return x.market_hash_name || "?"; }).join(", ") : "";
-      var itemsReceive = o.items_to_receive ? o.items_to_receive.map(function(x) { return x.market_hash_name || "?"; }).join(", ") : "";
-      html += '<div style="background:#1a1a2e;border:1px solid #0f3460;border-radius:10px;padding:15px;margin:10px 0;">';
-      html += '<p style="color:#fff;font-weight:bold;">Nabídka #' + o.tradeofferid + '</p>';
-      if (itemsGive) html += '<p style="color:#00ff96;font-size:14px;">Dává: ' + itemsGive + '</p>';
-      if (itemsReceive) html += '<p style="color:#f80;font-size:14px;">Dostává: ' + itemsReceive + '</p>';
-      html += '<p style="color:#aaa;font-size:12px;">Stav: ' + o.state + ' | <a href="https://steamcommunity.com/tradeoffer/' + o.tradeofferid + '" target="_blank" style="color:#00ff96;">Zobrazit na Steamu</a></p>';
-      html += '</div>';
-    }
-    div.innerHTML = html;
-  } catch (e) {
-    div.innerHTML = "<p style='color:#f80;'>Chyba parsování: " + e.message + "</p>";
-  }
+  
+  div.innerHTML = html;
+}
+
+async function approve(row) {
+  await callScript("approveWithdrawal", { row: row });
+  loadAll();
 }
 </script>
 </html>

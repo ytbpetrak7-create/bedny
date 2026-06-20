@@ -101,13 +101,24 @@ async function loadInventory() {
       actions += '<a class="btn-steam" href="' + adminTradeLink + '" target="_blank" rel="noopener">Poslat</a>';
     }
     if (userTradeLink) {
-      actions += '<a class="btn-withdraw" href="' + userTradeLink + '" target="_blank" rel="noopener">Vyzvednout</a>';
+      actions += '<button class="btn-withdraw" onclick="requestWithdraw(\'' + item.name + '\',' + item.row + ')">Vyzvednout</button>';
     }
     actions += '</div>';
     
     div.innerHTML = imgHtml + '<div class="info"><div class="name">' + item.name + '</div><div class="date">' + new Date(item.date).toLocaleDateString() + '</div></div>' + actions;
     container.appendChild(div);
   });
+}
+
+async function requestWithdraw(itemName, row) {
+  if (!confirm("Vyzvednout " + itemName + "?")) return;
+  var uname = getCurrentUser();
+  var res = await callScript("requestWithdraw", { username: uname, itemName: itemName, row: row });
+  if (res === "WITHDRAW_REQUESTED") {
+    loadInventory();
+  } else {
+    alert("Chyba: " + res);
+  }
 }
 
 async function removeItem(name, row) {

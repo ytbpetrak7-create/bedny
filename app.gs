@@ -82,6 +82,18 @@ function doPost(e) {
     case "sellItem":
       result = sellItem(ss, params.username, params.row, params.price);
       break;
+    case "requestWithdraw":
+      result = requestWithdraw(ss, params.username, params.itemName, params.row);
+      break;
+    case "getWithdrawals":
+      result = getWithdrawals(ss);
+      break;
+    case "completeWithdrawal":
+      result = completeWithdrawal(ss, params.row);
+      break;
+    case "approveWithdrawal":
+      result = approveWithdrawal(ss, params.row);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -421,6 +433,62 @@ function sellItem(ss, username, row, price) {
   }
   
   return "SOLD";
+}
+
+function requestWithdraw(ss, username, itemName, row) {
+  const invSheet = getSheet(ss, "Inventory");
+  const invData = invSheet.getDataRange().getValues();
+  var foundRow = -1;
+  for (var i = 1; i < invData.length; i++) {
+    if (invData[i][0] && invData[i][0].toString().trim() === username.trim() && (i + 1) === Number(row)) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+  if (foundRow === -1) return "NOT_FOUND";
+  
+  var usersSheet = getSheet(ss, "Users");
+  var userData = usersSheet.getDataRange().getValues();
+  var tradeLink = "";
+  for (var j = 0; j < userData.length; j++) {
+    if (userData[j][0] && userData[j][0].toString().trim() === username.trim()) {
+      tradeLink = userData[j][6] || "";
+      break;
+    }
+  }
+  
+  var wSheet = getSheet(ss, "Withdrawals");
+  if (wSheet.getLastRow() === 0) {
+    wSheet.appendRow(["username", "item", "status", "date", "tradeLink"]);
+  }
+  wSheet.appendRow([username, itemName, "pending", new Date(), tradeLink]);
+  
+  invSheet.deleteRow(foundRow);
+  return "WITHDRAW_REQUESTED";
+}
+
+function getWithdrawals(ss) {
+  var wSheet = getSheet(ss, "Withdrawals");
+  var data = wSheet.getDataRange().getValues();
+  var items = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2] && data[i][2] !== "done") {
+      items.push({ row: i + 1, username: data[i][0], item: data[i][1], status: data[i][2], date: data[i][3], tradeLink: data[i][4] || "" });
+    }
+  }
+  return JSON.stringify(items);
+}
+
+function completeWithdrawal(ss, row) {
+  var wSheet = getSheet(ss, "Withdrawals");
+  wSheet.getRange(Number(row), 3).setValue("done");
+  return "COMPLETED";
+}
+
+function approveWithdrawal(ss, row) {
+  var wSheet = getSheet(ss, "Withdrawals");
+  wSheet.getRange(Number(row), 3).setValue("approved");
+  return "APPROVED";
 }
 
 function saveTradeLink(ss, username, link) {
