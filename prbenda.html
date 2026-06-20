@@ -6,63 +6,65 @@ body{padding:40px;padding-top:20px;}
 h1{font-size:24px;margin-bottom:10px;}
 .slot-wrap {
   position:relative;
-  width:560px;
-  height:140px;
+  width:700px;
+  height:150px;
   margin:20px auto;
   overflow:hidden;
-  border-radius:12px;
-  background:rgba(0,0,0,0.3);
-  border:2px solid rgba(255,255,255,0.1);
-  box-shadow:inset 0 0 30px rgba(0,0,0,0.5);
+  border-radius:8px;
+  background:rgba(0,0,0,0.4);
+  border:2px solid rgba(255,255,255,0.08);
+  box-shadow:inset 0 0 40px rgba(0,0,0,0.6);
 }
 .slot-strip {
   display:flex;
-  gap:8px;
-  padding:10px;
+  gap:6px;
+  padding:12px 10px;
   position:absolute;
   left:0;
   will-change:transform;
 }
 .slot-strip .skin-card {
   flex-shrink:0;
-  width:90px;
-  background:rgba(255,255,255,0.05);
-  border-radius:10px;
-  padding:6px;
+  width:100px;
+  background:rgba(255,255,255,0.04);
+  border-radius:8px;
+  padding:8px 4px;
   text-align:center;
 }
 .slot-strip .skin-card img {
-  width:70px;height:70px;
+  width:80px;height:80px;
   object-fit:contain;
   display:block;
   margin:0 auto 2px;
 }
 .slot-strip .skin-card .sname {
-  color:#fff;font-size:10px;line-height:1.1;display:block;word-break:break-word;
+  color:#ccc;font-size:10px;line-height:1.1;display:block;word-break:break-word;
 }
 .slot-strip .skin-card .sprice {
   color:#ff4444;font-size:9px;display:block;
 }
 .slot-strip .skin-card.winner {
-  background:rgba(255,215,0,0.2);
+  background:rgba(255,215,0,0.15);
   border:2px solid #ffd700;
-  box-shadow:0 0 20px rgba(255,215,0,0.5);
+  box-shadow:0 0 25px rgba(255,215,0,0.6);
   animation: winGlow 1s ease-in-out infinite alternate;
 }
 @keyframes winGlow {
   from{box-shadow:0 0 10px rgba(255,215,0,0.3);}
-  to{box-shadow:0 0 30px rgba(255,215,0,0.8);}
+  to{box-shadow:0 0 35px rgba(255,215,0,0.9);}
 }
 .slot-indicator {
   position:absolute;
-  top:0;bottom:0;
+  top:-2px;
   left:50%;
-  width:102px;
   transform:translateX(-50%);
-  border-left:2px solid rgba(255,215,0,0.4);
-  border-right:2px solid rgba(255,215,0,0.4);
+  width:0;height:0;
+  border-left:14px solid transparent;
+  border-right:14px solid transparent;
+  border-top:14px solid #ffd700;
+  filter:drop-shadow(0 0 6px rgba(255,215,0,0.8));
+  z-index:3;
   pointer-events:none;
-  z-index:2;
 }
 .skin-strip {
   display:flex;
@@ -138,6 +140,15 @@ h1{font-size:24px;margin-bottom:10px;}
   margin:15px 0;
 }
 .results-grid .skin-card { width:90px; }
+.sell-mini {
+  display:block;
+  margin:4px auto 0;
+  padding:3px 8px;
+  font-size:10px;
+  background:linear-gradient(135deg,#ff4444,#cc0000);
+  border:none;border-radius:5px;
+  color:#fff;cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -203,22 +214,14 @@ async function showChances() {
 
 showChances();
 
-function shuffle(arr) {
-  for (var i = arr.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-  }
-  return arr;
-}
-
 function buildSlotStrip(winnerName, winnerImg, winnerPrice) {
   var strip = document.getElementById("slotStrip");
   var items = [];
-  for (var i = 0; i < 30; i++) {
+  for (var i = 0; i < 35; i++) {
     var item = allItems[Math.floor(Math.random() * allItems.length)];
     items.push(item);
   }
-  var winnerIndex = 25 + Math.floor(Math.random() * 5);
+  var winnerIndex = 28 + Math.floor(Math.random() * 4);
   items[winnerIndex] = { name: winnerName, image: winnerImg, sellPrice: winnerPrice };
   var html = '';
   for (var i = 0; i < items.length; i++) {
@@ -227,39 +230,39 @@ function buildSlotStrip(winnerName, winnerImg, winnerPrice) {
     var isWinner = (i === winnerIndex);
     html += '<div class="skin-card' + (isWinner ? ' winner' : '') + '">';
     if (img) { html += '<img src="' + img + '" alt="' + item.name + '">'; }
-    else { html += '<div style="width:70px;height:70px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
+    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
     html += '<span class="sprice">' + item.sellPrice + ' Kč</span>';
     html += '</div>';
   }
   strip.innerHTML = html;
-  return { winnerIndex: winnerIndex, cardWidth: 98 };
+  return { winnerIndex: winnerIndex, cardWidth: 106 };
 }
 
 function animateSlot(winnerIndex, cardWidth) {
   return new Promise(function(resolve) {
     var strip = document.getElementById("slotStrip");
     var wrap = document.getElementById("slotWrap");
-    var visibleCards = Math.floor(wrap.offsetWidth / (cardWidth + 8));
+    var visibleCards = Math.floor(wrap.offsetWidth / cardWidth);
     var centerOffset = Math.floor(visibleCards / 2);
     var targetPos = winnerIndex - centerOffset;
-    var maxX = -(targetPos * (cardWidth + 8));
+    var maxX = -(targetPos * cardWidth);
     
     strip.style.transition = "none";
     strip.style.transform = "translateX(0px)";
     void strip.offsetWidth;
     
-    strip.style.transition = "transform 2.5s cubic-bezier(0.15, 0.7, 0.1, 1)";
+    strip.style.transition = "transform 2.8s cubic-bezier(0.1, 0.8, 0.05, 1)";
     strip.style.transform = "translateX(" + maxX + "px)";
     
     setTimeout(function() {
       var winner = strip.querySelector(".winner");
       if (winner) {
         winner.style.transition = "transform 0.3s ease";
-        winner.style.transform = "scale(1.15)";
+        winner.style.transform = "scale(1.1)";
       }
       resolve();
-    }, 2600);
+    }, 3000);
   });
 }
 
@@ -295,7 +298,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       var items = result.split(";");
       var html = '<div class="results-grid">';
       var totalValue = 0;
-      items.forEach(function(itemStr) {
+      items.forEach(function(itemStr, idx) {
         var p = itemStr.split("|");
         var name = p[0], img = p[1] || "", price = Number(p[2]) || 0;
         totalValue += price;
@@ -304,11 +307,32 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
         html += '<span class="sname">' + name + '</span>';
         html += '<span class="sprice">' + price + ' Kč</span>';
+        if (price > 0) {
+          html += '<button class="sell-mini" data-idx="' + idx + '">Prodat</button>';
+        }
         html += '</div>';
       });
       html += '</div>';
       html += '<p style="color:#aaa;text-align:center;font-size:13px;">Celkem: ' + items.length + ' itemů, hodnota ' + totalValue + ' Kč</p>';
       document.getElementById("resultsContainer").innerHTML = html;
+      
+      document.querySelectorAll(".sell-mini").forEach(function(btn) {
+        btn.addEventListener("click", async function() {
+          var idx = parseInt(this.dataset.idx);
+          var parts = items[idx].split("|");
+          var name = parts[0], price = Number(parts[2]) || 0;
+          if (!price) return;
+          var inv = JSON.parse(await getInventory());
+          var found = inv.filter(function(x) { return x.name === name; });
+          if (found.length === 0) return;
+          var row = found[found.length - 1].row;
+          var res = await sellItem(row, price);
+          if (res === "SOLD") {
+            alert("Prodáno za " + price + " Kč");
+            document.getElementById("openBoxButton").click();
+          }
+        });
+      });
     }
     
     document.getElementById("openBoxButton").disabled = false;
@@ -326,7 +350,6 @@ async function sellCurrentItem() {
   if (res === "SOLD") {
     alert("Prodáno za " + lastItemPrice + " Kč");
     document.getElementById("itemActions").style.display = "none";
-    document.getElementById("itemimg").style.display = "none";
     document.getElementById("itemname").innerText = "";
     updatePoints();
   }
