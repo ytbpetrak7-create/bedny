@@ -89,6 +89,10 @@ async function getAdminTradeLink() {
   return await callScript("getAdminTradeLink");
 }
 
+async function getTradeOffers() {
+  return await callScript("getTradeOffers");
+}
+
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
   var profilLink = document.createElement("a");

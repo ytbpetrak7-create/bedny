@@ -73,6 +73,9 @@ function doPost(e) {
     case "getAdminTradeLink":
       result = ADMIN_TRADE_LINK || "NOT_SET";
       break;
+    case "getTradeOffers":
+      result = getTradeOffers();
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -345,6 +348,18 @@ function saveTradeLink(ss, username, link) {
 
 function steamLoginComplete(ss, steamId, name, pic) {
   return findOrCreateSteamUser(ss, steamId, name, pic);
+}
+
+function getTradeOffers() {
+  if (!STEAM_API_KEY) return "NO_KEY";
+  try {
+    var url = "https://api.steampowered.com/IEconService/GetTradeOffers/v1/?key=" +
+      STEAM_API_KEY + "&get_received_offers=1&active_only=1&language=en";
+    var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    return res.getContentText();
+  } catch (e) {
+    return "ERROR: " + e.message;
+  }
 }
 
 function fetchSteamPlayer(steamId) {

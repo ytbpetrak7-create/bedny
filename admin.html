@@ -3,9 +3,7 @@
 <body>
 <a href="hlav.html" class="back-link">← Zpět</a>
 <h1>Admin</h1>
-
 <div id="adminContent"></div>
-
 <link rel="stylesheet" href="inventory.css">
 </body>
 <script src="user.js?ver=3"></script>
@@ -18,8 +16,42 @@ if (!getCurrentUser()) {
       window.location.href = "hlav.html";
     } else {
       createPointsDisplay();
+      loadOffers();
     }
   });
+}
+
+async function loadOffers() {
+  var div = document.getElementById("adminContent");
+  div.innerHTML = "<p style='color:#aaa;'>Načítám nabídky...</p>";
+  var res = await getTradeOffers();
+  if (res === "NO_KEY" || res.indexOf("ERROR:") === 0) {
+    div.innerHTML = "<p style='color:#f80;'>Chyba: " + res + "</p>";
+    return;
+  }
+  try {
+    var data = JSON.parse(res);
+    var offers = data.response && data.response.trade_offers ? data.response.trade_offers : [];
+    if (offers.length === 0) {
+      div.innerHTML = "<p style='color:#aaa;'>Žádné aktivní obchodní nabídky</p>";
+      return;
+    }
+    var html = "<h2 style='color:#fff;'>Příchozí nabídky (" + offers.length + ")</h2>";
+    for (var i = 0; i < offers.length; i++) {
+      var o = offers[i];
+      var itemsGive = o.items_to_give ? o.items_to_give.map(function(x) { return x.market_hash_name || "?"; }).join(", ") : "";
+      var itemsReceive = o.items_to_receive ? o.items_to_receive.map(function(x) { return x.market_hash_name || "?"; }).join(", ") : "";
+      html += '<div style="background:#1a1a2e;border:1px solid #0f3460;border-radius:10px;padding:15px;margin:10px 0;">';
+      html += '<p style="color:#fff;font-weight:bold;">Nabídka #' + o.tradeofferid + '</p>';
+      if (itemsGive) html += '<p style="color:#00ff96;font-size:14px;">Dává: ' + itemsGive + '</p>';
+      if (itemsReceive) html += '<p style="color:#f80;font-size:14px;">Dostává: ' + itemsReceive + '</p>';
+      html += '<p style="color:#aaa;font-size:12px;">Stav: ' + o.state + ' | <a href="https://steamcommunity.com/tradeoffer/' + o.tradeofferid + '" target="_blank" style="color:#00ff96;">Zobrazit na Steamu</a></p>';
+      html += '</div>';
+    }
+    div.innerHTML = html;
+  } catch (e) {
+    div.innerHTML = "<p style='color:#f80;'>Chyba parsování: " + e.message + "</p>";
+  }
 }
 </script>
 </html>
