@@ -36,6 +36,7 @@ h1{font-size:24px;margin-bottom:10px;}
 }
 .btn-sell { background:linear-gradient(135deg,#ff4444,#cc0000);color:#fff; }
 .btn-steam { background:linear-gradient(135deg,#1b2838,#2a475e);color:#fff; }
+.btn-withdraw { background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff; }
 .btn-del { background:#555;color:#fff; }
 </style>
 </head>
@@ -57,6 +58,7 @@ if (!getCurrentUser()) {
 
 var itemMap = {};
 var adminTradeLink = "";
+var userTradeLink = "";
 
 async function loadData() {
   var info1 = await getBoxInfo("Boxes1");
@@ -64,6 +66,9 @@ async function loadData() {
   var info2 = await getBoxInfo("Boxes2");
   JSON.parse(info2).forEach(function(x) { if (!itemMap[x.name]) itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
   adminTradeLink = await getAdminTradeLink();
+  var profile = await getProfile();
+  var pd = JSON.parse(profile);
+  userTradeLink = pd.tradeLink || "";
 }
 
 async function loadInventory() {
@@ -93,7 +98,10 @@ async function loadInventory() {
       actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat</button>';
     }
     if (adminTradeLink && adminTradeLink !== "NOT_SET") {
-      actions += '<button class="btn-steam" onclick="window.open(\'' + adminTradeLink + '\',\'_blank\')">Steam</button>';
+      actions += '<button class="btn-steam" onclick="window.open(\'' + adminTradeLink + '\',\'_blank\')">Poslat</button>';
+    }
+    if (userTradeLink) {
+      actions += '<button class="btn-withdraw" onclick="window.open(\'' + userTradeLink + '\',\'_blank\')">Vyzvednout</button>';
     }
     actions += '</div>';
     

@@ -135,91 +135,19 @@ h1{font-size:24px;margin-bottom:10px;}
   width:60px; padding:6px; border-radius:8px; border:1px solid #555;
   background:#333; color:#fff; font-size:16px; text-align:center;
 }
-.multi-slot-wrap {
-  display:flex;
-  gap:6px;
-  justify-content:center;
-  margin:15px auto;
-  padding:12px;
-  background:rgba(0,0,0,0.3);
-  border-radius:10px;
-  border:2px solid rgba(255,255,255,0.08);
-  max-width:700px;
-}
-.multi-slot-col {
-  flex:1;
-  max-width:120px;
-  height:200px;
-  overflow:hidden;
-  position:relative;
-  border-radius:6px;
-  background:rgba(0,0,0,0.3);
-}
-.multi-slot-col .col-strip {
-  position:absolute;
-  left:0;right:0;
-  will-change:transform;
-}
-.multi-slot-col .col-strip .skin-card {
-  padding:6px 4px;
-  text-align:center;
-  background:rgba(255,255,255,0.04);
-  border-radius:6px;
-  margin:4px 6px;
-}
-.multi-slot-col .col-strip .skin-card img {
-  width:60px;height:60px;
-  object-fit:contain;
-  display:block;
-  margin:0 auto 2px;
-}
-.multi-slot-col .col-strip .skin-card .sname {
-  color:#ccc;font-size:9px;line-height:1.1;display:block;
-}
-.multi-slot-col .col-strip .skin-card.winner {
-  background:rgba(255,215,0,0.15);
-  border:2px solid #ffd700;
-  box-shadow:0 0 15px rgba(255,215,0,0.5);
-}
-.multi-slot-col .col-indicator {
-  position:absolute;
-  left:0;right:0;
-  top:50%;
-  height:76px;
-  transform:translateY(-50%);
-  border-top:2px solid rgba(255,215,0,0.3);
-  border-bottom:2px solid rgba(255,215,0,0.3);
-  pointer-events:none;
-  z-index:2;
-}
 .results-grid {
-  display:flex; flex-direction:column; gap:8px;
-  margin:15px auto;
-  max-width:400px;
+  display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
+  margin:15px 0;
 }
-.results-grid .skin-card {
-  display:flex; align-items:center; gap:12px;
-  width:100%; padding:8px 12px;
-  background:rgba(255,255,255,0.05);
-  border-radius:8px;
-  text-align:left;
-}
-.results-grid .skin-card img {
-  width:50px;height:50px;object-fit:contain;flex-shrink:0;
-}
-.results-grid .skin-card .sname {
-  flex:1; color:#fff; font-size:13px; font-weight:bold;
-}
-.results-grid .skin-card .sprice {
-  color:#ff4444; font-size:12px; white-space:nowrap;
-}
+.results-grid .skin-card { width:90px; }
 .sell-mini {
-  padding:5px 12px;
-  font-size:11px;
+  display:block;
+  margin:4px auto 0;
+  padding:3px 8px;
+  font-size:10px;
   background:linear-gradient(135deg,#ff4444,#cc0000);
   border:none;border-radius:5px;
   color:#fff;cursor:pointer;
-  white-space:nowrap;
 }
 </style>
 </head>
@@ -245,7 +173,6 @@ h1{font-size:24px;margin-bottom:10px;}
   <div class="slot-strip" id="slotStrip"></div>
   <div class="slot-indicator"></div>
 </div>
-<div id="multiSlotWrap" class="multi-slot-wrap" style="display:none;"></div>
 <p id="itemname"></p>
 
 <div id="resultsContainer"></div>
@@ -369,90 +296,37 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       }
     } else {
       var items = result.split(";");
-      var parsed = items.map(function(s) { var p = s.split("|"); return { name: p[0], img: p[1] || "", price: Number(p[2]) || 0 }; });
-      
-      document.getElementById("slotWrap").style.display = "none";
-      var multiWrap = document.getElementById("multiSlotWrap");
-      multiWrap.style.display = "flex";
-      
-      var colHtml = "";
-      var cols = [];
-      parsed.forEach(function(win, idx) {
-        var colItems = [];
-        for (var i = 0; i < 20; i++) {
-          colItems.push(allItems[Math.floor(Math.random() * allItems.length)]);
-        }
-        var winIdx = 14 + Math.floor(Math.random() * 4);
-        colItems[winIdx] = { name: win.name, image: win.img, sellPrice: win.price };
-        cols.push({ winnerIndex: winIdx });
-        
-        colHtml += '<div class="multi-slot-col" id="col' + idx + '">';
-        colHtml += '<div class="col-strip">';
-        colItems.forEach(function(it, ii) {
-          var isW = (ii === winIdx);
-          colHtml += '<div class="skin-card' + (isW ? ' winner' : '') + '">';
-          if (it.image) { colHtml += '<img src="' + it.image + '" alt="' + it.name + '">'; }
-          else { colHtml += '<div style="width:60px;height:60px;background:rgba(255,255,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 2px;">🎁</div>'; }
-          colHtml += '<span class="sname">' + it.name + '</span>';
-          colHtml += '</div>';
-        });
-        colHtml += '</div>';
-        colHtml += '<div class="col-indicator"></div>';
-        colHtml += '</div>';
-      });
-      multiWrap.innerHTML = colHtml;
-      
-      await new Promise(function(resolve) {
-        var done = 0;
-        var totalCols = cols.length;
-        cols.forEach(function(col, idx) {
-          var strip = document.querySelector("#col" + idx + " .col-strip");
-          var cardH = 76;
-          var targetY = -(col.winnerIndex * cardH);
-          setTimeout(function() {
-            strip.style.transition = "none";
-            strip.style.transform = "translateY(0px)";
-            void strip.offsetWidth;
-            strip.style.transition = "transform 2.5s cubic-bezier(0.1, 0.8, 0.05, 1)";
-            strip.style.transform = "translateY(" + targetY + "px)";
-          }, idx * 150);
-        });
-        setTimeout(function() {
-          document.querySelectorAll(".multi-slot-col .col-strip .winner").forEach(function(w) {
-            w.style.transition = "transform 0.3s ease";
-            w.style.transform = "scale(1.1)";
-          });
-          resolve();
-        }, 3000 + cols.length * 150);
-      });
-      
-      var totalValue = parsed.reduce(function(s, it) { return s + it.price; }, 0);
       var html = '<div class="results-grid">';
-      parsed.forEach(function(it, idx) {
+      var totalValue = 0;
+      items.forEach(function(itemStr, idx) {
+        var p = itemStr.split("|");
+        var name = p[0], img = p[1] || "", price = Number(p[2]) || 0;
+        totalValue += price;
         html += '<div class="skin-card">';
-        if (it.img) { html += '<img src="' + it.img + '" alt="' + it.name + '" loading="lazy">'; }
-        else { html += '<div style="width:50px;height:50px;background:rgba(255,255,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🎁</div>'; }
-        html += '<span class="sname">' + it.name + '</span>';
-        html += '<span class="sprice">' + it.price + ' Kč</span>';
-        if (it.price > 0) {
+        if (img) { html += '<img src="' + img + '" alt="' + name + '" loading="lazy">'; }
+        else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
+        html += '<span class="sname">' + name + '</span>';
+        html += '<span class="sprice">' + price + ' Kč</span>';
+        if (price > 0) {
           html += '<button class="sell-mini" data-idx="' + idx + '">Prodat</button>';
         }
         html += '</div>';
       });
       html += '</div>';
-      html += '<p style="color:#aaa;text-align:center;font-size:13px;">Celkem: ' + parsed.length + ' itemů, hodnota ' + totalValue + ' Kč</p>';
+      html += '<p style="color:#aaa;text-align:center;font-size:13px;">Celkem: ' + items.length + ' itemů, hodnota ' + totalValue + ' Kč</p>';
       document.getElementById("resultsContainer").innerHTML = html;
       
       document.querySelectorAll(".sell-mini").forEach(function(btn) {
         btn.addEventListener("click", async function() {
           var idx = parseInt(this.dataset.idx);
-          var it = parsed[idx];
-          if (!it.price) return;
+          var parts = items[idx].split("|");
+          var name = parts[0], price = Number(parts[2]) || 0;
+          if (!price) return;
           var inv = JSON.parse(await getInventory());
-          var found = inv.filter(function(x) { return x.name === it.name; });
+          var found = inv.filter(function(x) { return x.name === name; });
           if (found.length === 0) return;
           var row = found[found.length - 1].row;
-          var res = await sellItem(row, it.price);
+          var res = await sellItem(row, price);
           if (res === "SOLD") {
             document.getElementById("openBoxButton").click();
           }
@@ -484,8 +358,6 @@ function openAgain() {
   document.getElementById("itemActions").style.display = "none";
   document.getElementById("itemname").innerText = "";
   document.getElementById("slotStrip").innerHTML = "";
-  document.getElementById("slotWrap").style.display = "block";
-  document.getElementById("multiSlotWrap").style.display = "none";
 }
 </script>
 </html>
