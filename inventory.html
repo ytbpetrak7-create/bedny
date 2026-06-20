@@ -35,8 +35,8 @@ h1{font-size:24px;margin-bottom:10px;}
   font-size:12px;cursor:pointer;white-space:nowrap;
 }
 .btn-sell { background:linear-gradient(135deg,#ff4444,#cc0000);color:#fff; }
-.btn-steam { background:linear-gradient(135deg,#1b2838,#2a475e);color:#fff; }
-.btn-withdraw { background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff; }
+.btn-steam { background:linear-gradient(135deg,#1b2838,#2a475e);color:#fff;display:inline-flex;align-items:center;padding:6px 12px;border-radius:6px;font-size:12px;text-decoration:none;cursor:pointer; }
+.btn-withdraw { background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;display:inline-flex;align-items:center;padding:6px 12px;border-radius:6px;font-size:12px;text-decoration:none;cursor:pointer; }
 .btn-del { background:#555;color:#fff; }
 </style>
 </head>
@@ -98,10 +98,10 @@ async function loadInventory() {
       actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat</button>';
     }
     if (adminTradeLink && adminTradeLink !== "NOT_SET") {
-      actions += '<button class="btn-steam" onclick="window.open(\'' + adminTradeLink + '\',\'_blank\')">Poslat</button>';
+      actions += '<a class="btn-steam" href="' + adminTradeLink + '" target="_blank" rel="noopener">Poslat</a>';
     }
     if (userTradeLink) {
-      actions += '<button class="btn-withdraw" onclick="window.open(\'' + userTradeLink + '\',\'_blank\')">Vyzvednout</button>';
+      actions += '<a class="btn-withdraw" href="' + userTradeLink + '" target="_blank" rel="noopener">Vyzvednout</a>';
     }
     actions += '</div>';
     
