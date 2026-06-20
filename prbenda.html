@@ -27,6 +27,47 @@ h1{font-size:24px;margin-bottom:10px;}
 #boxCrate.spin {
   animation: spin 0.8s ease-in-out infinite;
 }
+.skin-strip {
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:10px 0;
+  margin:10px 0;
+}
+.skin-strip::-webkit-scrollbar { height:6px; }
+.skin-strip::-webkit-scrollbar-track { background:rgba(255,255,255,0.05); border-radius:3px; }
+.skin-strip::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.2); border-radius:3px; }
+.skin-card {
+  flex-shrink:0;
+  width:100px;
+  background:rgba(255,255,255,0.05);
+  border-radius:10px;
+  padding:8px;
+  text-align:center;
+  cursor:default;
+  transition:transform 0.2s;
+}
+.skin-card:hover { transform:scale(1.05); background:rgba(255,255,255,0.1); }
+.skin-card img {
+  width:80px;
+  height:80px;
+  object-fit:contain;
+  display:block;
+  margin:0 auto 4px;
+}
+.skin-card .sname {
+  color:#fff;
+  font-size:11px;
+  line-height:1.2;
+  word-break:break-word;
+  display:block;
+}
+.skin-card .sprice {
+  color:#ff4444;
+  font-size:10px;
+  display:block;
+  margin-top:2px;
+}
 #boxCrate.reveal {
   animation: reveal 0.6s ease-out forwards;
 }
@@ -91,7 +132,7 @@ h1{font-size:24px;margin-bottom:10px;}
   <button onclick="sellCurrentItem()" id="sellBtn" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-right:10px;box-shadow:0 4px 15px rgba(255,68,68,0.3);"></button>
   <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Otevřít znova</button>
 </div>
-<div id="chances"></div>
+<div class="skin-strip" id="skinStrip"></div>
 
 <link rel="stylesheet" href="inventory.css">
 <link rel="stylesheet" href="1bed.css">
@@ -110,15 +151,17 @@ var lastItemPrice = 0;
 async function showChances() {
   var result = await getBoxInfo("Boxes1");
   var items = JSON.parse(result);
-  var total = items.reduce(function(sum, item) { return sum + item.chance; }, 0);
-  var html = '<h3 style="color:#0f0;font-size:14px;margin:5px 0 2px;">Šance:</h3><ul style="color:#fff;font-size:12px;list-style:none;padding:0;margin:0;">';
+  var html = '';
   items.forEach(function(item) {
-    var pct = ((item.chance / total) * 100).toFixed(1);
-    var odds = Math.round(total / item.chance);
-    html += '<li style="padding:1px 0;">' + item.name + ': ' + pct + '% (1 z ' + odds + ') <span style="color:#ff4444;">' + item.sellPrice + ' bodů</span></li>';
+    var img = item.image || '';
+    html += '<div class="skin-card">';
+    if (img) { html += '<img src="' + img + '" alt="' + item.name + '" loading="lazy">'; }
+    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
+    html += '<span class="sname">' + item.name + '</span>';
+    html += '<span class="sprice">' + item.sellPrice + ' bodů</span>';
+    html += '</div>';
   });
-  html += "</ul>";
-  document.getElementById("chances").innerHTML = html;
+  document.getElementById("skinStrip").innerHTML = html;
 }
 
 showChances();
