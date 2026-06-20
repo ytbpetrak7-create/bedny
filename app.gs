@@ -43,6 +43,9 @@ function doPost(e) {
     case "open":
       result = openBox(ss, params.username, params.box);
       break;
+    case "openMultiple":
+      result = openBoxMultiple(ss, params.username, params.box, parseInt(params.count) || 1);
+      break;
     case "getInventory":
       result = getInventory(ss, params.username);
       break;
@@ -224,6 +227,64 @@ function openBox(ss, username, box) {
   addToInventory(ss, username, selectedItem.name);
   
   return selectedItem.name + "|" + selectedItem.image + "|" + selectedItem.sellPrice;
+}
+
+function openBoxMultiple(ss, username, box, count) {
+  const boxesSheet = getSheet(ss, "Boxes1");
+  const data = boxesSheet.getDataRange().getValues();
+  const boxItems = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    boxItems.push({
+      name: data[i][2],
+      image: data[i][0],
+      chance: Number(data[i][1]),
+      sellPrice: Number(data[i][3]) || 0
+    });
+  }
+  
+  if (boxItems.length === 0) return "EMPTY_BOX";
+  
+  const costMap = { "Boxes1": 2, "Boxes2": 250 };
+  const cost = (costMap[box] || 0) * count;
+  
+  const usersSheet = getSheet(ss, "Users");
+  const userData = usersSheet.getDataRange().getValues();
+  let userRow = -1;
+  let userPoints = 0;
+  
+  for (let j = 1; j < userData.length; j++) {
+    if (userData[j][0].toString().trim() === username.trim()) {
+      userRow = j + 1;
+      userPoints = userData[j][2];
+      break;
+    }
+  }
+  
+  if (userRow === -1) return "USER_NOT_FOUND";
+  if (userPoints < cost) return "NOT_ENOUGH";
+  
+  usersSheet.getRange(userRow, 3).setValue(userPoints - cost);
+  
+  let totalChance = 0;
+  boxItems.forEach(item => totalChance += item.chance);
+  
+  var results = [];
+  for (let n = 0; n < count; n++) {
+    let value = Math.random() * totalChance;
+    let selectedItem = boxItems[0];
+    for (const item of boxItems) {
+      value -= item.chance;
+      if (value <= 0) {
+        selectedItem = item;
+        break;
+      }
+    }
+    addToInventory(ss, username, selectedItem.name);
+    results.push(selectedItem.name + "|" + selectedItem.image + "|" + selectedItem.sellPrice);
+  }
+  
+  return results.join(";");
 }
 
 function getInventory(ss, username) {

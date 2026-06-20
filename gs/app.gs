@@ -32,7 +32,7 @@ function registerUser(userid) {
   
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_USERS);
-    sheet.appendRow(["userid", "datum registrace", "počet bodů"]);
+    sheet.appendRow(["userid", "datum registrace", "Kč"]);
   }
   
   var data = sheet.getDataRange().getValues();
@@ -232,7 +232,7 @@ function openBox(userid, boxName) {
   }
   
   if (userPoints < priceFromSheet) {
-    return "Nedostatek bodů";
+    return "Nedostatek Kč";
   }
   
   var pickedItem = pickItem(boxName);

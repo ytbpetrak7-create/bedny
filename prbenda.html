@@ -114,6 +114,17 @@ h1{font-size:24px;margin-bottom:10px;}
 }
 #openBoxButton:hover{transform:scale(1.05);}
 #openBoxButton:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.count-wrap { text-align:center; margin-bottom:10px; }
+.count-wrap label { color:#aaa; font-size:14px; margin-right:8px; }
+#openCount {
+  width:60px; padding:6px; border-radius:8px; border:1px solid #555;
+  background:#333; color:#fff; font-size:16px; text-align:center;
+}
+.results-grid {
+  display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
+  margin:15px 0;
+}
+.results-grid .skin-card { width:90px; }
 </style>
 </head>
 <body>
@@ -123,11 +134,22 @@ h1{font-size:24px;margin-bottom:10px;}
 <div class="open-btn-wrap">
   <button type="button" id="openBoxButton">Otevřít</button>
 </div>
+<div class="count-wrap">
+  <label for="openCount">Počet:</label>
+  <select id="openCount">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+  </select>
+</div>
 <div class="box-container">
   <div id="boxCrate">📦</div>
   <img id="itemimg">
 </div>
 <p id="itemname"></p>
+<div id="resultsContainer"></div>
 <div id="itemActions" style="display:none;text-align:center;margin-top:10px;">
   <button onclick="sellCurrentItem()" id="sellBtn" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-right:10px;box-shadow:0 4px 15px rgba(255,68,68,0.3);"></button>
   <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Otevřít znova</button>
@@ -145,7 +167,6 @@ if (!getCurrentUser()) {
   createPointsDisplay();
 }
 
-var lastItemRow = null;
 var lastItemPrice = 0;
 
 async function showChances() {
@@ -158,7 +179,7 @@ async function showChances() {
     if (img) { html += '<img src="' + img + '" alt="' + item.name + '" loading="lazy">'; }
     else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
-    html += '<span class="sprice">' + item.sellPrice + ' bodů</span>';
+    html += '<span class="sprice">' + item.sellPrice + ' Kč</span>';
     html += '</div>';
   });
   document.getElementById("skinStrip").innerHTML = html;
@@ -167,57 +188,87 @@ async function showChances() {
 showChances();
 
 document.getElementById("openBoxButton").addEventListener("click", async () => {
+    document.getElementById("resultsContainer").innerHTML = "";
     document.getElementById("itemActions").style.display = "none";
     document.getElementById("itemimg").style.display = "none";
+    document.getElementById("itemname").innerText = "";
     var crate = document.getElementById("boxCrate");
     crate.style.display = "flex";
     crate.textContent = "📦";
     crate.className = "spin";
     document.getElementById("openBoxButton").disabled = true;
     
-    const result = await open("Boxes1");
+    var count = parseInt(document.getElementById("openCount").value) || 1;
+    var result = count > 1 ? await openMultiple("Boxes1", count) : await open("Boxes1");
     
     crate.className = "";
     
-    let itemName, itemImg, itemPrice;
-    var parts = result.split("|");
-    itemName = parts[0];
-    itemImg = parts[1] || "";
-    itemPrice = Number(parts[2]) || 0;
-    
-    if (itemImg) {
-      crate.style.display = "none";
-      document.getElementById("itemimg").src = itemImg;
-      document.getElementById("itemimg").style.display = "block";
-      document.getElementById("itemimg").className = "";
-      void document.getElementById("itemimg").offsetWidth;
-      document.getElementById("itemimg").className = "reveal";
+    if (count === 1) {
+      let itemName, itemImg, itemPrice;
+      var parts = result.split("|");
+      itemName = parts[0];
+      itemImg = parts[1] || "";
+      itemPrice = Number(parts[2]) || 0;
+      
+      if (itemImg) {
+        crate.style.display = "none";
+        document.getElementById("itemimg").src = itemImg;
+        document.getElementById("itemimg").style.display = "block";
+        document.getElementById("itemimg").className = "";
+        void document.getElementById("itemimg").offsetWidth;
+        document.getElementById("itemimg").className = "reveal";
+      } else {
+        crate.textContent = itemName.charAt(0).toUpperCase();
+        crate.style.background = "linear-gradient(135deg,#6f42c1,#9b59b6)";
+        crate.className = "reveal";
+      }
+      document.getElementById("itemname").innerText = itemName;
+      
+      lastItemPrice = itemPrice;
+      
+      var inv = JSON.parse(await getInventory());
+      var found = inv.filter(function(x) { return x.name === itemName; });
+      var lastItemRow = found.length > 0 ? found[found.length - 1].row : null;
+      
+      if (itemPrice > 0 && lastItemRow) {
+        document.getElementById("sellBtn").textContent = "Prodat za " + itemPrice + " Kč";
+        document.getElementById("itemActions").style.display = "block";
+      }
     } else {
-      crate.textContent = itemName.charAt(0).toUpperCase();
-      crate.style.background = "linear-gradient(135deg,#6f42c1,#9b59b6)";
-      crate.className = "reveal";
+      var items = result.split(";");
+      var html = '<div class="results-grid">';
+      var totalValue = 0;
+      items.forEach(function(itemStr) {
+        var p = itemStr.split("|");
+        var name = p[0], img = p[1] || "", price = Number(p[2]) || 0;
+        totalValue += price;
+        html += '<div class="skin-card">';
+        if (img) { html += '<img src="' + img + '" alt="' + name + '" loading="lazy">'; }
+        else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
+        html += '<span class="sname">' + name + '</span>';
+        html += '<span class="sprice">' + price + ' Kč</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '<p style="color:#aaa;text-align:center;font-size:13px;">Celkem: ' + items.length + ' itemů, hodnota ' + totalValue + ' Kč</p>';
+      document.getElementById("resultsContainer").innerHTML = html;
+      crate.style.display = "none";
     }
-    document.getElementById("itemname").innerText = itemName;
     
-    lastItemPrice = itemPrice;
-    
-    var inv = JSON.parse(await getInventory());
-    var found = inv.filter(function(x) { return x.name === itemName; });
-    lastItemRow = found.length > 0 ? found[found.length - 1].row : null;
-    
-    if (itemPrice > 0 && lastItemRow) {
-      document.getElementById("sellBtn").textContent = "Prodat za " + itemPrice + " bodů";
-      document.getElementById("itemActions").style.display = "block";
-    }
     document.getElementById("openBoxButton").disabled = false;
     updatePoints();
 });
 
 async function sellCurrentItem() {
-  if (!lastItemRow) return;
-  var res = await sellItem(lastItemRow, lastItemPrice);
+  if (!lastItemPrice) return;
+  var inv = JSON.parse(await getInventory());
+  var itemname = document.getElementById("itemname").innerText;
+  var found = inv.filter(function(x) { return x.name === itemname; });
+  if (found.length === 0) return;
+  var row = found[found.length - 1].row;
+  var res = await sellItem(row, lastItemPrice);
   if (res === "SOLD") {
-    alert("Item prodán za " + lastItemPrice + " bodů");
+    alert("Prodáno za " + lastItemPrice + " Kč");
     document.getElementById("itemActions").style.display = "none";
     document.getElementById("itemimg").style.display = "none";
     document.getElementById("boxCrate").style.display = "flex";
@@ -229,6 +280,7 @@ async function sellCurrentItem() {
 }
 
 function openAgain() {
+  document.getElementById("resultsContainer").innerHTML = "";
   document.getElementById("itemActions").style.display = "none";
   document.getElementById("itemimg").style.display = "none";
   var crate = document.getElementById("boxCrate");

@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfIUVo-jCSi_H7O4IyaEnH0SMjJ-GLw5Wk_gtLagPA-FO6dxEyPBwLpnTOkyF9Cmnp-A/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8497mJeXwartQvSmISv7TsH_pdqrzuQB_j6mArSNgZk3DevwnG363HmlKukla5Wcdxg/exec";
 
 async function callScript(action, params = {}) {
   const url = new URL(SCRIPT_URL);
@@ -49,6 +49,11 @@ async function useCode(code) {
 async function open(boxName) {
   const uname = getUsername();
   return await callScript("open", { username: uname, box: boxName });
+}
+
+async function openMultiple(boxName, count) {
+  const uname = getUsername();
+  return await callScript("openMultiple", { username: uname, box: boxName, count: count });
 }
 
 async function getInventory() {
@@ -123,14 +128,14 @@ function createPointsDisplay() {
 
 async function updatePoints() {
   var points = await getPoints();
-  console.log("updatePoints: body =", points);
+  console.log("updatePoints: Kč =", points);
   var el = document.getElementById("pointsDisplay");
   if (el) {
     var trimmed = points.trim();
     if (isNaN(trimmed) || trimmed === "OK" || trimmed === "Odpověď: OK") {
-      el.textContent = "Body: načítání...";
+      el.textContent = "Kč: načítání...";
     } else {
-      el.textContent = "Body: " + trimmed;
+      el.textContent = "Kč: " + trimmed;
     }
   }
 }

@@ -48,7 +48,7 @@ async function loadProfile() {
   var data = JSON.parse(res);
   console.log("Profil data:", data);
   var pts = Number(data.points);
-  console.log("Body:", pts, "Level:", getLevel(pts));
+  console.log("Kč:", pts, "Level:", getLevel(pts));
   var lvl = getLevel(pts);
   var bounds = getLevelBounds(lvl);
   var progress = ((pts - bounds.min) / (bounds.max - bounds.min)) * 100;
@@ -60,12 +60,12 @@ async function loadProfile() {
   html += data.profilePic ? "" : data.username.charAt(0).toUpperCase();
   html += '</div>';
   html += '<p><strong>' + data.username + '</strong></p>';
-  html += '<p>Body: ' + pts + '</p>';
+  html += '<p>Kč: ' + pts + '</p>';
   html += '<p>Level ' + lvl + '</p>';
   html += '<div style="width:80%;max-width:300px;margin:10px auto;background:#444;border-radius:10px;overflow:hidden;height:20px;">';
   html += '<div style="width:' + progress + '%;background:#00ff96;height:20px;border-radius:10px;"></div>';
   html += '</div>';
-  html += '<p style="font-size:14px;color:#aaa;">' + pts + ' / ' + bounds.max + ' bodů na další level</p>';
+  html += '<p style="font-size:14px;color:#aaa;">' + pts + ' / ' + bounds.max + ' Kč na další level</p>';
   html += '<hr style="border-color:#444;margin:20px 0;">';
   html += '<p style="font-size:16px;color:#aaa;">Steam Trade Link</p>';
   html += '<p style="font-size:12px;color:#666;">Najdeš ho na <a href="https://steamcommunity.com/profiles/76561198785128182/tradeoffers/privacy" target="_blank" style="color:#00ff96;">této stránce</a> (dole)</p>';
