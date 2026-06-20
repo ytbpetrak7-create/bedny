@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNrEKVcrblSA7CfG8XCq9vc7lueOi5O6OFKFc7tkHu3bjbuy_MRCuGv9r0NzOlL_RrXw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjFD1qCiJlHfmXW6pIIZMgAwbw2ZYwuPP6NZC-AUxEMq2C8AicK9K6fgiG3drOiGjSlw/exec";
 
 async function callScript(action, params = {}) {
   const url = new URL(SCRIPT_URL);
@@ -70,13 +70,31 @@ async function isAdmin() {
   return await callScript("isAdmin", { username: uname });
 }
 
+async function getProfile() {
+  const uname = getUsername();
+  return await callScript("getProfile", { username: uname });
+}
+
+async function saveProfilePic(url) {
+  const uname = getUsername();
+  return await callScript("saveProfilePic", { username: uname, url: url });
+}
+
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
+  var profilLink = document.createElement("a");
+  profilLink.href = "profil.html";
+  profilLink.id = "profilePic";
+  profilLink.style.cssText = "position:fixed;top:10px;right:10px;width:50px;height:50px;border-radius:50%;background:#6f42c1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:bold;text-decoration:none;z-index:9999;overflow:hidden;";
+  profilLink.textContent = getCurrentUser().charAt(0).toUpperCase();
+  document.body.appendChild(profilLink);
+
   pointsDiv.id = "pointsDisplay";
-  pointsDiv.style.cssText = "position:fixed;top:10px;right:10px;background:#333;color:#fff;padding:10px;z-index:9999;font-size:16px;border-radius:5px;";
+  pointsDiv.style.cssText = "position:fixed;top:18px;right:75px;background:#333;color:#fff;padding:8px 12px;z-index:9999;font-size:14px;border-radius:5px;cursor:pointer;";
+  pointsDiv.onclick = function() { window.location.href = "zamobr.html"; };
   document.body.prepend(pointsDiv);
   updatePoints();
-  
+
   var invLink = document.createElement("a");
   invLink.href = "inventory.html";
   invLink.id = "inventoryLink";

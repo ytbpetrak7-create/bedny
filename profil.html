@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<body>
+<a href="hlav.html" class="back-link">← Zpět</a>
+<h1>Profil</h1>
+<div id="profile"></div>
+
+<link rel="stylesheet" href="inventory.css">
+</body>
+<script src="user.js?ver=3"></script>
+<script>
+if (!getCurrentUser()) {
+  window.location.href = "index.html";
+} else {
+  createPointsDisplay();
+  loadProfile();
+}
+
+function getLevel(pts) {
+  if (pts < 100) return 1;
+  if (pts < 300) return 2;
+  if (pts < 600) return 3;
+  if (pts < 1000) return 4;
+  if (pts < 1500) return 5;
+  if (pts < 2500) return 6;
+  if (pts < 5000) return 7;
+  return 8;
+}
+
+function getLevelBounds(lvl) {
+  var bounds = [0, 100, 300, 600, 1000, 1500, 2500, 5000, 99999];
+  return { min: bounds[lvl - 1], max: bounds[lvl] };
+}
+
+async function changePic() {
+  var url = prompt("Zadej URL profilovky:");
+  if (!url) return;
+  await saveProfilePic(url);
+  loadProfile();
+}
+
+async function loadProfile() {
+  var res = await getProfile();
+  if (res === "NOT_FOUND") {
+    document.getElementById("profile").innerHTML = "<p style='color:#fff;'>Uživatel nenalezen</p>";
+    return;
+  }
+  var data = JSON.parse(res);
+  var pts = Number(data.points);
+  var lvl = getLevel(pts);
+  var bounds = getLevelBounds(lvl);
+  var progress = ((pts - bounds.min) / (bounds.max - bounds.min)) * 100;
+  if (progress > 100) progress = 100;
+  var picStyle = data.profilePic ? "background:url('" + data.profilePic + "') center/cover;" : "";
+  
+  var html = '<div style="color:#fff;font-size:18px;text-align:center;">';
+  html += '<div onclick="changePic()" style="width:120px;height:120px;border-radius:50%;' + picStyle + 'background-color:#6f42c1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:bold;margin:0 auto 20px;cursor:pointer;border:3px solid #00ff96;">';
+  html += data.profilePic ? "" : data.username.charAt(0).toUpperCase();
+  html += '</div>';
+  html += '<p><strong>' + data.username + '</strong></p>';
+  html += '<p>Body: ' + pts + '</p>';
+  html += '<p>Level ' + lvl + '</p>';
+  html += '<div style="width:80%;max-width:300px;margin:10px auto;background:#444;border-radius:10px;overflow:hidden;height:20px;">';
+  html += '<div style="width:' + progress + '%;background:#00ff96;height:20px;border-radius:10px;"></div>';
+  html += '</div>';
+  html += '<p style="font-size:14px;color:#aaa;">' + pts + ' / ' + bounds.max + ' bodů na další level</p>';
+  html += '</div>';
+  
+  document.getElementById("profile").innerHTML = html;
+  updateProfilePic(data.profilePic);
+}
+
+function updateProfilePic(url) {
+  var pic = document.getElementById("profilePic");
+  if (!pic) return;
+  if (url) {
+    pic.style.background = "url('" + url + "') center/cover";
+    pic.textContent = "";
+  }
+}
+</script>
+</html>

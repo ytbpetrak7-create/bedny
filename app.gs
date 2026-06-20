@@ -51,6 +51,12 @@ function doPost(e) {
     case "isAdmin":
       result = isAdmin(ss, params.username);
       break;
+    case "getProfile":
+      result = getProfile(ss, params.username);
+      break;
+    case "saveProfilePic":
+      result = saveProfilePic(ss, params.username, params.url);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -69,7 +75,7 @@ function register(ss, username, password) {
   const data = usersSheet.getDataRange().getValues();
   
   if (data.length === 0) {
-    usersSheet.appendRow(["username", "password", "points", "registered"]);
+    usersSheet.appendRow(["username", "password", "points", "registered", "profilePic"]);
   }
   
   usersSheet.getRange("C:C").setNumberFormat("0");
@@ -260,4 +266,36 @@ function isAdmin(ss, username) {
   }
   
   return "NO";
+}
+
+function getProfile(ss, username) {
+  const usersSheet = getSheet(ss, "Users");
+  const data = usersSheet.getDataRange().getValues();
+  
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      return JSON.stringify({
+        username: data[i][0],
+        points: data[i][2],
+        registered: data[i][3],
+        profilePic: data[i][4] || ""
+      });
+    }
+  }
+  
+  return "NOT_FOUND";
+}
+
+function saveProfilePic(ss, username, url) {
+  const usersSheet = getSheet(ss, "Users");
+  const data = usersSheet.getDataRange().getValues();
+  
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      usersSheet.getRange(i + 1, 5).setValue(url);
+      return "SAVED";
+    }
+  }
+  
+  return "NOT_FOUND";
 }

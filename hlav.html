@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html>
 <body>
-    <a href="zamobr.html">
-    <img  class="1" src="125a28f5-dea6-4922-b8a3-02493aecd3db.png"></a>
                     <a href="prbenda.html">
     <img  class="1" src="Snímek obrazovky 2026-04-23 174559.png"></a>
 <a href="dvebed.html">
@@ -19,6 +17,20 @@ if (!getCurrentUser()) {
 } else {
   createPointsDisplay();
   checkAdmin();
+  loadProfilePic();
+}
+
+async function loadProfilePic() {
+  var res = await getProfile();
+  if (res === "NOT_FOUND") return;
+  var data = JSON.parse(res);
+  if (data.profilePic) {
+    var pic = document.getElementById("profilePic");
+    if (pic) {
+      pic.style.background = "url('" + data.profilePic + "') center/cover";
+      pic.textContent = "";
+    }
+  }
 }
 
 async function checkAdmin() {
