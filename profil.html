@@ -68,6 +68,7 @@ async function loadProfile() {
   html += '<p style="font-size:14px;color:#aaa;">' + pts + ' / ' + bounds.max + ' bodů na další level</p>';
   html += '<hr style="border-color:#444;margin:20px 0;">';
   html += '<p style="font-size:16px;color:#aaa;">Steam Trade Link</p>';
+  html += '<p style="font-size:12px;color:#666;">Najdeš ho na <a href="https://steamcommunity.com/profiles/76561198785128182/tradeoffers/privacy" target="_blank" style="color:#00ff96;">této stránce</a> (dole)</p>';
   html += '<input id="tradeLinkInput" type="text" value="' + (data.tradeLink || "") + '" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..." style="width:80%;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:14px;outline:none;">';
   html += '<br><br>';
   html += '<button onclick="saveTrade()" style="padding:10px 30px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Uložit trade link</button>';
