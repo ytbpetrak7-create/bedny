@@ -348,14 +348,21 @@ function findOrCreateSteamUser(ss, steamId) {
   for (var i = 1; i < data.length; i++) {
     if (data[i][5] && data[i][5].toString().trim() === steamId.toString().trim()) {
       var pic = data[i][4] || "";
+      var name = data[i][0];
       if (STEAM_API_KEY) {
         var player = fetchSteamPlayer(steamId);
-        if (player && player.avatarfull && player.avatarfull !== pic) {
-          usersSheet.getRange(i + 1, 5).setValue(player.avatarfull);
-          pic = player.avatarfull;
+        if (player) {
+          if (player.avatarfull && player.avatarfull !== pic) {
+            usersSheet.getRange(i + 1, 5).setValue(player.avatarfull);
+            pic = player.avatarfull;
+          }
+          if (player.personaname && player.personaname !== name) {
+            usersSheet.getRange(i + 1, 1).setValue(player.personaname);
+            name = player.personaname;
+          }
         }
       }
-      return data[i][0] + "|" + pic;
+      return name + "|" + pic;
     }
   }
   
