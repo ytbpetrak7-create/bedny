@@ -66,6 +66,9 @@ function doPost(e) {
     case "steamLoginComplete":
       result = steamLoginComplete(ss, params.steamId, params.name, params.pic);
       break;
+    case "saveTradeLink":
+      result = saveTradeLink(ss, params.username, params.link);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -291,7 +294,8 @@ function getProfile(ss, username) {
         username: data[i][0],
         points: Number(pts),
         registered: data[i][3],
-        profilePic: data[i][4] || ""
+        profilePic: data[i][4] || "",
+        tradeLink: data[i][6] || ""
       });
     }
   }
@@ -310,6 +314,24 @@ function saveProfilePic(ss, username, url) {
   for (let i = 0; i < data.length; i++) {
     if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
       usersSheet.getRange(i + 1, 5).setValue(url);
+      return "SAVED";
+    }
+  }
+  
+  return "NOT_FOUND";
+}
+
+function saveTradeLink(ss, username, link) {
+  const usersSheet = getSheet(ss, "Users");
+  const data = usersSheet.getDataRange().getValues();
+  
+  if (data.length > 0 && data[0].length < 7) {
+    usersSheet.getRange(1, 7).setValue("tradeLink");
+  }
+  
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      usersSheet.getRange(i + 1, 7).setValue(link);
       return "SAVED";
     }
   }

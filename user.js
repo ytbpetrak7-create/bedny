@@ -80,6 +80,11 @@ async function saveProfilePic(url) {
   return await callScript("saveProfilePic", { username: uname, url: url });
 }
 
+async function saveTradeLink(link) {
+  const uname = getUsername();
+  return await callScript("saveTradeLink", { username: uname, link: link });
+}
+
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
   var profilLink = document.createElement("a");
