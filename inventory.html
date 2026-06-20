@@ -1,5 +1,44 @@
 <!DOCTYPE html>
 <html>
+<head>
+<style>
+body{padding:40px;padding-top:20px;}
+h1{font-size:24px;margin-bottom:10px;}
+.inventory-item {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:rgba(255,255,255,0.05);
+  border-radius:10px;
+  padding:10px 15px;
+  margin-bottom:8px;
+}
+.inventory-item img {
+  width:64px;height:64px;
+  object-fit:contain;
+  border-radius:6px;
+}
+.inventory-item .info {
+  flex:1;
+}
+.inventory-item .info .name {
+  color:#fff;font-size:15px;font-weight:bold;
+}
+.inventory-item .info .date {
+  color:#888;font-size:11px;
+}
+.inventory-item .actions {
+  display:flex;gap:6px;flex-shrink:0;
+}
+.inventory-item .actions button {
+  border:none;border-radius:6px;padding:6px 12px;
+  font-size:12px;cursor:pointer;white-space:nowrap;
+}
+.btn-sell { background:linear-gradient(135deg,#ff4444,#cc0000);color:#fff; }
+.btn-steam { background:linear-gradient(135deg,#1b2838,#2a475e);color:#fff; }
+.btn-del { background:#555;color:#fff; }
+</style>
+</head>
 <body>
 <a href="hlav.html" class="back-link">← Zpět</a>
 <h1>Inventář</h1>
@@ -16,35 +55,49 @@ if (!getCurrentUser()) {
   createPointsDisplay();
 }
 
-var priceMap = {};
+var itemMap = {};
+var adminTradeLink = "";
 
-async function loadPrices() {
-  var info = await getBoxInfo("Boxes1");
-  var items = JSON.parse(info);
-  items.forEach(function(x) { priceMap[x.name] = x.sellPrice || 0; });
+async function loadData() {
+  var info1 = await getBoxInfo("Boxes1");
+  JSON.parse(info1).forEach(function(x) { itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
+  var info2 = await getBoxInfo("Boxes2");
+  JSON.parse(info2).forEach(function(x) { if (!itemMap[x.name]) itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
+  adminTradeLink = await getAdminTradeLink();
 }
 
 async function loadInventory() {
-  await loadPrices();
+  await loadData();
   var result = await getInventory();
   var items = JSON.parse(result);
   var container = document.getElementById("inventory");
   
   if (items.length === 0) {
-    container.innerHTML = "<p>Zatím nemáš žádné předměty</p>";
+    container.innerHTML = "<p style='color:#aaa;'>Zatím nemáš žádné předměty</p>";
     return;
   }
   
   container.innerHTML = "";
   items.forEach(function(item) {
+    var data = itemMap[item.name] || { price: 0, image: "" };
+    var img = data.image;
+    var price = data.price;
     var div = document.createElement("div");
     div.className = "inventory-item";
-    var price = priceMap[item.name] || 0;
-    var btns = "<button onclick='removeItem(\"" + item.name + "\"," + item.row + ")' style='background:#f44;color:#fff;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;'>X</button>";
+    
+    var imgHtml = img ? '<img src="' + img + '" alt="' + item.name + '" loading="lazy">' : '<div style="width:64px;height:64px;background:rgba(255,255,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎁</div>';
+    
+    var actions = '<div class="actions">';
+    actions += '<button class="btn-del" onclick="removeItem(\'' + item.name + '\',' + item.row + ')">X</button>';
     if (price > 0) {
-      btns += " <button onclick='sellFromInv(" + item.row + ",\"" + item.name + "\"," + price + ")' style='background:#ff4444;color:#fff;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;'>Prodat za " + price + "</button>";
+      actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat</button>';
     }
-    div.innerHTML = "<p>" + item.name + "</p><span>" + new Date(item.date).toLocaleDateString() + "</span> " + btns;
+    if (adminTradeLink && adminTradeLink !== "NOT_SET") {
+      actions += '<button class="btn-steam" onclick="window.open(\'' + adminTradeLink + '\',\'_blank\')">Steam</button>';
+    }
+    actions += '</div>';
+    
+    div.innerHTML = imgHtml + '<div class="info"><div class="name">' + item.name + '</div><div class="date">' + new Date(item.date).toLocaleDateString() + '</div></div>' + actions;
     container.appendChild(div);
   });
 }
