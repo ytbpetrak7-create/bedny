@@ -65,6 +65,11 @@ async function deleteInventoryItem(item, row) {
   return await callScript("deleteInventoryItem", { username: uname, item: item, row: row });
 }
 
+async function isAdmin() {
+  const uname = getUsername();
+  return await callScript("isAdmin", { username: uname });
+}
+
 function createPointsDisplay() {
   var pointsDiv = document.createElement("div");
   pointsDiv.id = "pointsDisplay";

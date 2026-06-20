@@ -18,6 +18,19 @@ if (!getCurrentUser()) {
   window.location.href = "index.html";
 } else {
   createPointsDisplay();
+  checkAdmin();
+}
+
+async function checkAdmin() {
+  var res = await isAdmin();
+  if (res === "YES") {
+    var a = document.createElement("a");
+    a.href = "admin.html";
+    a.id = "adminLink";
+    a.textContent = "Admin";
+    a.style.cssText = "position:fixed;bottom:20px;right:20px;color:#fff;background:#f80;padding:10px 20px;text-decoration:none;z-index:9999;font-size:16px;border-radius:5px;";
+    document.body.appendChild(a);
+  }
 }
 </script>
 </body>

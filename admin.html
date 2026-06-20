@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<body>
+<a href="hlav.html" class="back-link">← Zpět</a>
+<h1>Admin</h1>
+
+<div id="adminContent"></div>
+
+<link rel="stylesheet" href="inventory.css">
+</body>
+<script src="user.js?ver=3"></script>
+<script>
+if (!getCurrentUser()) {
+  window.location.href = "index.html";
+} else {
+  isAdmin().then(function(res) {
+    if (res !== "YES") {
+      window.location.href = "hlav.html";
+    } else {
+      createPointsDisplay();
+    }
+  });
+}
+</script>
+</html>

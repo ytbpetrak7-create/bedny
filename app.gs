@@ -48,6 +48,9 @@ function doPost(e) {
     case "deleteInventoryItem":
       result = deleteInventoryItem(ss, params.username, params.item, params.row);
       break;
+    case "isAdmin":
+      result = isAdmin(ss, params.username);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -242,4 +245,19 @@ function deleteInventoryItem(ss, username, item, row) {
   const invSheet = getSheet(ss, "Inventory");
   invSheet.deleteRow(Number(row));
   return "DELETED";
+}
+
+function isAdmin(ss, username) {
+  const adminSheet = getSheet(ss, "Admins");
+  const data = adminSheet.getDataRange().getValues();
+  
+  if (data.length === 0) return "NO";
+  
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      return "YES";
+    }
+  }
+  
+  return "NO";
 }
