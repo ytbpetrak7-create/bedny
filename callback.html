@@ -4,18 +4,43 @@
 <script src="user.js"></script>
 <script>
 (async function() {
-  var claimedId = new URLSearchParams(window.location.search).get("openid.claimed_id") || "";
-  var steamId = claimedId.substring(claimedId.lastIndexOf("/") + 1);
-  if (!steamId) {
-    document.write("<p>Chyba: Steam ID nenalezeno</p>");
+  function getParam(name) {
+    var p = new URLSearchParams(window.location.search).get(name);
+    return p || "";
+  }
+
+  var claimedId = getParam("openid.claimed_id");
+  if (!claimedId) {
+    document.write("<p>Chyba: chybí Steam ID</p>");
     return;
   }
 
-  var res = await callScript("steamLoginComplete", { steamId: steamId });
-  if (res.indexOf("|") > -1) {
-    var parts = res.split("|");
-    localStorage.setItem("username", parts[0]);
-    if (parts[1]) localStorage.setItem("steamPic", parts[1]);
+  var steamId = claimedId.substring(claimedId.lastIndexOf("/") + 1);
+  var personaName = steamId;
+  var avatarUrl = "";
+
+  try {
+    var proxyUrl = "https://api.allorigins.win/raw?url=" +
+      encodeURIComponent("https://steamcommunity.com/profiles/" + steamId + "/?xml=1");
+    var xmlRes = await fetch(proxyUrl);
+    var xmlText = await xmlRes.text();
+    var mName = xmlText.match(/<steamID><!\[CDATA\[([^\]]+)\]\]><\/steamID>/);
+    var mAvatar = xmlText.match(/<avatarFull><!\[CDATA\[([^\]]+)\]\]><\/avatarFull>/);
+    if (mName) personaName = mName[1];
+    if (mAvatar) avatarUrl = mAvatar[1];
+  } catch(e) {
+    console.log("Steam XML fetch failed, using Steam ID", e);
+  }
+
+  var res = await callScript("steamLoginComplete", {
+    steamId: steamId,
+    name: personaName,
+    pic: avatarUrl
+  });
+
+  if (res === "OK") {
+    localStorage.setItem("username", personaName);
+    if (avatarUrl) localStorage.setItem("steamPic", avatarUrl);
     window.location.href = "hlav.html";
   } else {
     document.write("<p>Chyba: " + res + "</p>");
