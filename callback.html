@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="user.js"></script>
+<script>
+(async function() {
+  var params = new URLSearchParams(window.location.search);
+  var claimedId = params.get("openid.claimed_id");
+  if (!claimedId) {
+    document.write("<p>Chyba: chybí Steam ID</p>");
+    return;
+  }
+  var steamId = claimedId.substring(claimedId.lastIndexOf("/") + 1);
+  var res = await callScript("steamLoginComplete", { steamId: steamId });
+  if (res.indexOf("|") > -1) {
+    var parts = res.split("|");
+    localStorage.setItem("username", parts[0]);
+    if (parts[1]) localStorage.setItem("steamPic", parts[1]);
+    window.location.href = "hlav.html";
+  } else {
+    document.write("<p>Chyba: " + res + "</p>");
+  }
+})();
+</script>
+</body>
+</html>

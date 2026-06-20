@@ -2,12 +2,6 @@ const SHEET_ID = "1K5T_SGfE-krTwfAluVsXv8VqPRl5GaPT1S2vf8f3ezw";
 const STEAM_API_KEY = "9BF03DB2AF38585766A60108DE4F66A1";
 
 function doGet(e) {
-  if (e && e.parameter && e.parameter.action === "steam_login") {
-    return steamLogin();
-  }
-  if (e && e.parameter && e.parameter.action === "steam_callback") {
-    return steamCallback(e);
-  }
   return doPost(e);
 }
 
@@ -316,35 +310,6 @@ function saveProfilePic(ss, username, url) {
   }
   
   return "NOT_FOUND";
-}
-
-function steamLogin() {
-  var url = ScriptApp.getService().getUrl();
-  var returnTo = url + "?action=steam_callback";
-  
-  var steamUrl = "https://steamcommunity.com/openid/login?" +
-    "openid.ns=" + encodeURIComponent("http://specs.openid.net/auth/2.0") +
-    "&openid.mode=" + encodeURIComponent("checkid_setup") +
-    "&openid.return_to=" + encodeURIComponent(returnTo) +
-    "&openid.realm=" + encodeURIComponent(url) +
-    "&openid.identity=" + encodeURIComponent("http://specs.openid.net/auth/2.0/identifier_select") +
-    "&openid.claimed_id=" + encodeURIComponent("http://specs.openid.net/auth/2.0/identifier_select");
-  
-  return HtmlService.createHtmlOutput(
-    '<html><body><script>window.location.href="' + steamUrl + '";</script></body></html>'
-  );
-}
-
-function steamCallback(e) {
-  var params = e.parameter;
-  var claimedId = params["openid.claimed_id"] || "";
-  var steamId = claimedId.substring(claimedId.lastIndexOf("/") + 1);
-  
-  var html = '<html><head><script>';
-  html += 'window.location.href = "hlav.html?steamId=' + steamId + '";';
-  html += '</scr' + 'ipt></head><body></body></html>';
-  
-  return HtmlService.createHtmlOutput(html);
 }
 
 function steamLoginComplete(ss, steamId) {
