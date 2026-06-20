@@ -19,7 +19,12 @@ function doPost(e) {
     userSheet.getRange("C:C").setNumberFormat("0");
   }
   
-  let result = "Unknown action: " + action;
+  // force steam api auth
+  if (STEAM_API_KEY) {
+    try { UrlFetchApp.fetch("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + STEAM_API_KEY + "&steamids=0"); } catch (ef) {}
+  }
+  
+  let result = "Unknown action";
   
   switch (action) {
     case "register":
@@ -313,7 +318,7 @@ function saveProfilePic(ss, username, url) {
 }
 
 function steamLoginComplete(ss, steamId) {
-  return findOrCreateSteamUser(steamId);
+  return findOrCreateSteamUser(ss, steamId);
 }
 
 function fetchSteamPlayer(steamId) {
@@ -330,8 +335,7 @@ function fetchSteamPlayer(steamId) {
   return null;
 }
 
-function findOrCreateSteamUser(steamId) {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
+function findOrCreateSteamUser(ss, steamId) {
   var usersSheet = getSheet(ss, "Users");
   var data = usersSheet.getDataRange().getValues();
   
