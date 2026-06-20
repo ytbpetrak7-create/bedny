@@ -328,7 +328,6 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
           var row = found[found.length - 1].row;
           var res = await sellItem(row, price);
           if (res === "SOLD") {
-            alert("Prodáno za " + price + " Kč");
             document.getElementById("openBoxButton").click();
           }
         });
@@ -348,7 +347,6 @@ async function sellCurrentItem() {
   var row = found[found.length - 1].row;
   var res = await sellItem(row, lastItemPrice);
   if (res === "SOLD") {
-    alert("Prodáno za " + lastItemPrice + " Kč");
     document.getElementById("itemActions").style.display = "none";
     document.getElementById("itemname").innerText = "";
     updatePoints();

@@ -63,7 +63,6 @@ async function sellFromInv(row, name, price) {
   if (!confirm("Prodat " + name + " za " + price + " Kč?")) return;
   var res = await sellItem(row, price);
   if (res === "SOLD") {
-    alert("Prodáno za " + price + " Kč");
     loadInventory();
   } else {
     alert("Chyba: " + res);
