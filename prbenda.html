@@ -343,8 +343,11 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       var parts = result.split("|");
       var itemName = parts[0], itemImg = parts[1] || "", itemPrice = Number(parts[2]) || 0;
       
-      var winnerItem = allItems.find(function(x) { return x.name === itemName; });
-      var isRare = winnerItem && winnerItem.rare;
+      var winnerItem = null;
+      for (var w = 0; w < allItems.length; w++) {
+        if (allItems[w].name === itemName) { winnerItem = allItems[w]; break; }
+      }
+      var isRare = winnerItem && Number(winnerItem.rare) === 1;
       
       if (isRare) {
         var decoy = allItems.filter(function(x) { return !x.rare; });

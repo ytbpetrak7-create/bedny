@@ -652,12 +652,12 @@ function depositSkin(ss, username, itemNames) {
   if (userRow === -1) return "USER_NOT_FOUND";
   
   var prices = {};
-  var boxesSheet = getSheet(ss, "Boxes1");
-  var boxesData = boxesSheet.getDataRange().getValues();
-  for (var i = 1; i < boxesData.length; i++) {
-    if (boxesData[i][2]) {
-      var key = boxesData[i][2].toString().trim().toLowerCase();
-      var p = Number(boxesData[i][3]) || 0;
+  var depSheet = getSheet(ss, "DepositSkins");
+  var depData = depSheet.getDataRange().getValues();
+  for (var i = 1; i < depData.length; i++) {
+    if (depData[i][0]) {
+      var key = depData[i][0].toString().trim().toLowerCase();
+      var p = Number(depData[i][1]) || 0;
       if (p > 0) prices[key] = p;
     }
   }
