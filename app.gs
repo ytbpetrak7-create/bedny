@@ -411,7 +411,7 @@ function sellItem(ss, username, row, price) {
   
   var itemName = "";
   var foundRow = -1;
-  for (var i = 1; i < invData.length; i++) {
+  for (var i = 0; i < invData.length; i++) {
     if (invData[i][0] && invData[i][0].toString().trim() === username.trim() && (i + 1) === Number(row)) {
       itemName = invData[i][1];
       foundRow = i + 1;
@@ -440,7 +440,7 @@ function requestWithdraw(ss, username, itemName, row) {
   const invData = invSheet.getDataRange().getValues();
   var foundRow = -1;
   if (row) {
-    for (var i = 1; i < invData.length; i++) {
+    for (var i = 0; i < invData.length; i++) {
       if (invData[i][0] && invData[i][0].toString().trim() === username.trim() && (i + 1) === Number(row)) {
         foundRow = i + 1;
         break;
@@ -448,7 +448,7 @@ function requestWithdraw(ss, username, itemName, row) {
     }
   }
   if (foundRow === -1) {
-    for (var i = 1; i < invData.length; i++) {
+    for (var i = 0; i < invData.length; i++) {
       if (invData[i][0] && invData[i][0].toString().trim() === username.trim() && invData[i][1] && invData[i][1].toString().trim() === itemName.trim()) {
         foundRow = i + 1;
         break;
