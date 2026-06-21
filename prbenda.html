@@ -247,7 +247,7 @@ async function showChances() {
     else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
     if (item.rare) { html += '<span style="color:#ff00ff;font-size:9px;">★ RARE</span>'; }
-    html += '<span class="sprice">' + item.sellPrice + ' Kč</span>';
+    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
     html += '</div>';
   });
   document.getElementById("skinStrip").innerHTML = html;
@@ -275,7 +275,7 @@ function buildSlotStrip(winnerName, winnerImg, winnerPrice, rareMode) {
     if (img) { html += '<img src="' + img + '" alt="' + item.name + '">'; }
     else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
-    html += '<span class="sprice">' + item.sellPrice + ' Kč</span>';
+    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
     html += '</div>';
   }
   strip.innerHTML = html;
@@ -394,7 +394,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       var lastItemRow = found.length > 0 ? found[found.length - 1].row : null;
       
       if (itemPrice > 0 && lastItemRow) {
-        document.getElementById("sellBtn").textContent = "Prodat za " + itemPrice + " Kč";
+        document.getElementById("sellBtn").textContent = "Prodat za " + Number(itemPrice).toFixed(2) + " Kč";
         document.getElementById("itemActions").style.display = "block";
       }
     } else {
@@ -409,14 +409,14 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         if (img) { html += '<img src="' + img + '" alt="' + name + '" loading="lazy">'; }
         else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
         html += '<span class="sname">' + name + '</span>';
-        html += '<span class="sprice">' + price + ' Kč</span>';
+        html += '<span class="sprice">' + Number(price).toFixed(2) + ' Kč</span>';
         if (price > 0) {
           html += '<button class="sell-mini" data-idx="' + idx + '">Prodat</button>';
         }
         html += '</div>';
       });
       html += '</div>';
-      html += '<p style="color:#aaa;text-align:center;font-size:13px;">Celkem: ' + items.length + ' itemů, hodnota ' + totalValue + ' Kč</p>';
+      html += '<p style="color:#aaa;text-align:center;font-size:13px;">Celkem: ' + items.length + ' itemů, hodnota ' + totalValue.toFixed(2) + ' Kč</p>';
       document.getElementById("resultsContainer").innerHTML = html;
       
       document.querySelectorAll(".sell-mini").forEach(function(btn) {

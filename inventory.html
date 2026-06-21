@@ -101,7 +101,7 @@ async function loadInventory() {
     
     var actions = '<div class="actions">';
     if (price > 0) {
-      actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat</button>';
+      actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat ' + Number(price).toFixed(2) + ' Kč</button>';
     }
     if (userTradeLink) {
       actions += '<button class="btn-withdraw" onclick="requestWithdraw(\'' + item.name + '\',' + item.row + ')">Vyzvednout</button>';
@@ -135,7 +135,7 @@ async function removeItem(name, row) {
 }
 
 async function sellFromInv(row, name, price) {
-  if (!confirm("Prodat " + name + " za " + price + " Kč?")) return;
+  if (!confirm("Prodat " + name + " za " + Number(price).toFixed(2) + " Kč?")) return;
   var res = await sellItem(row, price);
   if (res === "SOLD") {
     loadInventory();
@@ -157,7 +157,7 @@ async function sellAll() {
     }
   });
   if (toSell.length === 0) { alert("Žádné prodejné předměty"); return; }
-  if (!confirm("Prodat " + toSell.length + " předmětů za " + total + " Kč?")) return;
+  if (!confirm("Prodat " + toSell.length + " předmětů za " + total.toFixed(2) + " Kč?")) return;
   for (var i = 0; i < toSell.length; i++) {
     await sellItem(toSell[i].row, toSell[i].price);
   }
@@ -174,7 +174,7 @@ function renderSellAll(items) {
   });
   var wrap = document.getElementById("sellAllWrap");
   if (count > 0) {
-    wrap.innerHTML = '<button onclick="sellAll()" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Prodat vše (' + count + ' za ' + total + ' Kč)</button>';
+    wrap.innerHTML = '<button onclick="sellAll()" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Prodat vše (' + count + ' za ' + total.toFixed(2) + ' Kč)</button>';
   } else {
     wrap.innerHTML = "";
   }
