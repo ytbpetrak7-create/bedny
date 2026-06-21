@@ -72,10 +72,15 @@ async function loadProfile() {
   html += '<input id="tradeLinkInput" type="text" value="' + (data.tradeLink || "") + '" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..." style="width:80%;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:14px;outline:none;">';
   html += '<br><br>';
   html += '<button onclick="saveTrade()" style="padding:10px 30px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Uložit trade link</button>';
+  html += '<hr style="border-color:#444;margin:20px 0;">';
+  html += '<p style="font-size:16px;color:#aaa;">Partnerský program</p>';
+  html += '<p style="font-size:12px;color:#888;">Sdílej svůj kód a získej 6 Kč za každého nového hráče + 10% z jeho depositů</p>';
+  html += '<div id="refCodeSection"></div>';
   html += '</div>';
   
   document.getElementById("profile").innerHTML = html;
   updateProfilePic(data.profilePic);
+  loadRefStats();
 }
 
 async function saveTrade() {
@@ -83,6 +88,61 @@ async function saveTrade() {
   if (!link) link = "";
   await saveTradeLink(link);
   alert("Trade link uložen");
+}
+
+function copyRef() {
+  var input = document.getElementById("refLink");
+  input.select();
+  document.execCommand("copy");
+  alert("Odkaz zkopírován!");
+}
+
+async function loadRefStats() {
+  var uname = getCurrentUser();
+  var codeRes = await callScript("generateRefCode", { username: uname });
+  var code = codeRes.trim();
+  var refLink = "https://ytbpetrak7-create.github.io/bedny/index.html?ref=" + code;
+  
+  var el = document.getElementById("refCodeSection");
+  if (el) {
+    el.innerHTML = '<p style="font-size:20px;color:#ffd700;font-weight:bold;letter-spacing:4px;margin:10px 0;">' + code + '</p>' +
+      '<input id="refLink" type="text" value="' + refLink + '" readonly style="width:80%;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:14px;outline:none;">' +
+      '<br><br>' +
+      '<button onclick="copyRef()" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;margin-right:10px;">Kopírovat odkaz</button>' +
+      '<button onclick="showCustomCodeForm()" style="padding:10px 30px;background:linear-gradient(135deg,#6f42c1,#5a32a3);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Vlastní kód</button>' +
+      '<div id="customCodeForm" style="display:none;margin-top:15px;">' +
+      '<input id="customCodeInput" type="text" maxlength="4" placeholder="4 znaky (např. M777)" style="width:150px;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:18px;text-align:center;letter-spacing:3px;text-transform:uppercase;outline:none;">' +
+      '<br><br>' +
+      '<button onclick="requestCustomCode()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:10px;color:#1a1a2e;font-size:14px;font-weight:bold;cursor:pointer;">Odeslat žádost</button>' +
+      '<p style="font-size:11px;color:#888;margin-top:8px;">Admin musí kód schválit</p>' +
+      '</div>';
+  }
+  
+  var statsRes = await callScript("getReferralStats", { username: uname });
+  try {
+    var stats = JSON.parse(statsRes);
+    var statsEl = document.getElementById("refCodeSection");
+    if (statsEl) {
+      statsEl.innerHTML += '<p style="font-size:14px;color:#00ff96;margin-top:15px;">Pozvaní hráči: ' + stats.count + '</p>';
+    }
+  } catch(e) {}
+}
+
+function showCustomCodeForm() {
+  var form = document.getElementById("customCodeForm");
+  form.style.display = form.style.display === "none" ? "block" : "none";
+}
+
+async function requestCustomCode() {
+  var code = document.getElementById("customCodeInput").value.trim();
+  if (code.length !== 4) { alert("Kód musí mít 4 znaky"); return; }
+  var res = await callScript("requestRefCode", { username: getCurrentUser(), code: code });
+  if (res === "OK") {
+    alert("Žádost odeslána! Počkej na schválení adminem.");
+    document.getElementById("customCodeForm").style.display = "none";
+  } else {
+    alert("Chyba: " + res);
+  }
 }
 
 function updateProfilePic(url) {

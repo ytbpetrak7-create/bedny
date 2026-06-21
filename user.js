@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDy6yVTgVoFNXEachMq85QsnA5toqwlltlcb-OdGs4JcMsKWJspH8V8YQxZSxrvFxD3w/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYLveizWJtg7yq4fR9G1VkB_h3d87dUybfbwbK-dl-_Gkl5B4d127wIVRVz9bc9WB0Tw/exec";
 
 async function callScript(action, params = {}) {
   const url = new URL(SCRIPT_URL);
@@ -29,7 +29,8 @@ async function registerUser(uname) {
 }
 
 async function register(username, password) {
-  return await callScript("register", { username: username, password: password });
+  var ref = new URLSearchParams(window.location.search).get("ref") || "";
+  return await callScript("register", { username: username, password: password, ref: ref });
 }
 
 async function login(username, password) {

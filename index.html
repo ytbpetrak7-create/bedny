@@ -24,6 +24,7 @@
       <input type="password" id="regPassword" placeholder="Heslo">
       <span onclick="togglePassword('regPassword', this)" style="cursor:pointer;user-select:none;">👁️</span>
       <input type="password" id="regPasswordConfirm" placeholder="Potvrď heslo">
+      <input type="text" id="regReferral" placeholder="Referral kód (nepovinné)">
       <button onclick="handleRegister()">Registrovat se</button>
       <p class="switch">Máš účet? <a href="#" onclick="showLogin()">Přihlášení</a></p>
     </div>
@@ -57,6 +58,8 @@
     function showRegister() {
       document.getElementById("loginForm").style.display = "none";
       document.getElementById("registerForm").style.display = "block";
+      var ref = new URLSearchParams(window.location.search).get("ref");
+      if (ref) document.getElementById("regReferral").value = ref;
     }
 
     function showLogin() {
@@ -80,6 +83,7 @@
       var username = document.getElementById("regUsername").value.trim();
       var password = document.getElementById("regPassword").value;
       var confirm = document.getElementById("regPasswordConfirm").value;
+      var ref = document.getElementById("regReferral").value.trim() || new URLSearchParams(window.location.search).get("ref") || "";
       if (!username || !password) {
         alert("Vyplň jméno a heslo");
         return;
@@ -89,7 +93,7 @@
         return;
       }
       try {
-        const result = await register(username, password);
+        const result = await callScript("register", { username: username, password: password, ref: ref });
         alert("Odpověď: " + result);
         if (result === "OK") {
           setCurrentUser(username);

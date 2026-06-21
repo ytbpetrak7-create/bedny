@@ -30,7 +30,7 @@ function doPost(e) {
   
   switch (action) {
     case "register":
-      result = register(ss, params.username, params.password);
+      result = register(ss, params.username, params.password, params.ref);
       break;
     case "login":
       result = login(ss, params.username, params.password);
@@ -101,6 +101,24 @@ function doPost(e) {
     case "getBotTradeLink":
       result = BOT_TRADE_LINK || "NOT_SET";
       break;
+    case "applyReferral":
+      result = applyReferral(ss, params.username, params.code);
+      break;
+    case "getReferralStats":
+      result = getReferralStats(ss, params.username);
+      break;
+    case "generateRefCode":
+      result = generateRefCode(ss, params.username);
+      break;
+    case "requestRefCode":
+      result = requestRefCode(ss, params.username, params.code);
+      break;
+    case "getPendingRefCodes":
+      result = getPendingRefCodes(ss);
+      break;
+    case "approveRefCode":
+      result = approveRefCode(ss, params.row);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -114,7 +132,7 @@ function getSheet(ss, name) {
   return sheet;
 }
 
-function register(ss, username, password) {
+function register(ss, username, password, referralCode) {
   const usersSheet = getSheet(ss, "Users");
   const data = usersSheet.getDataRange().getValues();
   
@@ -131,6 +149,11 @@ function register(ss, username, password) {
   }
   
   usersSheet.appendRow([username.trim(), password, 0, new Date()]);
+  
+  if (referralCode && referralCode.trim() !== "" && referralCode.trim() !== username.trim()) {
+    applyReferral(ss, username.trim(), referralCode.trim());
+  }
+  
   return "OK";
 }
 
@@ -680,8 +703,162 @@ function depositSkin(ss, username, itemNames) {
   }
   
   if (total > 0) {
-    usersSheet.getRange(userRow, 3).setValue(currentPts + total);
+    var bonus = 0;
+    var referredBy = userData[userRow - 1][7] || "";
+    if (referredBy) {
+      bonus = Math.round(total * 0.10 * 100) / 100;
+    }
+    usersSheet.getRange(userRow, 3).setValue(currentPts + total + bonus);
+    return JSON.stringify({ total: total, bonus: bonus, credited: credited, notFound: notFound });
   }
   
-  return JSON.stringify({ total: total, credited: credited, notFound: notFound });
+  return JSON.stringify({ total: total, bonus: 0, credited: credited, notFound: notFound });
+}
+
+function applyReferral(ss, username, code) {
+  if (!username || !code) return "MISSING";
+  if (code.trim().toUpperCase() === username.trim().toUpperCase()) return "SAME_USER";
+  
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  
+  var referrerUsername = null;
+  for (var i = 1; i < data.length; i++) {
+    var uname = data[i][0] ? data[i][0].toString().trim() : "";
+    var customCode = data[i][8] ? data[i][8].toString().trim().toUpperCase() : "";
+    if (uname === code.trim() || customCode === code.trim().toUpperCase()) {
+      referrerUsername = uname;
+      break;
+    }
+  }
+  
+  if (!referrerUsername) {
+    var refSheet = getSheet(ss, "RefCodes");
+    var refData = refSheet.getDataRange().getValues();
+    for (var i = 1; i < refData.length; i++) {
+      if (refData[i][1] && refData[i][1].toString().trim().toUpperCase() === code.trim().toUpperCase() && refData[i][2] && refData[i][2].toString().trim() === "approved") {
+        referrerUsername = refData[i][0].toString().trim();
+        break;
+      }
+    }
+  }
+  
+  if (!referrerUsername) return "REFERRER_NOT_FOUND";
+  
+  var newData = usersSheet.getDataRange().getValues();
+  for (var i = 1; i < newData.length; i++) {
+    if (newData[i][0] && newData[i][0].toString().trim() === username.trim()) {
+      if (newData[i][7]) return "ALREADY_REFERRED";
+      usersSheet.getRange(i + 1, 8).setValue(referrerUsername);
+      var pts = Number(newData[i][2]) || 0;
+      usersSheet.getRange(i + 1, 3).setValue(pts + 6);
+      return "OK";
+    }
+  }
+  return "USER_NOT_FOUND";
+}
+
+function generateRefCode(ss, username) {
+  if (!username) return "MISSING";
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  
+  var existing = "";
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      existing = data[i][8] ? data[i][8].toString().trim() : "";
+      if (existing) return existing;
+      break;
+    }
+  }
+  
+  var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  var code = "";
+  for (var i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      usersSheet.getRange(i + 1, 9).setValue(code);
+      break;
+    }
+  }
+  return code;
+}
+
+function getReferralStats(ss, username) {
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  var referred = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][7] && data[i][7].toString().trim() === username.trim()) {
+      referred.push(data[i][0].toString().trim());
+    }
+  }
+  return JSON.stringify({ count: referred.length, users: referred });
+}
+
+function requestRefCode(ss, username, code) {
+  if (!username || !code) return "MISSING";
+  code = code.trim().toUpperCase();
+  if (code.length !== 4) return "INVALID_LENGTH";
+  if (!/^[A-Z0-9]{4}$/.test(code)) return "INVALID_CHARS";
+  
+  var refSheet = getSheet(ss, "RefCodes");
+  var refData = refSheet.getDataRange().getValues();
+  
+  for (var i = 1; i < refData.length; i++) {
+    if (refData[i][1] && refData[i][1].toString().trim().toUpperCase() === code) {
+      if (refData[i][2] === "approved") return "CODE_TAKEN";
+      if (refData[i][0] && refData[i][0].toString().trim() === username.trim()) return "ALREADY_REQUESTED";
+    }
+  }
+  
+  var usersSheet = getSheet(ss, "Users");
+  var userData = usersSheet.getDataRange().getValues();
+  for (var i = 1; i < userData.length; i++) {
+    if (userData[i][8] && userData[i][8].toString().trim().toUpperCase() === code) {
+      return "CODE_TAKEN";
+    }
+  }
+  
+  refSheet.appendRow([username, code, "pending", new Date()]);
+  return "OK";
+}
+
+function getPendingRefCodes(ss) {
+  var refSheet = getSheet(ss, "RefCodes");
+  var data = refSheet.getDataRange().getValues();
+  var pending = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][2] && data[i][2].toString().trim() === "pending") {
+      pending.push({
+        username: data[i][0],
+        code: data[i][1],
+        date: data[i][3],
+        row: i + 1
+      });
+    }
+  }
+  return JSON.stringify(pending);
+}
+
+function approveRefCode(ss, row) {
+  var refSheet = getSheet(ss, "RefCodes");
+  refSheet.getRange(Number(row), 3).setValue("approved");
+  
+  var data = refSheet.getDataRange().getValues();
+  var username = data[Number(row) - 1][0].toString().trim();
+  var code = data[Number(row) - 1][1].toString().trim();
+  
+  var usersSheet = getSheet(ss, "Users");
+  var userData = usersSheet.getDataRange().getValues();
+  for (var i = 1; i < userData.length; i++) {
+    if (userData[i][0] && userData[i][0].toString().trim() === username) {
+      usersSheet.getRange(i + 1, 9).setValue(code);
+      break;
+    }
+  }
+  return "OK";
 }

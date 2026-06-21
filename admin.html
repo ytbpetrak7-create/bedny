@@ -37,10 +37,12 @@ async function loadAll() {
   var html = "<h2>Žádosti o výběr</h2>";
   var results = await Promise.all([
     callScript("getWithdrawals"),
-    getTradeOffers()
+    getTradeOffers(),
+    callScript("getPendingRefCodes")
   ]);
   var wRes = results[0];
   var res = results[1];
+  var refRes = results[2];
   try {
     var wItems = JSON.parse(wRes);
     if (wItems.length === 0) {
@@ -60,6 +62,25 @@ async function loadAll() {
         } else if (w.status === "done") {
           html += '<button class="btn-done" disabled>Hotovo</button>';
         }
+        html += '</div>';
+      }
+    }
+  } catch (e) {
+    html += "<p style='color:#f80;'>Chyba: " + e.message + "</p>";
+  }
+  
+  html += "<h2>Žádosti o referral kódy</h2>";
+  try {
+    var refItems = JSON.parse(refRes);
+    if (refItems.length === 0) {
+      html += "<p style='color:#aaa;'>Žádné pending žádosti</p>";
+    } else {
+      for (var ri = 0; ri < refItems.length; ri++) {
+        var r = refItems[ri];
+        html += '<div class="req-item">';
+        html += '<p style="color:#ffd700;font-weight:bold;font-size:18px;letter-spacing:3px;">' + r.code + '</p>';
+        html += '<p style="color:#aaa;font-size:13px;">Uživatel: ' + r.username + ' | ' + new Date(r.date).toLocaleString() + '</p>';
+        html += '<button class="btn-app" onclick="approveRef(' + r.row + ')">Schválit</button>';
         html += '</div>';
       }
     }
@@ -103,6 +124,11 @@ async function loadAll() {
 
 async function approve(row) {
   await callScript("approveWithdrawal", { row: row });
+  loadAll();
+}
+
+async function approveRef(row) {
+  await callScript("approveRefCode", { row: row });
   loadAll();
 }
 </script>
