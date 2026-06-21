@@ -16,10 +16,11 @@
 </div>
 
 <div id="skinTab" style="display:none;">
-  <p>Pošli skin přes Steam Trade</p>
+  <p>Pošli skin botovi přes Steam Trade</p>
   <div id="tradeInfo"></div>
-  <button onclick="openTrade()" id="tradeBtn" style="padding:15px 40px;background:linear-gradient(135deg,#1b2838,#2a475e);border:none;border-radius:10px;color:#c6d4df;font-size:18px;font-weight:bold;cursor:pointer;margin-top:10px;">Odeslat skin</button>
-  <p style="font-size:12px;color:#aaa;margin-top:20px;">Po odeslání skinu admin ověří a připíše body</p>
+  <button onclick="openTrade()" id="tradeBtn" style="padding:15px 40px;background:linear-gradient(135deg,#1b2838,#2a475e);border:none;border-radius:10px;color:#c6d4df;font-size:18px;font-weight:bold;cursor:pointer;margin-top:10px;">Otevřít trade</button>
+  <p style="font-size:13px;color:#ff8800;margin-top:15px;">⚠️ Do zprávy trade nabídky napiš své <b>uživatelské jméno</b>!</p>
+  <p style="font-size:12px;color:#aaa;margin-top:5px;">Bot automaticky přepočítá skiny na Kč a připíše ti je na účet</p>
 </div>
 
 <link rel="stylesheet" href="zam obr.css">
@@ -46,13 +47,13 @@ function showTab(tab) {
 }
 
 async function loadTradeLink() {
-  var adminLink = await getAdminTradeLink();
+  var botLink = await callScript("getBotTradeLink");
   var info = document.getElementById("tradeInfo");
-  if (adminLink && adminLink !== "NOT_SET") {
-    info.innerHTML = '<p style="color:#aaa;font-size:14px;">Pošli skin sem: <a href="' + adminLink + '" target="_blank" style="color:#00ff96;">otevřít trade</a></p>';
-    document.getElementById("tradeBtn").onclick = function() { window.open(adminLink, "_blank"); };
+  if (botLink && botLink !== "NOT_SET") {
+    info.innerHTML = '<p style="color:#aaa;font-size:14px;">Bot trade link: <a href="' + botLink + '" target="_blank" style="color:#00ff96;">otevřít trade</a></p>';
+    document.getElementById("tradeBtn").onclick = function() { window.open(botLink, "_blank"); };
   } else {
-    info.innerHTML = '<p style="color:#f80;font-size:14px;">Admin trade link není nastaven, kontaktuj admina</p>';
+    info.innerHTML = '<p style="color:#f80;font-size:14px;">Bot trade link není nastaven, kontaktuj admina</p>';
     document.getElementById("tradeBtn").disabled = true;
     document.getElementById("tradeBtn").style.opacity = "0.5";
   }

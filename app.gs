@@ -1,6 +1,7 @@
 const SHEET_ID = "1K5T_SGfE-krTwfAluVsXv8VqPRl5GaPT1S2vf8f3ezw";
 const STEAM_API_KEY = "9BF03DB2AF38585766A60108DE4F66A1";
 const ADMIN_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=1724748264&token=DhhVwMmS";
+const BOT_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=724294414&token=GYHge3_G";
 
 function doGet(e) {
   return doPost(e);
@@ -93,6 +94,12 @@ function doPost(e) {
       break;
     case "approveWithdrawal":
       result = approveWithdrawal(ss, params.row);
+      break;
+    case "depositSkin":
+      result = depositSkin(ss, params.username, params.items);
+      break;
+    case "getBotTradeLink":
+      result = BOT_TRADE_LINK || "NOT_SET";
       break;
   }
   
@@ -336,7 +343,7 @@ function getBoxInfo(ss, box) {
   
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] && data[i][1] && data[i][2]) {
-      items.push({ name: data[i][2], image: data[i][0], chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0 });
+      items.push({ name: data[i][2], image: data[i][0], chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0, rare: Number(data[i][4]) || 0 });
     }
   }
   
@@ -625,4 +632,55 @@ function authorizeExternalRequest() {
   if (!STEAM_API_KEY) return;
   var res = UrlFetchApp.fetch("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + STEAM_API_KEY + "&steamids=76561197960435530");
   Logger.log("Auth OK: " + res.getResponseCode());
+}
+
+function depositSkin(ss, username, itemNames) {
+  if (!username || !itemNames) return "MISSING_PARAMS";
+  
+  var usersSheet = getSheet(ss, "Users");
+  var userData = usersSheet.getDataRange().getValues();
+  var userRow = -1;
+  var currentPts = 0;
+  
+  for (var i = 0; i < userData.length; i++) {
+    if (userData[i][0] && userData[i][0].toString().trim() === username.trim()) {
+      userRow = i + 1;
+      currentPts = Number(userData[i][2]) || 0;
+      break;
+    }
+  }
+  if (userRow === -1) return "USER_NOT_FOUND";
+  
+  var prices = {};
+  var boxesSheet = getSheet(ss, "Boxes1");
+  var boxesData = boxesSheet.getDataRange().getValues();
+  for (var i = 1; i < boxesData.length; i++) {
+    if (boxesData[i][2]) {
+      var key = boxesData[i][2].toString().trim().toLowerCase();
+      var p = Number(boxesData[i][3]) || 0;
+      if (p > 0) prices[key] = p;
+    }
+  }
+  
+  var names = itemNames.split(";").map(function(n) { return n.trim(); });
+  var total = 0;
+  var credited = [];
+  var notFound = [];
+  
+  for (var j = 0; j < names.length; j++) {
+    var name = names[j];
+    var price = prices[name.toLowerCase()];
+    if (price > 0) {
+      total += price;
+      credited.push(name);
+    } else {
+      notFound.push(name);
+    }
+  }
+  
+  if (total > 0) {
+    usersSheet.getRange(userRow, 3).setValue(currentPts + total);
+  }
+  
+  return JSON.stringify({ total: total, credited: credited, notFound: notFound });
 }

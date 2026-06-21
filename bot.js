@@ -4,7 +4,7 @@ const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxg0rTWCrOgg7KFWHYR__ij9yCBtSJ39erFaAv-Wv2edlpIlB8D4zB1RovB8IA0fSFA8w/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwbajsX5Ekb1yOgM9Luwd0muAoAEUdIbnWwKiLlIU4qiLzebscF-tcDRMBUEu5NdU6p/exec";
 
 const client = new SteamUser();
 const manager = new TradeOfferManager({ steam: client, language: "en", pollInterval: 30000 });
@@ -76,7 +76,6 @@ async function poll() {
       const t = parseTradeLink(w.tradeLink);
       if (!t) { console.log("Neplatný tradeLink"); continue; }
       
-      // Najdi v inventáři bota item podle názvu
       const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
       if (!found) { console.log("Item nenalezen v inventáři bota:", w.item); continue; }
       
@@ -90,6 +89,37 @@ async function poll() {
       });
     }
   } catch (e) { console.error("Chyba:", e.message); }
+  
+  try {
+    const result = await new Promise((resolve, reject) => {
+      manager.getOffers({ received: true, active: true }, (err, sent, received) => {
+        if (err) return reject(err);
+        resolve(received || []);
+      });
+    });
+    
+    for (const offer of result) {
+      if (offer.state !== 3) continue;
+      
+      const msg = (offer.message || "").trim();
+      if (!msg) { console.log("Deposit bez zprávy, přeskakuji"); continue; }
+      
+      const username = msg;
+      const itemNames = offer.items_to_receive.map(x => x.market_hash_name || "").filter(Boolean).join(";");
+      if (!itemNames) continue;
+      
+      console.log(`Deposit: ${username} - ${itemNames}`);
+      
+      const depositResult = await gasGet(GAS_URL + "?action=depositSkin&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(itemNames));
+      console.log(`Deposit result: ${depositResult}`);
+      
+      offer.accept((err, status) => {
+        if (err) return console.log("Chyba accept:", err);
+        console.log(`Deposit accepted: ${status}`);
+      });
+    }
+  } catch (e) { console.error("Deposit check error:", e.message); }
+  
   setTimeout(poll, 30000);
 }
 

@@ -98,12 +98,8 @@ async function loadInventory() {
     var imgHtml = img ? '<img src="' + img + '" alt="' + item.name + '" loading="lazy">' : '<div style="width:64px;height:64px;background:rgba(255,255,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎁</div>';
     
     var actions = '<div class="actions">';
-    actions += '<button class="btn-del" onclick="removeItem(\'' + item.name + '\',' + item.row + ')">X</button>';
     if (price > 0) {
       actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat</button>';
-    }
-    if (adminTradeLink && adminTradeLink !== "NOT_SET") {
-      actions += '<a class="btn-steam" href="' + adminTradeLink + '" target="_blank" rel="noopener">Poslat</a>';
     }
     if (userTradeLink) {
       actions += '<button class="btn-withdraw" onclick="requestWithdraw(\'' + item.name + '\',' + item.row + ')">Vyzvednout</button>';
