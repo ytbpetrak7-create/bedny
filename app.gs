@@ -83,6 +83,9 @@ function doPost(e) {
     case "sellItem":
       result = sellItem(ss, params.username, params.row, params.price);
       break;
+    case "sellAll":
+      result = sellAll(ss, params.username);
+      break;
     case "requestWithdraw":
       result = requestWithdraw(ss, params.username, params.itemName, params.row);
       break;
@@ -510,6 +513,48 @@ function sellItem(ss, username, row, price) {
   }
   
   return "SOLD";
+}
+
+function sellAll(ss, username) {
+  var boxesInfo = JSON.parse(getBoxInfo(ss, "Boxes1"));
+  var boxes2Info = JSON.parse(getBoxInfo(ss, "Boxes2"));
+  var priceMap = {};
+  boxesInfo.forEach(function(item) { priceMap[item.name] = item.sellPrice; });
+  boxes2Info.forEach(function(item) { priceMap[item.name] = item.sellPrice; });
+  
+  var invSheet = getSheet(ss, "Inventory");
+  var invData = invSheet.getDataRange().getValues();
+  
+  var toSell = [];
+  for (var i = invData.length - 1; i >= 1; i--) {
+    if (invData[i][0] && invData[i][0].toString().trim() === username.trim()) {
+      var name = invData[i][1] ? invData[i][1].toString().trim() : "";
+      var price = priceMap[name] || 0;
+      if (price > 0) {
+        toSell.push({ row: i + 1, price: price });
+      }
+    }
+  }
+  
+  if (toSell.length === 0) return "NOTHING";
+  
+  var totalEarned = 0;
+  for (var s = 0; s < toSell.length; s++) {
+    invSheet.deleteRow(toSell[s].row);
+    totalEarned += toSell[s].price;
+  }
+  
+  var usersSheet = getSheet(ss, "Users");
+  var userData = usersSheet.getDataRange().getValues();
+  for (var j = 1; j < userData.length; j++) {
+    if (userData[j][0].toString().trim() === username.trim()) {
+      var pts = Number(userData[j][2]) || 0;
+      usersSheet.getRange(j + 1, 3).setValue(pts + totalEarned);
+      break;
+    }
+  }
+  
+  return "SOLD|" + toSell.length + "|" + totalEarned;
 }
 
 function requestWithdraw(ss, username, itemName, row) {

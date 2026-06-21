@@ -128,11 +128,11 @@ async function loadRefStats() {
   var statsRes = await callScript("getReferralStats", { username: uname });
   try {
     var stats = JSON.parse(statsRes);
-    el.innerHTML += '<p style="font-size:14px;color:#00ff96;margin-top:15px;">Pozvaní hráči: ' + stats.count + '</p>';
-    if (stats.count > 0) {
-      el.innerHTML += '<p style="font-size:13px;color:#aaa;">Celkem XP od referralů: ' + stats.totalXp + '</p>';
-      el.innerHTML += '<p style="font-size:13px;color:#ffd700;">Získáno z provize: ' + stats.earned + ' Kč</p>';
-    }
+    el.innerHTML += '<div style="margin-top:15px;padding:15px;border:1px solid #444;border-radius:10px;">';
+    el.innerHTML += '<p style="font-size:14px;color:#00ff96;">Pozvaní hráči: <b>' + stats.count + '</b></p>';
+    el.innerHTML += '<p style="font-size:13px;color:#aaa;">Celkem XP od referralů: <b>' + stats.totalXp + '</b></p>';
+    el.innerHTML += '<p style="font-size:13px;color:#ffd700;">Získáno z provize: <b>' + stats.earned + ' Kč</b></p>';
+    el.innerHTML += '</div>';
   } catch(e) {}
 }
 

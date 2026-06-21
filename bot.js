@@ -1,13 +1,15 @@
 const SteamUser = require("steam-user");
 const TradeOfferManager = require("steam-tradeoffer-manager");
+const SteamCommunity = require("steamcommunity");
 const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzRlq4cmYUy0Z4J9wSbmQpfMWwaNEV6z4A8gtGxAh-6x9JS5kkDS3N_t3IBXTykeGLImA/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyuJ4znlsQ9R1okVrMngWlM4Mz3Pp05rf1Iax0V7Jrdby-nr4m5K6YT3jA0_dGrthlpVw/exec";
 
 const client = new SteamUser();
-const manager = new TradeOfferManager({ steam: client, language: "en", pollInterval: 30000 });
+const community = new SteamCommunity();
+const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 30000 });
 
 const BOT = {
   accountName: "pet7bot1",
@@ -23,11 +25,41 @@ client.on("steamGuard", (domain, callback, isEmail) => {
   });
 });
 
-client.on("loggedOn", () => { console.log("✅ Bot přihlášen"); client.setPersona(SteamUser.EPersonaState.Online); client.gamesPlayed(730); });
+client.on("loggedOn", () => { 
+  console.log("✅ Bot přihlášen"); 
+  client.setPersona(SteamUser.EPersonaState.Online); 
+  client.gamesPlayed(730);
+});
+
+client.on("webSession", (sessionID, cookies) => {
+  console.log("✅ Web session získána");
+  manager.setCookies(cookies);
+  community.setCookies(cookies);
+  fs.writeFileSync("cookies.json", JSON.stringify(cookies));
+});
 client.on("sentry", (buffer) => { fs.writeFileSync("sentry", buffer); });
 client.on("error", (err) => { console.log("❌ Chyba:", err.message); if (err.eresult === 5) console.log("➡️  Zkus se na chvíli odhlásit ze Steamu v prohlížeči a pak spustit znovu"); });
 
-manager.on("ready", () => { console.log("✅ Trade manager ready"); poll(); });
+manager.on("ready", () => { 
+  console.log("✅ Trade manager ready"); 
+  poll();
+  autoConfirm();
+});
+
+function autoConfirm() {
+  manager.getOffers({ confirmedNeedsConfirmation: true }, (err, sent, received) => {
+    if (err) { console.log("Auto-confirm error:", err.message); return setTimeout(autoConfirm, 30000); }
+    
+    const needsConfirm = [...(sent || []), ...(received || [])];
+    for (const offer of needsConfirm) {
+      offer.accept((err) => {
+        if (err) console.log("Auto-confirm accept error:", err.message);
+        else console.log(`✅ Auto-potvrzeno: #${offer.id}`);
+      });
+    }
+    setTimeout(autoConfirm, 10000);
+  });
+}
 
 var sentry = fs.existsSync("sentry") ? fs.readFileSync("sentry") : null;
 
@@ -35,10 +67,10 @@ if (process.argv.includes("--2fa")) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   rl.question("🔑 Zadej kód z Steam mobile app: ", (code) => {
     rl.close();
-    client.logOn({ ...BOT, machineName: "bot", sentry: sentry, twoFactorCode: code });
+    client.logOn({ accountName: BOT.accountName, password: BOT.password, machineName: "bot", sentry: sentry, twoFactorCode: code });
   });
 } else {
-  client.logOn({ ...BOT, machineName: "bot", sentry: sentry });
+  client.logOn({ accountName: BOT.accountName, password: BOT.password, machineName: "bot", sentry: sentry });
 }
 
 function gasGet(url) {

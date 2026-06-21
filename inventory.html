@@ -145,24 +145,12 @@ async function sellFromInv(row, name, price) {
 }
 
 async function sellAll() {
-  var result = await getInventory();
-  var items = JSON.parse(result);
-  var toSell = [];
-  var total = 0;
-  items.forEach(function(item) {
-    var data = itemMap[item.name] || { price: 0 };
-    if (data.price > 0) {
-      toSell.push({ row: item.row, name: item.name, price: data.price });
-      total += data.price;
-    }
-  });
-  if (toSell.length === 0) { alert("Žádné prodejné předměty"); return; }
-  if (!confirm("Prodat " + toSell.length + " předmětů za " + total.toFixed(2) + " Kč?")) return;
-  for (var i = 0; i < toSell.length; i++) {
-    await sellItem(toSell[i].row, toSell[i].price);
+  if (!confirm("Prodat všechny prodejné předměty?")) return;
+  var res = await callScript("sellAll", { username: getCurrentUser() });
+  if (res && res.startsWith("SOLD")) {
+    loadInventory();
+    updatePoints();
   }
-  loadInventory();
-  updatePoints();
 }
 
 function renderSellAll(items) {
