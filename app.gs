@@ -806,16 +806,6 @@ function applyReferral(ss, username, code) {
 
 function getRefCode(ss, username) {
   if (!username) return "MISSING";
-  var usersSheet = getSheet(ss, "Users");
-  var data = usersSheet.getDataRange().getValues();
-  
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
-      var code = data[i][8] ? data[i][8].toString().trim() : "";
-      if (code) return code;
-      break;
-    }
-  }
   
   var refSheet = getSheet(ss, "RefCodes");
   var refData = refSheet.getDataRange().getValues();
@@ -826,6 +816,16 @@ function getRefCode(ss, username) {
     if (u === username.trim()) {
       if (s === "approved") return c;
       if (s === "pending") return "pending:" + c;
+    }
+  }
+  
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      var code = data[i][8] ? data[i][8].toString().trim() : "";
+      if (code) return code;
+      break;
     }
   }
   return "";
