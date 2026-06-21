@@ -1,6 +1,8 @@
 const SteamUser = require("steam-user");
 const TradeOfferManager = require("steam-tradeoffer-manager");
 const https = require("https");
+const fs = require("fs");
+const readline = require("readline");
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycby--biLvrDLnb5PkXo8t0TcK_CkMya3wE23T12EOOs_oI9iA8Krrsxun2_DgvjMTeHc2g/exec";
 
@@ -9,12 +11,35 @@ const manager = new TradeOfferManager({ steam: client, language: "en", pollInter
 
 const BOT = {
   accountName: "pet7bot1",
-  password: "Petrone7"
+  password: "Petronel7"
 };
 
-client.logOn(BOT);
-client.on("loggedOn", () => { console.log("Bot přihlášen"); client.setPersona(SteamUser.EPersonaState.Online); client.gamesPlayed(730); });
-manager.on("ready", () => { console.log("Trade manager ready"); poll(); });
+client.on("steamGuard", (domain, callback, isEmail) => {
+  const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
+  rl2.question(isEmail ? "🔐 Kód z emailu: " : "🔐 Kód z Steam app: ", (code) => {
+    rl2.close();
+    if (isEmail) callback(code);
+    else callback(null, code);
+  });
+});
+
+client.on("loggedOn", () => { console.log("✅ Bot přihlášen"); client.setPersona(SteamUser.EPersonaState.Online); client.gamesPlayed(730); });
+client.on("sentry", (buffer) => { fs.writeFileSync("sentry", buffer); });
+client.on("error", (err) => { console.log("❌ Chyba:", err.message); if (err.eresult === 5) console.log("➡️  Zkus se na chvíli odhlásit ze Steamu v prohlížeči a pak spustit znovu"); });
+
+manager.on("ready", () => { console.log("✅ Trade manager ready"); poll(); });
+
+var sentry = fs.existsSync("sentry") ? fs.readFileSync("sentry") : null;
+
+if (process.argv.includes("--2fa")) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  rl.question("🔑 Zadej kód z Steam mobile app: ", (code) => {
+    rl.close();
+    client.logOn({ ...BOT, machineName: "bot", sentry: sentry, twoFactorCode: code });
+  });
+} else {
+  client.logOn({ ...BOT, machineName: "bot", sentry: sentry });
+}
 
 function gasGet(url) {
   return new Promise((resolve, reject) => {
@@ -69,3 +94,5 @@ async function poll() {
 }
 
 console.log("Bot spuštěn");
+process.stdin.resume();
+setInterval(() => {}, 60000);
