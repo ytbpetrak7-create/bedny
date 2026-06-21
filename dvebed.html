@@ -396,6 +396,45 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       }
     } else {
       var items = result.split(";");
+      var lastParts = items[items.length - 1].split("|");
+      var lastItemName = lastParts[0], lastItemImg = lastParts[1] || "", lastItemPrice = Number(lastParts[2]) || 0;
+      var lastWinnerItem = null;
+      for (var w = 0; w < allItems.length; w++) {
+        if (allItems[w].name === lastItemName) { lastWinnerItem = allItems[w]; break; }
+      }
+      var isLastRare = lastWinnerItem && Number(lastWinnerItem.rare) === 1;
+      
+      if (isLastRare) {
+        var info = buildSlotStrip(lastItemName, lastItemImg, lastItemPrice, false);
+        await animateSlot(info.winnerIndex, info.cardWidth);
+        document.getElementById("itemname").innerText = "?? RARE ??";
+        document.getElementById("itemname").style.color = "#ff00ff";
+        playRare();
+        var slotWrap = document.getElementById("slotWrap");
+        var c4div = document.createElement("div");
+        c4div.id = "c4overlay";
+        c4div.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:10;background:rgba(0,0,0,0.7);border-radius:8px;";
+        c4div.innerHTML = '<img src="c4.webp" style="width:120px;height:120px;object-fit:contain;animation:c4Pulse 0.4s ease-in-out 3;">';
+        slotWrap.appendChild(c4div);
+        var style = document.createElement("style");
+        style.textContent = "@keyframes c4Pulse{0%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.3);filter:brightness(2) saturate(2)}100%{transform:scale(1);filter:brightness(1)}}";
+        document.head.appendChild(style);
+        await new Promise(function(r) { setTimeout(r, 1500); });
+        var c4el = document.getElementById("c4overlay");
+        if (c4el) c4el.remove();
+        slotWrap.style.transition = "none";
+        slotWrap.style.transform = "translateX(0px)";
+        document.getElementById("slotStrip").innerHTML = "";
+        var info2 = buildSlotStrip(lastItemName, lastItemImg, lastItemPrice, true);
+        await animateSlot(info2.winnerIndex, info2.cardWidth);
+      } else {
+        var info = buildSlotStrip(lastItemName, lastItemImg, lastItemPrice, false);
+        await animateSlot(info.winnerIndex, info.cardWidth);
+      }
+      
+      document.getElementById("itemname").innerText = "Otevřeno " + items.length + " beden";
+      document.getElementById("itemname").style.color = "#ffd700";
+      
       var html = '<div class="results-grid">';
       var totalValue = 0;
       items.forEach(function(itemStr, idx) {
@@ -407,30 +446,21 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
         html += '<span class="sname">' + name + '</span>';
         html += '<span class="sprice">' + Number(price).toFixed(2) + ' Kč</span>';
-        if (price > 0) {
-          html += '<button class="sell-mini" data-idx="' + idx + '">Prodat</button>';
-        }
         html += '</div>';
       });
       html += '</div>';
       html += '<p style="color:#aaa;text-align:center;font-size:13px;">Celkem: ' + items.length + ' itemů, hodnota ' + totalValue.toFixed(2) + ' Kč</p>';
+      html += '<div style="text-align:center;margin:10px 0;"><button id="sellAllBtn" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">Prodat vše (' + totalValue.toFixed(2) + ' Kč)</button></div>';
       document.getElementById("resultsContainer").innerHTML = html;
       
-      document.querySelectorAll(".sell-mini").forEach(function(btn) {
-        btn.addEventListener("click", async function() {
-          var idx = parseInt(this.dataset.idx);
-          var parts = items[idx].split("|");
-          var name = parts[0], price = Number(parts[2]) || 0;
-          if (!price) return;
-          var inv = JSON.parse(await getInventory());
-          var found = inv.filter(function(x) { return x.name === name; });
-          if (found.length === 0) return;
-          var row = found[found.length - 1].row;
-          var res = await sellItem(row, price);
-          if (res === "SOLD") {
-            document.getElementById("openBoxButton").click();
-          }
-        });
+      document.getElementById("sellAllBtn").addEventListener("click", async function() {
+        if (!confirm("Prodat vše za " + totalValue.toFixed(2) + " Kč?")) return;
+        var res = await callScript("sellAll", { username: getCurrentUser() });
+        if (res && res.startsWith("SOLD")) {
+          updatePoints();
+          document.getElementById("resultsContainer").innerHTML = "";
+          document.getElementById("itemname").innerText = "";
+        }
       });
     }
     
