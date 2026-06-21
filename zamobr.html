@@ -6,7 +6,8 @@
 
 <div style="text-align:center;margin-bottom:20px;">
   <button onclick="showTab('code')" id="tabCode" style="padding:10px 30px;background:#00ff96;border:none;border-radius:10px 0 0 10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Kód</button>
-  <button onclick="showTab('skin')" id="tabSkin" style="padding:10px 30px;background:#444;border:none;border-radius:0 10px 10px 0;color:#fff;font-size:16px;cursor:pointer;">Skin</button>
+  <button onclick="showTab('skin')" id="tabSkin" style="padding:10px 30px;background:#444;border:none;border-radius:0;color:#fff;font-size:16px;cursor:pointer;">Skin</button>
+  <button onclick="showTab('ref')" id="tabRef" style="padding:10px 30px;background:#444;border:none;border-radius:0 10px 10px 0;color:#fff;font-size:16px;cursor:pointer;">Referral</button>
 </div>
 
 <div id="codeTab">
@@ -21,6 +22,15 @@
   <button onclick="openTrade()" id="tradeBtn" style="padding:15px 40px;background:linear-gradient(135deg,#1b2838,#2a475e);border:none;border-radius:10px;color:#c6d4df;font-size:18px;font-weight:bold;cursor:pointer;margin-top:10px;">Otevřít trade</button>
   <p style="font-size:13px;color:#ff8800;margin-top:15px;">⚠️ Do zprávy trade nabídky napiš své <b>uživatelské jméno</b>!</p>
   <p style="font-size:12px;color:#aaa;margin-top:5px;">Bot automaticky přepočítá skiny na Kč a připíše ti je na účet</p>
+</div>
+
+<div id="refTab" style="display:none;">
+  <p>Zadej referral kód kamaráda</p>
+  <input class="intex" type="text" id="refCodeInput" maxlength="4" placeholder="4 znaky" style="text-transform:uppercase;letter-spacing:3px;text-align:center;">
+  <br><br>
+  <button onclick="applyRefCode()" style="padding:10px 30px;background:#00ff96;border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Použít kód</button>
+  <p style="font-size:13px;color:#aaa;margin-top:15px;">Získej <b>6 Kč</b> zdarma + <b>10%</b> bonus při depositu</p>
+  <div id="refResult"></div>
 </div>
 
 <link rel="stylesheet" href="zam obr.css">
@@ -40,10 +50,13 @@ if (!getCurrentUser()) {
 function showTab(tab) {
   document.getElementById("codeTab").style.display = tab === "code" ? "block" : "none";
   document.getElementById("skinTab").style.display = tab === "skin" ? "block" : "none";
+  document.getElementById("refTab").style.display = tab === "ref" ? "block" : "none";
   document.getElementById("tabCode").style.background = tab === "code" ? "#00ff96" : "#444";
   document.getElementById("tabCode").style.color = tab === "code" ? "#1a1a2e" : "#fff";
   document.getElementById("tabSkin").style.background = tab === "skin" ? "#00ff96" : "#444";
   document.getElementById("tabSkin").style.color = tab === "skin" ? "#1a1a2e" : "#fff";
+  document.getElementById("tabRef").style.background = tab === "ref" ? "#00ff96" : "#444";
+  document.getElementById("tabRef").style.color = tab === "ref" ? "#1a1a2e" : "#fff";
 }
 
 async function loadTradeLink() {
@@ -63,6 +76,20 @@ function openTrade() {
   var btn = document.getElementById("tradeBtn");
   btn.textContent = "Otevřeno";
   btn.style.background = "#00cc78";
+}
+
+async function applyRefCode() {
+  var code = document.getElementById("refCodeInput").value.trim();
+  if (!code) { alert("Zadej kód"); return; }
+  var res = await callScript("applyReferral", { username: getCurrentUser(), code: code });
+  var el = document.getElementById("refResult");
+  if (res === "OK") {
+    el.innerHTML = '<p style="color:#00ff96;margin-top:15px;">Kód použit! Získal jsi 6 Kč + 10% deposit bonus.</p>';
+    document.getElementById("refCodeInput").value = "";
+    createPointsDisplay();
+  } else {
+    el.innerHTML = '<p style="color:#f44;margin-top:15px;">Chyba: ' + res + '</p>';
+  }
 }
 </script>
 </html>

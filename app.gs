@@ -107,8 +107,8 @@ function doPost(e) {
     case "getReferralStats":
       result = getReferralStats(ss, params.username);
       break;
-    case "generateRefCode":
-      result = generateRefCode(ss, params.username);
+    case "getRefCode":
+      result = getRefCode(ss, params.username);
       break;
     case "requestRefCode":
       result = requestRefCode(ss, params.username, params.code);
@@ -251,6 +251,21 @@ function openBox(ss, username, box) {
   }
   
   usersSheet.getRange(userRow, 3).setValue(userPoints - cost);
+  var xpGain = box === "Boxes1" ? 20 : 250;
+  var xp = Number(userData[userRow - 1][9]) || 0;
+  usersSheet.getRange(userRow, 10).setValue(xp + xpGain);
+  var refXp = Math.floor(xpGain * 0.01);
+  var referrer = userData[userRow - 1][7];
+  if (referrer) {
+    for (var r = 1; r < userData.length; r++) {
+      if (userData[r][0] && userData[r][0].toString().trim() === referrer.toString().trim()) {
+        var rXp = Number(userData[r][9]) || 0;
+        usersSheet.getRange(r + 1, 10).setValue(rXp + refXp);
+        break;
+      }
+    }
+  }
+  payReferrerCommission(ss, usersSheet, userData, userRow, cost);
   
   let totalChance = 0;
   boxItems.forEach(item => totalChance += item.chance);
@@ -307,6 +322,22 @@ function openBoxMultiple(ss, username, box, count) {
   if (userPoints < cost) return "NOT_ENOUGH";
   
   usersSheet.getRange(userRow, 3).setValue(userPoints - cost);
+  var xpPerBox = box === "Boxes1" ? 20 : 250;
+  var xpGain = xpPerBox * count;
+  var xp = Number(userData[userRow - 1][9]) || 0;
+  usersSheet.getRange(userRow, 10).setValue(xp + xpGain);
+  var refXp = Math.floor(xpGain * 0.01);
+  var referrer = userData[userRow - 1][7];
+  if (referrer) {
+    for (var r = 1; r < userData.length; r++) {
+      if (userData[r][0] && userData[r][0].toString().trim() === referrer.toString().trim()) {
+        var rXp = Number(userData[r][9]) || 0;
+        usersSheet.getRange(r + 1, 10).setValue(rXp + refXp);
+        break;
+      }
+    }
+  }
+  payReferrerCommission(ss, usersSheet, userData, userRow, cost);
   
   let totalChance = 0;
   boxItems.forEach(item => totalChance += item.chance);
@@ -357,6 +388,20 @@ function addToInventory(ss, username, item) {
   
   invSheet.appendRow([username, item, new Date()]);
   return "ADDED";
+}
+
+function payReferrerCommission(ss, usersSheet, userData, userRow, spent) {
+  var referrer = userData[userRow - 1][7];
+  if (!referrer) return;
+  referrer = referrer.toString().trim();
+  for (var i = 1; i < userData.length; i++) {
+    if (userData[i][0] && userData[i][0].toString().trim() === referrer) {
+      var pts = Number(userData[i][2]) || 0;
+      var commission = spent * 0.01;
+      usersSheet.getRange(i + 1, 3).setValue(pts + commission);
+      break;
+    }
+  }
 }
 
 function getBoxInfo(ss, box) {
@@ -410,7 +455,8 @@ function getProfile(ss, username) {
         points: Number(pts),
         registered: data[i][3],
         profilePic: data[i][4] || "",
-        tradeLink: data[i][6] || ""
+        tradeLink: data[i][6] || "",
+        xp: Number(data[i][9]) || 0
       });
     }
   }
@@ -758,52 +804,54 @@ function applyReferral(ss, username, code) {
   return "USER_NOT_FOUND";
 }
 
-function generateRefCode(ss, username) {
+function getRefCode(ss, username) {
   if (!username) return "MISSING";
   var usersSheet = getSheet(ss, "Users");
   var data = usersSheet.getDataRange().getValues();
   
-  var existing = "";
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
-      existing = data[i][8] ? data[i][8].toString().trim() : "";
-      if (existing) return existing;
+      var code = data[i][8] ? data[i][8].toString().trim() : "";
+      if (code) return code;
       break;
     }
   }
   
-  var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  var code = "";
-  for (var i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
-      usersSheet.getRange(i + 1, 9).setValue(code);
-      break;
+  var refSheet = getSheet(ss, "RefCodes");
+  var refData = refSheet.getDataRange().getValues();
+  for (var i = 1; i < refData.length; i++) {
+    var u = refData[i][0] ? refData[i][0].toString().trim() : "";
+    var c = refData[i][1] ? refData[i][1].toString().trim() : "";
+    var s = refData[i][2] ? refData[i][2].toString().trim() : "";
+    if (u === username.trim()) {
+      if (s === "approved") return c;
+      if (s === "pending") return "pending:" + c;
     }
   }
-  return code;
+  return "";
 }
 
 function getReferralStats(ss, username) {
   var usersSheet = getSheet(ss, "Users");
   var data = usersSheet.getDataRange().getValues();
   var referred = [];
+  var totalXp = 0;
+  var totalEarned = 0;
   for (var i = 1; i < data.length; i++) {
     if (data[i][7] && data[i][7].toString().trim() === username.trim()) {
       referred.push(data[i][0].toString().trim());
+      var refXp = Number(data[i][9]) || 0;
+      totalXp += refXp;
+      totalEarned += refXp * 0.01;
     }
   }
-  return JSON.stringify({ count: referred.length, users: referred });
+  return JSON.stringify({ count: referred.length, users: referred, totalXp: totalXp, earned: Math.floor(totalEarned * 100) / 100 });
 }
 
 function requestRefCode(ss, username, code) {
   if (!username || !code) return "MISSING";
   code = code.trim().toUpperCase();
   if (code.length !== 4) return "INVALID_LENGTH";
-  if (!/^[A-Z0-9]{4}$/.test(code)) return "INVALID_CHARS";
   
   var refSheet = getSheet(ss, "RefCodes");
   var refData = refSheet.getDataRange().getValues();
