@@ -358,7 +358,25 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         document.getElementById("itemname").innerText = "?? RARE ??";
         document.getElementById("itemname").style.color = "#ff00ff";
         playRare();
-        await new Promise(function(r) { setTimeout(r, 800); });
+        
+        var slotWrap = document.getElementById("slotWrap");
+        var c4div = document.createElement("div");
+        c4div.id = "c4overlay";
+        c4div.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:10;background:rgba(0,0,0,0.7);border-radius:8px;";
+        c4div.innerHTML = '<img src="c4.webp" style="width:120px;height:120px;object-fit:contain;animation:c4Pulse 0.4s ease-in-out 3;">';
+        slotWrap.appendChild(c4div);
+        
+        var style = document.createElement("style");
+        style.textContent = "@keyframes c4Pulse{0%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.3);filter:brightness(2) saturate(2)}100%{transform:scale(1);filter:brightness(1)}}";
+        document.head.appendChild(style);
+        
+        await new Promise(function(r) { setTimeout(r, 1500); });
+        
+        var c4el = document.getElementById("c4overlay");
+        if (c4el) c4el.remove();
+        slotWrap.style.transition = "none";
+        slotWrap.style.transform = "translateX(0px)";
+        document.getElementById("slotStrip").innerHTML = "";
         
         var info2 = buildSlotStrip(itemName, itemImg, itemPrice, true);
         await animateSlot(info2.winnerIndex, info2.cardWidth);
