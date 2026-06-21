@@ -337,7 +337,8 @@ function addToInventory(ss, username, item) {
 }
 
 function getBoxInfo(ss, box) {
-  const boxesSheet = getSheet(ss, "Boxes1");
+  var sheetName = box === "Boxes2" ? "Boxes2" : "Boxes1";
+  const boxesSheet = getSheet(ss, sheetName);
   const data = boxesSheet.getDataRange().getValues();
   const items = [];
   

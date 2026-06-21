@@ -43,6 +43,11 @@ async function checkAdmin() {
     a.style.cssText = "position:fixed;bottom:20px;right:20px;color:#fff;background:#f80;padding:10px 20px;text-decoration:none;z-index:9999;font-size:16px;border-radius:5px;";
     document.body.appendChild(a);
   }
+  var logout = document.createElement("button");
+  logout.textContent = "Odhlásit se";
+  logout.style.cssText = "position:fixed;bottom:20px;left:20px;color:#fff;background:#555;border:none;padding:10px 20px;z-index:9999;font-size:14px;border-radius:5px;cursor:pointer;";
+  logout.onclick = function() { localStorage.removeItem("username"); window.location.href = "index.html"; };
+  document.body.appendChild(logout);
 }
 </script>
 </body>

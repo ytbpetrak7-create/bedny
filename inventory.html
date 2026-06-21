@@ -43,6 +43,7 @@ h1{font-size:24px;margin-bottom:10px;}
 <body>
 <a href="hlav.html" class="back-link">← Zpět</a>
 <h1>Inventář</h1>
+<div id="sellAllWrap" style="margin-bottom:15px;"></div>
 <div id="inventory"></div>
 
 <link rel="stylesheet" href="1bed.css">
@@ -88,6 +89,7 @@ async function loadInventory() {
   }
   
   container.innerHTML = "";
+  renderSellAll(items);
   items.forEach(function(item) {
     var data = itemMap[item.name] || { price: 0, image: "" };
     var img = data.image;
@@ -139,6 +141,42 @@ async function sellFromInv(row, name, price) {
     loadInventory();
   } else {
     alert("Chyba: " + res);
+  }
+}
+
+async function sellAll() {
+  var result = await getInventory();
+  var items = JSON.parse(result);
+  var toSell = [];
+  var total = 0;
+  items.forEach(function(item) {
+    var data = itemMap[item.name] || { price: 0 };
+    if (data.price > 0) {
+      toSell.push({ row: item.row, name: item.name, price: data.price });
+      total += data.price;
+    }
+  });
+  if (toSell.length === 0) { alert("Žádné prodejné předměty"); return; }
+  if (!confirm("Prodat " + toSell.length + " předmětů za " + total + " Kč?")) return;
+  for (var i = 0; i < toSell.length; i++) {
+    await sellItem(toSell[i].row, toSell[i].price);
+  }
+  loadInventory();
+  updatePoints();
+}
+
+function renderSellAll(items) {
+  var total = 0;
+  var count = 0;
+  items.forEach(function(item) {
+    var data = itemMap[item.name] || { price: 0 };
+    if (data.price > 0) { total += data.price; count++; }
+  });
+  var wrap = document.getElementById("sellAllWrap");
+  if (count > 0) {
+    wrap.innerHTML = '<button onclick="sellAll()" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Prodat vše (' + count + ' za ' + total + ' Kč)</button>';
+  } else {
+    wrap.innerHTML = "";
   }
 }
 
