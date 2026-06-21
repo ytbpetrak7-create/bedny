@@ -139,7 +139,7 @@ async function updatePoints() {
     if (isNaN(trimmed) || trimmed === "OK" || trimmed === "Odpověď: OK") {
       el.textContent = "Kč: načítání...";
     } else {
-      el.textContent = "Kč: " + trimmed;
+      el.textContent = "Kč: " + Number(trimmed).toFixed(2);
     }
   }
 }
