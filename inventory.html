@@ -68,8 +68,8 @@ async function loadData() {
     getAdminTradeLink(),
     getProfile()
   ]);
-  JSON.parse(results[0]).forEach(function(x) { itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
-  JSON.parse(results[1]).forEach(function(x) { if (!itemMap[x.name]) itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
+  JSON.parse(results[0]).forEach(function(x) { var img = x.image || ""; if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img; itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img }; });
+  JSON.parse(results[1]).forEach(function(x) { var img = x.image || ""; if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img; if (!itemMap[x.name.trim()]) itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img }; });
   adminTradeLink = results[2];
   var pd = JSON.parse(results[3]);
   userTradeLink = pd.tradeLink || "";
@@ -91,8 +91,9 @@ async function loadInventory() {
   container.innerHTML = "";
   renderSellAll(items);
   items.forEach(function(item) {
-    var data = itemMap[item.name] || { price: 0, image: "" };
+    var data = itemMap[item.name.trim()] || { price: 0, image: "" };
     var img = data.image;
+    if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
     var price = data.price;
     var div = document.createElement("div");
     div.className = "inventory-item";
