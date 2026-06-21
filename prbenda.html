@@ -257,8 +257,7 @@ showChances();
 
 function buildSlotStrip(winnerName, winnerImg, winnerPrice, rareMode) {
   var strip = document.getElementById("slotStrip");
-  var pool = rareMode ? allItems.filter(function(x) { return x.rare; }) : allItems.filter(function(x) { return !x.rare; });
-  if (pool.length === 0) pool = allItems;
+  var pool = allItems;
   var items = [];
   for (var i = 0; i < 35; i++) {
     var item = pool[Math.floor(Math.random() * pool.length)];
@@ -350,9 +349,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       var isRare = winnerItem && Number(winnerItem.rare) === 1;
       
       if (isRare) {
-        var decoy = allItems.filter(function(x) { return !x.rare; });
-        var d = decoy[Math.floor(Math.random() * decoy.length)];
-        var info = buildSlotStrip(d.name, d.image || "", d.sellPrice, false);
+        var info = buildSlotStrip(itemName, itemImg, itemPrice, false);
         await animateSlot(info.winnerIndex, info.cardWidth);
         
         document.getElementById("itemname").innerText = "?? RARE ??";
