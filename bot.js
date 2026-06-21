@@ -4,7 +4,7 @@ const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycby--biLvrDLnb5PkXo8t0TcK_CkMya3wE23T12EOOs_oI9iA8Krrsxun2_DgvjMTeHc2g/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyQCX6sg5Ks2A-pKF8-rJ_zvDFNwDkaINfLMVFCvS5pbIK3-lDy3hY4c5S_lZrOJGi90g/exec";
 
 const client = new SteamUser();
 const manager = new TradeOfferManager({ steam: client, language: "en", pollInterval: 30000 });

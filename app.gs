@@ -439,10 +439,20 @@ function requestWithdraw(ss, username, itemName, row) {
   const invSheet = getSheet(ss, "Inventory");
   const invData = invSheet.getDataRange().getValues();
   var foundRow = -1;
-  for (var i = 1; i < invData.length; i++) {
-    if (invData[i][0] && invData[i][0].toString().trim() === username.trim() && (i + 1) === Number(row)) {
-      foundRow = i + 1;
-      break;
+  if (row) {
+    for (var i = 1; i < invData.length; i++) {
+      if (invData[i][0] && invData[i][0].toString().trim() === username.trim() && (i + 1) === Number(row)) {
+        foundRow = i + 1;
+        break;
+      }
+    }
+  }
+  if (foundRow === -1) {
+    for (var i = 1; i < invData.length; i++) {
+      if (invData[i][0] && invData[i][0].toString().trim() === username.trim() && invData[i][1] && invData[i][1].toString().trim() === itemName.trim()) {
+        foundRow = i + 1;
+        break;
+      }
     }
   }
   if (foundRow === -1) return "NOT_FOUND";
