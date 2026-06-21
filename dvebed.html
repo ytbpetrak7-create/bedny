@@ -185,7 +185,7 @@ h1{font-size:24px;margin-bottom:10px;}
 <link rel="stylesheet" href="inventory.css">
 <link rel="stylesheet" href="1bed.css">
 </body>
-<script src="user.js?ver=3"></script>
+<script src="user.js?ver=5"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
@@ -275,6 +275,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
     
     var count = parseInt(document.getElementById("openCount").value) || 1;
     var result = count > 1 ? await openMultiple("Boxes2", count) : await open("Boxes2");
+    var invPromise = getInventory();
     
     if (count === 1) {
       var parts = result.split("|");
@@ -286,7 +287,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       document.getElementById("itemname").innerText = itemName;
       lastItemPrice = itemPrice;
       
-      var inv = JSON.parse(await getInventory());
+      var inv = JSON.parse(await invPromise);
       var found = inv.filter(function(x) { return x.name === itemName; });
       var lastItemRow = found.length > 0 ? found[found.length - 1].row : null;
       

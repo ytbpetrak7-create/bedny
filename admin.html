@@ -15,7 +15,7 @@ h2{color:#fff;font-size:18px;margin:20px 0 10px;}
 <div id="adminContent"></div>
 <link rel="stylesheet" href="inventory.css">
 </body>
-<script src="user.js?ver=3"></script>
+<script src="user.js?ver=5"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
@@ -35,7 +35,12 @@ async function loadAll() {
   div.innerHTML = "<p style='color:#aaa;'>Načítám...</p>";
   
   var html = "<h2>Žádosti o výběr</h2>";
-  var wRes = await callScript("getWithdrawals");
+  var results = await Promise.all([
+    callScript("getWithdrawals"),
+    getTradeOffers()
+  ]);
+  var wRes = results[0];
+  var res = results[1];
   try {
     var wItems = JSON.parse(wRes);
     if (wItems.length === 0) {
@@ -63,7 +68,6 @@ async function loadAll() {
   }
   
   html += "<h2>Příchozí trade offeary</h2>";
-  var res = await getTradeOffers();
   if (res === "NO_KEY" || res.indexOf("ERROR:") === 0) {
     var msg = res;
     if (res.indexOf("script.external_request") > -1) {

@@ -48,7 +48,7 @@ h1{font-size:24px;margin-bottom:10px;}
 <link rel="stylesheet" href="1bed.css">
 <link rel="stylesheet" href="inventory.css">
 </body>
-<script src="user.js?ver=3"></script>
+<script src="user.js?ver=5"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
@@ -61,19 +61,24 @@ var adminTradeLink = "";
 var userTradeLink = "";
 
 async function loadData() {
-  var info1 = await getBoxInfo("Boxes1");
-  JSON.parse(info1).forEach(function(x) { itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
-  var info2 = await getBoxInfo("Boxes2");
-  JSON.parse(info2).forEach(function(x) { if (!itemMap[x.name]) itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
-  adminTradeLink = await getAdminTradeLink();
-  var profile = await getProfile();
-  var pd = JSON.parse(profile);
+  var results = await Promise.all([
+    getBoxInfo("Boxes1"),
+    getBoxInfo("Boxes2"),
+    getAdminTradeLink(),
+    getProfile()
+  ]);
+  JSON.parse(results[0]).forEach(function(x) { itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
+  JSON.parse(results[1]).forEach(function(x) { if (!itemMap[x.name]) itemMap[x.name] = { price: x.sellPrice || 0, image: x.image || "" }; });
+  adminTradeLink = results[2];
+  var pd = JSON.parse(results[3]);
   userTradeLink = pd.tradeLink || "";
 }
 
 async function loadInventory() {
-  await loadData();
-  var result = await getInventory();
+  var dataPromise = loadData();
+  var invPromise = getInventory();
+  await dataPromise;
+  var result = await invPromise;
   var items = JSON.parse(result);
   var container = document.getElementById("inventory");
   

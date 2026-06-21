@@ -62,7 +62,11 @@ async function getInventory() {
 }
 
 async function getBoxInfo(boxName) {
-  return await callScript("getBoxInfo", { box: boxName });
+  var cached = sessionStorage.getItem("boxInfo_" + boxName);
+  if (cached) return cached;
+  var data = await callScript("getBoxInfo", { box: boxName });
+  sessionStorage.setItem("boxInfo_" + boxName, data);
+  return data;
 }
 
 async function deleteInventoryItem(item, row) {
