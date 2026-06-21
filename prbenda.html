@@ -257,7 +257,7 @@ showChances();
 
 function buildSlotStrip(winnerName, winnerImg, winnerPrice, rareMode) {
   var strip = document.getElementById("slotStrip");
-  var pool = allItems;
+  var pool = rareMode ? allItems.filter(function(x) { return x.rare; }) : allItems;
   var items = [];
   for (var i = 0; i < 35; i++) {
     var item = pool[Math.floor(Math.random() * pool.length)];
