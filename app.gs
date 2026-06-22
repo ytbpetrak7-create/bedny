@@ -218,14 +218,15 @@ function useCode(ss, username, code) {
 }
 
 function openBox(ss, username, box) {
-  const boxesSheet = getSheet(ss, "Boxes1");
+  var sheetName = box === "Boxes2" ? "Boxes2" : "Boxes1";
+  const boxesSheet = getSheet(ss, sheetName);
   const data = boxesSheet.getDataRange().getValues();
   const boxItems = [];
   
   for (let i = 1; i < data.length; i++) {
     boxItems.push({
       name: data[i][2],
-      image: data[i][0],
+      image: (data[i][0] || "").toString().trim(),
       chance: Number(data[i][1]),
       sellPrice: Number(data[i][3]) || 0
     });
@@ -290,14 +291,15 @@ function openBox(ss, username, box) {
 }
 
 function openBoxMultiple(ss, username, box, count) {
-  const boxesSheet = getSheet(ss, "Boxes1");
+  var sheetName = box === "Boxes2" ? "Boxes2" : "Boxes1";
+  const boxesSheet = getSheet(ss, sheetName);
   const data = boxesSheet.getDataRange().getValues();
   const boxItems = [];
   
   for (let i = 1; i < data.length; i++) {
     boxItems.push({
       name: data[i][2],
-      image: data[i][0],
+      image: (data[i][0] || "").toString().trim(),
       chance: Number(data[i][1]),
       sellPrice: Number(data[i][3]) || 0
     });
