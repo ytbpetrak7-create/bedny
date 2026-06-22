@@ -415,7 +415,7 @@ function getBoxInfo(ss, box) {
   
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] && data[i][1] && data[i][2]) {
-      items.push({ name: data[i][2], image: data[i][0], chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0, rare: Number(data[i][4]) || 0 });
+      items.push({ name: data[i][2], image: (data[i][0] || "").toString().trim(), chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0, rare: Number(data[i][4]) || 0 });
     }
   }
   
