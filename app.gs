@@ -233,7 +233,7 @@ function openBox(ss, username, box) {
   
   if (boxItems.length === 0) return "EMPTY_BOX";
   
-  const costMap = { "Boxes1": 2, "Boxes2": 250 };
+  const costMap = { "Boxes1": 2, "Boxes2": 6 };
   const cost = costMap[box] || 0;
   
   const usersSheet = getSheet(ss, "Users");
@@ -305,7 +305,7 @@ function openBoxMultiple(ss, username, box, count) {
   
   if (boxItems.length === 0) return "EMPTY_BOX";
   
-  const costMap = { "Boxes1": 2, "Boxes2": 250 };
+  const costMap = { "Boxes1": 2, "Boxes2": 6 };
   const cost = (costMap[box] || 0) * count;
   
   const usersSheet = getSheet(ss, "Users");

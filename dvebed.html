@@ -241,6 +241,7 @@ async function showChances() {
   var html = '';
   allItems.forEach(function(item) {
     var img = item.image || '';
+    if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
     var rareStyle = item.rare ? 'border:2px solid #ff00ff;box-shadow:0 0 10px rgba(255,0,255,0.5);' : '';
     html += '<div class="skin-card" style="' + rareStyle + '">';
     if (img) { html += '<img src="' + img + '" alt="' + item.name + '" loading="lazy">'; }
@@ -466,7 +467,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
         totalValue += price;
         html += '<div class="skin-card">';
-        if (img) { html += '<img src="' + img + '" alt="' + name + '" loading="lazy" onerror="this.style.display=\'none\'>"; }
+        if (img) { html += '<img src="' + img + '" alt="' + name + '" loading="lazy">'; }
         else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
         html += '<span class="sname">' + name + '</span>';
         html += '<span class="sprice">' + Number(price).toFixed(2) + ' Kč</span>';

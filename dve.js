@@ -1,11 +1,11 @@
 const items = [
-    {Image: "mac 10 ens.png", chance: 25, name : "mac 10 Ensnared"},
-    {Image: "", chance: 25, name : "M4A4 | Etch Lord"},
-    {Image: "", chance: 20, name : "Desert Eagle | Urban Rubble"},
-    {Image: "", chance: 15, name : "M4A1-S | Night Terror"},
-    {Image: "", chance: 15, name : "MAC-10 | Light Box"},
-    {Image: "", chance: 5, name : "Glock-18 | Winterized"},
-    {Image: "", chance: 2, name : "CZ75-Auto | Copper Fiber"},
+    {Image: "mac 10 ens.png", chance: 25, name : "MAC-10 | Ensnared"},
+    {Image: "m4a4 etch lord.png", chance: 25, name : "M4A4 | Etch Lord"},
+    {Image: "eagel urban.png", chance: 20, name : "Desert Eagle | Urban Rubble"},
+    {Image: "a1s n terror.png", chance: 15, name : "M4A1-S | Night Terror"},
+    {Image: "mac10 light box.png", chance: 15, name : "MAC-10 | Light Box"},
+    {Image: "glock win.png", chance: 5, name : "Glock-18 | Winterized"},
+    {Image: "cz copper.png", chance: 2, name : "CZ75-Auto | Copper Fiber"},
     
 
 ]
