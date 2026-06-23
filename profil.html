@@ -77,11 +77,15 @@ async function loadProfile() {
   html += '<p style="font-size:12px;color:#00ff96;">• Tvůj kamarád dostane <b>6 Kč</b> zdarma + <b>10%</b> bonus při depositu</p>';
   html += '<p style="font-size:12px;color:#ffd700;">• Ty dostaneš <b>1%</b> z každého Kč co utratí za bedny</p>';
   html += '<div id="refCodeSection"></div>';
+  html += '<hr style="border-color:#444;margin:20px 0;">';
+  html += '<p style="font-size:16px;color:#aaa;">Denní odměna</p>';
+  html += '<div id="dailySection"></div>';
   html += '</div>';
   
   document.getElementById("profile").innerHTML = html;
   updateProfilePic(data.profilePic);
   loadRefStats();
+  loadDailyStatus();
 }
 
 async function saveTrade() {
@@ -162,6 +166,54 @@ function updateProfilePic(url) {
   if (url) {
     pic.style.background = "url('" + url + "') center/cover";
     pic.textContent = "";
+  }
+}
+
+async function loadDailyStatus() {
+  var el = document.getElementById("dailySection");
+  if (!el) return;
+  var res = await callScript("getDailyStatus", { username: getCurrentUser() });
+  try {
+    var s = JSON.parse(res);
+    var days = [
+      { day: 1, reward: 1 }, { day: 2, reward: 2 }, { day: 3, reward: 5 },
+      { day: 4, reward: 10 }, { day: 5, reward: 15 }, { day: 6, reward: 25 }, { day: 7, reward: 50 }
+    ];
+    var html = '<div style="display:flex;gap:6px;justify-content:center;margin:10px 0;flex-wrap:wrap;">';
+    for (var i = 0; i < days.length; i++) {
+      var d = days[i];
+      var active = d.day <= s.streak;
+      var next = d.day === s.nextDay && !s.claimed;
+      var bg = active ? "#00ff96" : next ? "#ffa500" : "#333";
+      var col = active ? "#1a1a2e" : next ? "#1a1a2e" : "#888";
+      html += '<div style="width:50px;text-align:center;padding:8px 0;background:' + bg + ';border-radius:8px;color:' + col + ';">';
+      html += '<div style="font-size:11px;">Den ' + d.day + '</div>';
+      html += '<div style="font-size:13px;font-weight:bold;">' + d.reward + ' Kč</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    if (s.claimed) {
+      html += '<p style="color:#00ff96;font-size:14px;text-align:center;">Dnes už máš splněno!</p>';
+    } else {
+      html += '<div style="text-align:center;margin-top:10px;">';
+      html += '<button onclick="claimDaily()" style="padding:12px 40px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Vyzvednout ' + s.nextReward + ' Kč</button>';
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#888;">Načítání...</p>';
+  }
+}
+
+async function claimDaily() {
+  var res = await callScript("claimDailyReward", { username: getCurrentUser() });
+  try {
+    var s = JSON.parse(res);
+    alert("Získal jsi " + s.reward + " Kč! (Den " + s.streak + "/7)");
+    createPointsDisplay();
+    loadDailyStatus();
+  } catch(e) {
+    alert("Chyba: " + res);
   }
 }
 </script>

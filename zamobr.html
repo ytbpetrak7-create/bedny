@@ -45,6 +45,7 @@ if (!getCurrentUser()) {
 } else {
   createPointsDisplay();
   loadTradeLink();
+  checkReferralStatus();
 }
 
 function showTab(tab) {
@@ -87,8 +88,18 @@ async function applyRefCode() {
     el.innerHTML = '<p style="color:#00ff96;margin-top:15px;">Kód použit! Získal jsi 6 Kč + 10% deposit bonus.</p>';
     document.getElementById("refCodeInput").value = "";
     createPointsDisplay();
+  } else if (res === "ALREADY_REFERRED") {
+    el.innerHTML = '<p style="color:#ffa500;margin-top:15px;">Už máš přiřazený referral kód.</p>';
   } else {
     el.innerHTML = '<p style="color:#f44;margin-top:15px;">Chyba: ' + res + '</p>';
+  }
+}
+
+async function checkReferralStatus() {
+  var res = await callScript("hasReferral", { username: getCurrentUser() });
+  var el = document.getElementById("refTab");
+  if (res === "YES") {
+    el.innerHTML = '<p style="color:#ffa500;font-size:14px;">Už máš přiřazený referral kód.</p>';
   }
 }
 </script>

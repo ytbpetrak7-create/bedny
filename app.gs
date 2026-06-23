@@ -107,6 +107,9 @@ function doPost(e) {
     case "applyReferral":
       result = applyReferral(ss, params.username, params.code);
       break;
+    case "hasReferral":
+      result = hasReferral(ss, params.username);
+      break;
     case "getReferralStats":
       result = getReferralStats(ss, params.username);
       break;
@@ -121,6 +124,12 @@ function doPost(e) {
       break;
     case "approveRefCode":
       result = approveRefCode(ss, params.row);
+      break;
+    case "claimDailyReward":
+      result = claimDailyReward(ss, params.username);
+      break;
+    case "getDailyStatus":
+      result = getDailyStatus(ss, params.username);
       break;
   }
   
@@ -851,6 +860,19 @@ function applyReferral(ss, username, code) {
   return "USER_NOT_FOUND";
 }
 
+function hasReferral(ss, username) {
+  if (!username) return "NO";
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var uname = data[i][0] ? data[i][0].toString().trim() : "";
+    if (uname === username.trim()) {
+      return data[i][7] ? "YES" : "NO";
+    }
+  }
+  return "NO";
+}
+
 function getRefCode(ss, username) {
   if (!username) return "MISSING";
   
@@ -956,4 +978,80 @@ function approveRefCode(ss, row) {
     }
   }
   return "OK";
+}
+
+var DAILY_REWARDS = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
+
+function claimDailyReward(ss, username) {
+  if (!username) return "MISSING";
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  var userRow = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      userRow = i + 1;
+      break;
+    }
+  }
+  if (userRow === -1) return "USER_NOT_FOUND";
+
+  var lastClaim = data[userRow - 1][10] ? new Date(data[userRow - 1][10]) : null;
+  var streak = Number(data[userRow - 1][11]) || 0;
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (lastClaim) {
+    var lastDate = new Date(lastClaim.getFullYear(), lastClaim.getMonth(), lastClaim.getDate());
+    var diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "ALREADY_CLAIMED";
+    if (diffDays === 1) {
+      streak++;
+      if (streak > 7) streak = 1;
+    } else {
+      streak = 1;
+    }
+  } else {
+    streak = 1;
+  }
+
+  var reward = DAILY_REWARDS[streak] || 1;
+  var pts = Number(data[userRow - 1][2]) || 0;
+  usersSheet.getRange(userRow, 3).setValue(pts + reward);
+  usersSheet.getRange(userRow, 11).setValue(streak);
+  usersSheet.getRange(userRow, 12).setValue(today);
+
+  return JSON.stringify({ streak: streak, reward: reward });
+}
+
+function getDailyStatus(ss, username) {
+  if (!username) return "MISSING";
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  var userRow = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+      userRow = i + 1;
+      break;
+    }
+  }
+  if (userRow === -1) return "USER_NOT_FOUND";
+
+  var lastClaim = data[userRow - 1][10] ? new Date(data[userRow - 1][10]) : null;
+  var streak = Number(data[userRow - 1][11]) || 0;
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var claimed = false;
+
+  if (lastClaim) {
+    var lastDate = new Date(lastClaim.getFullYear(), lastClaim.getMonth(), lastClaim.getDate());
+    var diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) claimed = true;
+    if (diffDays > 1) streak = 0;
+  }
+
+  var nextDay = claimed ? streak : (streak || 0) + 1;
+  if (nextDay > 7) nextDay = 1;
+  var nextReward = DAILY_REWARDS[nextDay] || 1;
+
+  return JSON.stringify({ claimed: claimed, streak: streak, nextDay: nextDay, nextReward: nextReward });
 }
