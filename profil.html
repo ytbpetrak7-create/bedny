@@ -176,8 +176,8 @@ async function loadDailyStatus() {
   try {
     var s = JSON.parse(res);
     var days = [
-      { day: 1, reward: 1 }, { day: 2, reward: 2 }, { day: 3, reward: 5 },
-      { day: 4, reward: 10 }, { day: 5, reward: 15 }, { day: 6, reward: 25 }, { day: 7, reward: 50 }
+      { day: 1, reward: 0.10 }, { day: 2, reward: 0.20 }, { day: 3, reward: 0.30 },
+      { day: 4, reward: 0.40 }, { day: 5, reward: 0.50 }, { day: 6, reward: 0.60 }, { day: 7, reward: 0.70 }
     ];
     var html = '<div style="display:flex;gap:6px;justify-content:center;margin:10px 0;flex-wrap:wrap;">';
     for (var i = 0; i < days.length; i++) {
@@ -188,7 +188,7 @@ async function loadDailyStatus() {
       var col = active ? "#1a1a2e" : next ? "#1a1a2e" : "#888";
       html += '<div style="width:50px;text-align:center;padding:8px 0;background:' + bg + ';border-radius:8px;color:' + col + ';">';
       html += '<div style="font-size:11px;">Den ' + d.day + '</div>';
-      html += '<div style="font-size:13px;font-weight:bold;">' + d.reward + ' Kč</div>';
+      html += '<div style="font-size:13px;font-weight:bold;">' + d.reward.toFixed(2) + ' Kč</div>';
       html += '</div>';
     }
     html += '</div>';
@@ -196,7 +196,7 @@ async function loadDailyStatus() {
       html += '<p style="color:#00ff96;font-size:14px;text-align:center;">Dnes už máš splněno!</p>';
     } else {
       html += '<div style="text-align:center;margin-top:10px;">';
-      html += '<button onclick="claimDaily()" style="padding:12px 40px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Vyzvednout ' + s.nextReward + ' Kč</button>';
+      html += '<button onclick="claimDaily()" style="padding:12px 40px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Vyzvednout ' + s.nextReward.toFixed(2) + ' Kč</button>';
       html += '</div>';
     }
     el.innerHTML = html;
@@ -209,7 +209,7 @@ async function claimDaily() {
   var res = await callScript("claimDailyReward", { username: getCurrentUser() });
   try {
     var s = JSON.parse(res);
-    alert("Získal jsi " + s.reward + " Kč! (Den " + s.streak + "/7)");
+    alert("Získal jsi " + s.reward.toFixed(2) + " Kč! (Den " + s.streak + "/7)");
     createPointsDisplay();
     loadDailyStatus();
   } catch(e) {
