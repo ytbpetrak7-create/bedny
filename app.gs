@@ -996,23 +996,29 @@ function claimDailyReward(ss, username) {
   if (userRow === -1) return "USER_NOT_FOUND";
 
   var now = new Date();
-  var todayStr = Utilities.formatDate(now, "Europe/Prague", "yyyy-MM-dd");
+  var dd = now.getDate(); var mm = now.getMonth() + 1; var yyyy = now.getFullYear();
+  var todayNum = yyyy * 10000 + mm * 100 + dd;
+
   var rawLast = data[userRow - 1][10];
-  var lastClaimStr = "";
+  var lastClaimNum = 0;
   if (rawLast) {
     if (rawLast instanceof Date) {
-      lastClaimStr = Utilities.formatDate(rawLast, "Europe/Prague", "yyyy-MM-dd");
+      lastClaimNum = rawLast.getFullYear() * 10000 + (rawLast.getMonth() + 1) * 100 + rawLast.getDate();
     } else {
-      lastClaimStr = rawLast.toString().trim();
+      var parsed = parseInt(rawLast.toString().trim(), 10);
+      if (!isNaN(parsed)) lastClaimNum = parsed;
     }
   }
   var streak = Number(data[userRow - 1][11]) || 0;
 
-  if (lastClaimStr) {
-    if (lastClaimStr === todayStr) return "ALREADY_CLAIMED";
-    var lastDate = new Date(lastClaimStr);
-    var todayDate = new Date(todayStr);
-    var diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+  if (lastClaimNum) {
+    if (lastClaimNum === todayNum) return "ALREADY_CLAIMED";
+    var lastY = Math.floor(lastClaimNum / 10000);
+    var lastM = Math.floor((lastClaimNum % 10000) / 100) - 1;
+    var lastD = lastClaimNum % 100;
+    var lastDate = new Date(lastY, lastM, lastD);
+    var todayDate = new Date(yyyy, mm - 1, dd);
+    var diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
     if (diffDays === 1) {
       streak++;
       if (streak > 7) streak = 1;
@@ -1027,7 +1033,7 @@ function claimDailyReward(ss, username) {
   var pts = Number(data[userRow - 1][2]) || 0;
   usersSheet.getRange(userRow, 3).setValue(pts + reward);
   usersSheet.getRange(userRow, 11).setValue(streak);
-  usersSheet.getRange(userRow, 12).setValue(todayStr);
+  usersSheet.getRange(userRow, 12).setValue(todayNum);
 
   return JSON.stringify({ streak: streak, reward: reward });
 }
@@ -1046,26 +1052,32 @@ function getDailyStatus(ss, username) {
   if (userRow === -1) return "USER_NOT_FOUND";
 
   var now = new Date();
-  var todayStr = Utilities.formatDate(now, "Europe/Prague", "yyyy-MM-dd");
+  var dd = now.getDate(); var mm = now.getMonth() + 1; var yyyy = now.getFullYear();
+  var todayNum = yyyy * 10000 + mm * 100 + dd;
+
   var rawLast = data[userRow - 1][10];
-  var lastClaimStr = "";
+  var lastClaimNum = 0;
   if (rawLast) {
     if (rawLast instanceof Date) {
-      lastClaimStr = Utilities.formatDate(rawLast, "Europe/Prague", "yyyy-MM-dd");
+      lastClaimNum = rawLast.getFullYear() * 10000 + (rawLast.getMonth() + 1) * 100 + rawLast.getDate();
     } else {
-      lastClaimStr = rawLast.toString().trim();
+      var parsed = parseInt(rawLast.toString().trim(), 10);
+      if (!isNaN(parsed)) lastClaimNum = parsed;
     }
   }
   var streak = Number(data[userRow - 1][11]) || 0;
   var claimed = false;
 
-  if (lastClaimStr) {
-    if (lastClaimStr === todayStr) {
+  if (lastClaimNum) {
+    if (lastClaimNum === todayNum) {
       claimed = true;
     } else {
-      var lastDate = new Date(lastClaimStr);
-      var todayDate = new Date(todayStr);
-      var diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+      var lastY = Math.floor(lastClaimNum / 10000);
+      var lastM = Math.floor((lastClaimNum % 10000) / 100) - 1;
+      var lastD = lastClaimNum % 100;
+      var lastDate = new Date(lastY, lastM, lastD);
+      var todayDate = new Date(yyyy, mm - 1, dd);
+      var diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
       if (diffDays > 1) streak = 0;
     }
   }
