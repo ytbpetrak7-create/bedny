@@ -144,3 +144,10 @@ async function updatePoints() {
     }
   }
 }
+
+function fixImg(url) {
+  if (!url) return url;
+  var parts = url.split("/");
+  parts[parts.length - 1] = encodeURIComponent(parts[parts.length - 1]);
+  return parts.join("/");
+}

@@ -207,6 +207,10 @@ async function loadDailyStatus() {
 
 async function claimDaily() {
   var res = await callScript("claimDailyReward", { username: getCurrentUser() });
+  if (res === "ALREADY_CLAIMED") {
+    alert("Už sis dnes odměnu vyzvedl!");
+    return;
+  }
   try {
     var s = JSON.parse(res);
     alert("Získal jsi " + s.reward.toFixed(2) + " Kč! (Den " + s.streak + "/7)");

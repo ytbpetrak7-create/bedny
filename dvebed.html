@@ -244,7 +244,7 @@ async function showChances() {
     if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
     var rareStyle = item.rare ? 'border:2px solid #ff00ff;box-shadow:0 0 10px rgba(255,0,255,0.5);' : '';
     html += '<div class="skin-card" style="' + rareStyle + '">';
-    if (img) { html += '<img src="' + img + '" alt="' + item.name + '" loading="lazy">'; }
+    if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '" loading="lazy">'; }
     else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
     if (item.rare) { html += '<span style="color:#ff00ff;font-size:9px;">★ RARE</span>'; }
@@ -272,7 +272,7 @@ function buildSlotStrip(winnerName, winnerImg, winnerPrice, rareMode) {
     var img = item.image || '';
     var isWinner = (i === winnerIndex);
     html += '<div class="skin-card' + (isWinner ? ' winner' : '') + '">';
-    if (img) { html += '<img src="' + img + '" alt="' + item.name + '">'; }
+    if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '">'; }
     else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
     html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
@@ -418,7 +418,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
           var simg = si2.image || '';
           if (simg && !simg.startsWith("http")) simg = "https://ytbpetrak7-create.github.io/bedny/" + simg;
           stripHtml += '<div class="skin-card' + (si === wIdx ? ' winner' : '') + '">';
-          if (simg) { stripHtml += '<img src="' + simg + '" alt="' + si2.name + '">'; }
+          if (simg) { stripHtml += '<img src="' + fixImg(simg) + '" alt="' + si2.name + '">'; }
           else { stripHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
           stripHtml += '<span class="sname">' + si2.name + '</span>';
           stripHtml += '<span class="sprice">' + Number(si2.sellPrice).toFixed(2) + ' Kč</span>';
@@ -467,7 +467,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
         totalValue += price;
         html += '<div class="skin-card">';
-        if (img) { html += '<img src="' + img + '" alt="' + name + '" loading="lazy">'; }
+        if (img) { html += '<img src="' + fixImg(img) + '" alt="' + name + '" loading="lazy">'; }
         else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
         html += '<span class="sname">' + name + '</span>';
         html += '<span class="sprice">' + Number(price).toFixed(2) + ' Kč</span>';
