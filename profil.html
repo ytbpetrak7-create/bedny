@@ -206,9 +206,12 @@ async function loadDailyStatus() {
 }
 
 async function claimDaily() {
+  var btn = document.querySelector("#dailySection button");
+  if (btn) { btn.disabled = true; btn.textContent = "Načítání..."; }
   var res = await callScript("claimDailyReward", { username: getCurrentUser() });
   if (res === "ALREADY_CLAIMED") {
     alert("Už sis dnes odměnu vyzvedl!");
+    loadDailyStatus();
     return;
   }
   try {
@@ -218,6 +221,7 @@ async function claimDaily() {
     loadDailyStatus();
   } catch(e) {
     alert("Chyba: " + res);
+    loadDailyStatus();
   }
 }
 </script>

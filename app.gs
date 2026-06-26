@@ -997,7 +997,15 @@ function claimDailyReward(ss, username) {
 
   var now = new Date();
   var todayStr = Utilities.formatDate(now, "Europe/Prague", "yyyy-MM-dd");
-  var lastClaimStr = data[userRow - 1][10] ? data[userRow - 1][10].toString().trim() : "";
+  var rawLast = data[userRow - 1][10];
+  var lastClaimStr = "";
+  if (rawLast) {
+    if (rawLast instanceof Date) {
+      lastClaimStr = Utilities.formatDate(rawLast, "Europe/Prague", "yyyy-MM-dd");
+    } else {
+      lastClaimStr = rawLast.toString().trim();
+    }
+  }
   var streak = Number(data[userRow - 1][11]) || 0;
 
   if (lastClaimStr) {
@@ -1039,7 +1047,15 @@ function getDailyStatus(ss, username) {
 
   var now = new Date();
   var todayStr = Utilities.formatDate(now, "Europe/Prague", "yyyy-MM-dd");
-  var lastClaimStr = data[userRow - 1][10] ? data[userRow - 1][10].toString().trim() : "";
+  var rawLast = data[userRow - 1][10];
+  var lastClaimStr = "";
+  if (rawLast) {
+    if (rawLast instanceof Date) {
+      lastClaimStr = Utilities.formatDate(rawLast, "Europe/Prague", "yyyy-MM-dd");
+    } else {
+      lastClaimStr = rawLast.toString().trim();
+    }
+  }
   var streak = Number(data[userRow - 1][11]) || 0;
   var claimed = false;
 
