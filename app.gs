@@ -997,13 +997,13 @@ function claimDailyReward(ss, username) {
 
   var now = new Date();
   var dd = now.getDate(); var mm = now.getMonth() + 1; var yyyy = now.getFullYear();
-  var todayStr = yyyy + "-" + ("0" + mm).slice(-2) + "-" + ("0" + dd).slice(-2);
+  var todayStr = "D" + yyyy + ("0" + mm).slice(-2) + ("0" + dd).slice(-2);
 
   var rawLast = data[userRow - 1][10];
   var lastClaimStr = "";
   if (rawLast) {
     if (rawLast instanceof Date) {
-      lastClaimStr = rawLast.getFullYear() + "-" + ("0" + (rawLast.getMonth() + 1)).slice(-2) + "-" + ("0" + rawLast.getDate()).slice(-2);
+      lastClaimStr = "D" + rawLast.getFullYear() + ("0" + (rawLast.getMonth() + 1)).slice(-2) + ("0" + rawLast.getDate()).slice(-2);
     } else {
       lastClaimStr = rawLast.toString().trim();
     }
@@ -1012,9 +1012,9 @@ function claimDailyReward(ss, username) {
 
   if (lastClaimStr) {
     if (lastClaimStr === todayStr) return "ALREADY_CLAIMED";
-    var lastY = parseInt(lastClaimStr.slice(0, 4), 10);
+    var lastY = parseInt(lastClaimStr.slice(1, 5), 10);
     var lastM = parseInt(lastClaimStr.slice(5, 7), 10) - 1;
-    var lastD = parseInt(lastClaimStr.slice(8, 10), 10);
+    var lastD = parseInt(lastClaimStr.slice(7, 9), 10);
     var lastDate = new Date(lastY, lastM, lastD);
     var todayDate = new Date(yyyy, mm - 1, dd);
     var diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
@@ -1032,9 +1032,7 @@ function claimDailyReward(ss, username) {
   var pts = Number(data[userRow - 1][2]) || 0;
   usersSheet.getRange(userRow, 3).setValue(pts + reward);
   usersSheet.getRange(userRow, 11).setValue(streak);
-  var cell = usersSheet.getRange(userRow, 12);
-  cell.setNumberFormat("@");
-  cell.setValue(todayStr);
+  usersSheet.getRange(userRow, 12).setValue(todayStr);
 
   return JSON.stringify({ streak: streak, reward: reward });
 }
@@ -1054,13 +1052,13 @@ function getDailyStatus(ss, username) {
 
   var now = new Date();
   var dd = now.getDate(); var mm = now.getMonth() + 1; var yyyy = now.getFullYear();
-  var todayStr = yyyy + "-" + ("0" + mm).slice(-2) + "-" + ("0" + dd).slice(-2);
+  var todayStr = "D" + yyyy + ("0" + mm).slice(-2) + ("0" + dd).slice(-2);
 
   var rawLast = data[userRow - 1][10];
   var lastClaimStr = "";
   if (rawLast) {
     if (rawLast instanceof Date) {
-      lastClaimStr = rawLast.getFullYear() + "-" + ("0" + (rawLast.getMonth() + 1)).slice(-2) + "-" + ("0" + rawLast.getDate()).slice(-2);
+      lastClaimStr = "D" + rawLast.getFullYear() + ("0" + (rawLast.getMonth() + 1)).slice(-2) + ("0" + rawLast.getDate()).slice(-2);
     } else {
       lastClaimStr = rawLast.toString().trim();
     }
@@ -1072,9 +1070,9 @@ function getDailyStatus(ss, username) {
     if (lastClaimStr === todayStr) {
       claimed = true;
     } else {
-      var lastY = parseInt(lastClaimStr.slice(0, 4), 10);
+      var lastY = parseInt(lastClaimStr.slice(1, 5), 10);
       var lastM = parseInt(lastClaimStr.slice(5, 7), 10) - 1;
-      var lastD = parseInt(lastClaimStr.slice(8, 10), 10);
+      var lastD = parseInt(lastClaimStr.slice(7, 9), 10);
       var lastDate = new Date(lastY, lastM, lastD);
       var todayDate = new Date(yyyy, mm - 1, dd);
       var diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
