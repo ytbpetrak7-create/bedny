@@ -131,6 +131,9 @@ function doPost(e) {
     case "getDailyStatus":
       result = getDailyStatus(ss, params.username);
       break;
+    case "getUsernameBySteamId":
+      result = getUsernameBySteamId(ss, params.steamId);
+      break;
   }
   
   return ContentService.createTextOutput(result);
@@ -995,27 +998,23 @@ function claimDailyReward(ss, username) {
   }
   if (userRow === -1) return "USER_NOT_FOUND";
 
-  var now = new Date();
-  var dd = now.getDate(); var mm = now.getMonth() + 1; var yyyy = now.getFullYear();
-  var todayStr = "D" + yyyy + ("0" + mm).slice(-2) + ("0" + dd).slice(-2);
+  var props = PropertiesService.getScriptProperties();
+  var lastClaim = props.getProperty("daily_" + username + "_date") || "";
+  var streak = Number(props.getProperty("daily_" + username + "_streak")) || 0;
 
-  var rawLast = data[userRow - 1][10];
-  var lastClaimStr = "";
-  if (rawLast) {
-    if (rawLast instanceof Date) {
-      lastClaimStr = "D" + rawLast.getFullYear() + ("0" + (rawLast.getMonth() + 1)).slice(-2) + ("0" + rawLast.getDate()).slice(-2);
-    } else {
-      lastClaimStr = rawLast.toString().trim();
-    }
-  }
-  var streak = Number(data[userRow - 1][11]) || 0;
+  var todayKey = Utilities.formatDate(new Date(), "Europe/Prague", "yyyyMMdd");
+  var dateParts = Utilities.formatDate(new Date(), "Europe/Prague", "yyyy-MM-dd").split("-");
+  var yyyy = parseInt(dateParts[0], 10);
+  var mm = parseInt(dateParts[1], 10);
+  var dd = parseInt(dateParts[2], 10);
 
-  if (lastClaimStr) {
-    if (lastClaimStr === todayStr) return "ALREADY_CLAIMED";
-    var lastY = parseInt(lastClaimStr.slice(1, 5), 10);
-    var lastM = parseInt(lastClaimStr.slice(5, 7), 10) - 1;
-    var lastD = parseInt(lastClaimStr.slice(7, 9), 10);
-    var lastDate = new Date(lastY, lastM, lastD);
+  if (lastClaim === todayKey) return "ALREADY_CLAIMED";
+
+  if (lastClaim) {
+    var lastY = parseInt(lastClaim.slice(0, 4), 10);
+    var lastM = parseInt(lastClaim.slice(4, 6), 10);
+    var lastD = parseInt(lastClaim.slice(6, 8), 10);
+    var lastDate = new Date(lastY, lastM - 1, lastD);
     var todayDate = new Date(yyyy, mm - 1, dd);
     var diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
     if (diffDays === 1) {
@@ -1032,7 +1031,9 @@ function claimDailyReward(ss, username) {
   var pts = Number(data[userRow - 1][2]) || 0;
   usersSheet.getRange(userRow, 3).setValue(pts + reward);
   usersSheet.getRange(userRow, 11).setValue(streak);
-  usersSheet.getRange(userRow, 12).setValue(todayStr);
+
+  props.setProperty("daily_" + username + "_date", todayKey);
+  props.setProperty("daily_" + username + "_streak", streak.toString());
 
   return JSON.stringify({ streak: streak, reward: reward });
 }
@@ -1050,34 +1051,25 @@ function getDailyStatus(ss, username) {
   }
   if (userRow === -1) return "USER_NOT_FOUND";
 
-  var now = new Date();
-  var dd = now.getDate(); var mm = now.getMonth() + 1; var yyyy = now.getFullYear();
-  var todayStr = "D" + yyyy + ("0" + mm).slice(-2) + ("0" + dd).slice(-2);
+  var props = PropertiesService.getScriptProperties();
+  var lastClaim = props.getProperty("daily_" + username + "_date") || "";
+  var streak = Number(props.getProperty("daily_" + username + "_streak")) || 0;
 
-  var rawLast = data[userRow - 1][10];
-  var lastClaimStr = "";
-  if (rawLast) {
-    if (rawLast instanceof Date) {
-      lastClaimStr = "D" + rawLast.getFullYear() + ("0" + (rawLast.getMonth() + 1)).slice(-2) + ("0" + rawLast.getDate()).slice(-2);
-    } else {
-      lastClaimStr = rawLast.toString().trim();
-    }
-  }
-  var streak = Number(data[userRow - 1][11]) || 0;
-  var claimed = false;
+  var todayKey = Utilities.formatDate(new Date(), "Europe/Prague", "yyyyMMdd");
+  var dateParts = Utilities.formatDate(new Date(), "Europe/Prague", "yyyy-MM-dd").split("-");
+  var yyyy = parseInt(dateParts[0], 10);
+  var mm = parseInt(dateParts[1], 10);
+  var dd = parseInt(dateParts[2], 10);
+  var claimed = (lastClaim === todayKey);
 
-  if (lastClaimStr) {
-    if (lastClaimStr === todayStr) {
-      claimed = true;
-    } else {
-      var lastY = parseInt(lastClaimStr.slice(1, 5), 10);
-      var lastM = parseInt(lastClaimStr.slice(5, 7), 10) - 1;
-      var lastD = parseInt(lastClaimStr.slice(7, 9), 10);
-      var lastDate = new Date(lastY, lastM, lastD);
-      var todayDate = new Date(yyyy, mm - 1, dd);
-      var diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
-      if (diffDays > 1) streak = 0;
-    }
+  if (lastClaim && !claimed) {
+    var lastY = parseInt(lastClaim.slice(0, 4), 10);
+    var lastM = parseInt(lastClaim.slice(4, 6), 10);
+    var lastD = parseInt(lastClaim.slice(6, 8), 10);
+    var lastDate = new Date(lastY, lastM - 1, lastD);
+    var todayDate = new Date(yyyy, mm - 1, dd);
+    var diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+    if (diffDays > 1) streak = 0;
   }
 
   var nextDay = claimed ? streak + 1 : (streak || 0) + 1;
@@ -1085,4 +1077,16 @@ function getDailyStatus(ss, username) {
   var nextReward = DAILY_REWARDS[nextDay] || 0.10;
 
   return JSON.stringify({ claimed: claimed, streak: streak, nextDay: nextDay, nextReward: nextReward });
+}
+
+function getUsernameBySteamId(ss, steamId) {
+  if (!steamId) return "";
+  var usersSheet = getSheet(ss, "Users");
+  var data = usersSheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][5] && data[i][5].toString().trim() === steamId.toString().trim()) {
+      return data[i][0].toString().trim();
+    }
+  }
+  return "";
 }

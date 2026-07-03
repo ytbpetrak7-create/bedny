@@ -5,7 +5,7 @@ const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxbDv3JEdMZ1gQpK_AULiG7o08LJ4_bY72l8lSSTApB1ZgP_oqeHUiWsW37ObBnNdbx-Q/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxlsNREzDNB5vTULpZxAcnwuTcaLyDI49OsvPe-TTE1uru6G8ZHOPWwafA78vCySg5Tvg/exec";
 
 const client = new SteamUser();
 const community = new SteamCommunity();
@@ -133,10 +133,9 @@ async function poll() {
     for (const offer of result) {
       if (offer.state !== 3) continue;
       
-      const msg = (offer.message || "").trim();
-      if (!msg) { console.log("Deposit bez zprávy, přeskakuji"); continue; }
-      
-      const username = msg;
+      const partnerSteamId = offer.partner.toString();
+      const username = await gasGet(GAS_URL + "?action=getUsernameBySteamId&steamId=" + partnerSteamId);
+      if (!username || username === "" || username === "MISSING") { console.log("Deposit: nepodařilo se najít uživatele pro Steam ID " + partnerSteamId); continue; }
       const itemNames = offer.items_to_receive.map(x => x.market_hash_name || "").filter(Boolean).join(";");
       if (!itemNames) continue;
       
