@@ -36,8 +36,22 @@ client.on("webSession", (sessionID, cookies) => {
   manager.setCookies(cookies);
   community.setCookies(cookies);
   fs.writeFileSync("cookies.json", JSON.stringify(cookies));
+  if (!fs.existsSync("sentry")) {
+    try {
+      var s = client.getSteam && client.getSteam().sentry;
+      if (s) {
+        fs.writeFileSync("sentry", s);
+        console.log("📁 Sentry uloženo z webSession");
+      }
+    } catch(e) {}
+  }
 });
-client.on("sentry", (buffer) => { fs.writeFileSync("sentry", buffer); });
+client.on("sentry", (buffer) => { 
+  try {
+    fs.writeFileSync("sentry", buffer);
+    console.log("📁 Sentry uloženo (" + buffer.length + " bytes)");
+  } catch(e) { console.log("⚠️ Sentry save error:", e.message); }
+});
 client.on("error", (err) => { console.log("❌ Chyba:", err.message); if (err.eresult === 5) console.log("➡️  Zkus se na chvíli odhlásit ze Steamu v prohlížeči a pak spustit znovu"); });
 
 manager.on("ready", () => { 
@@ -63,14 +77,17 @@ function autoConfirm() {
 
 var sentry = fs.existsSync("sentry") ? fs.readFileSync("sentry") : null;
 
-if (process.argv.includes("--2fa")) {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+if (sentry) {
+  client.logOn({ accountName: BOT.accountName, password: BOT.password, machineName: "bot", sentry: sentry });
+} else if (process.argv.includes("--2fa")) {
+  var rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   rl.question("🔑 Zadej kód z Steam mobile app: ", (code) => {
     rl.close();
-    client.logOn({ accountName: BOT.accountName, password: BOT.password, machineName: "bot", sentry: sentry, twoFactorCode: code });
+    client.logOn({ accountName: BOT.accountName, password: BOT.password, machineName: "bot", twoFactorCode: code });
   });
 } else {
-  client.logOn({ accountName: BOT.accountName, password: BOT.password, machineName: "bot", sentry: sentry });
+  console.log("⚠️ Žádný sentry. Spusť: node bot.js --2fa");
+  process.exit(1);
 }
 
 function gasGet(url) {
@@ -215,7 +232,7 @@ async function poll() {
             const nameLower = name.toLowerCase();
             for (const a of accepted) {
               if (a.name && a.name.toLowerCase() === nameLower && a.price > 0) {
-                result.push({ name: name, price: a.price, assetId: asset.id });
+                result.push({ name: name, price: a.price, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
                 break;
               }
             }
