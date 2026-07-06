@@ -5,7 +5,7 @@ const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxlsNREzDNB5vTULpZxAcnwuTcaLyDI49OsvPe-TTE1uru6G8ZHOPWwafA78vCySg5Tvg/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzNzyZy62hMv62O6j22adu0vp2ulpfeOqENLtzctfv4iYQeE1RluR1lGprskvjwH2gC1w/exec";
 
 const client = new SteamUser();
 const community = new SteamCommunity();
@@ -96,31 +96,71 @@ function getInventory() {
 async function poll() {
   try {
     const items = await gasGet(GAS_URL + "?action=getWithdrawals");
-    if (!items || !items.length) return setTimeout(poll, 30000);
-    
-    const botInv = await getInventory();
-    
-    for (const w of items) {
-      if (w.status !== "approved") continue;
-      console.log(`${w.username} - ${w.item}`);
-      if (!w.tradeLink) { console.log("Chybí tradeLink"); continue; }
+    if (items && items.length) {
+      const botInv = await getInventory();
       
-      const t = parseTradeLink(w.tradeLink);
-      if (!t) { console.log("Neplatný tradeLink"); continue; }
-      
-      const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
-      if (!found) { console.log("Item nenalezen v inventáři bota:", w.item); continue; }
-      
-      const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
-      offer.addMyItem(found);
-      offer.setMessage(w.item);
-      offer.send((err, status) => {
-        if (err) return console.log("Chyba:", err);
-        console.log(`Offer sent: ${status}`);
-        https.get(GAS_URL + "?action=completeWithdrawal&row=" + w.row);
-      });
+      for (const w of items) {
+        if (w.status !== "approved") continue;
+        console.log(`${w.username} - ${w.item}`);
+        if (!w.tradeLink) { console.log("Chybí tradeLink"); continue; }
+        
+        const t = parseTradeLink(w.tradeLink);
+        if (!t) { console.log("Neplatný tradeLink"); continue; }
+        
+        const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
+        if (!found) { console.log("Item nenalezen v inventáři bota:", w.item); continue; }
+        
+        const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
+        offer.addMyItem(found);
+        offer.setMessage(w.item);
+        offer.send((err, status) => {
+          if (err) return console.log("Chyba:", err);
+          console.log(`Offer sent: ${status}`);
+          https.get(GAS_URL + "?action=completeWithdrawal&row=" + w.row);
+        });
+      }
     }
-  } catch (e) { console.error("Chyba:", e.message); }
+  } catch (e) { console.error("Withdrawal error:", e.message); }
+
+  try {
+    const pendingDeposits = await gasGet(GAS_URL + "?action=getPendingDeposits");
+    const deps = typeof pendingDeposits === "string" ? JSON.parse(pendingDeposits) : pendingDeposits;
+    if (deps && deps.length) {
+      for (const dep of deps) {
+        try {
+          const tradeLink = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(dep.username));
+          if (!tradeLink || tradeLink === "NOT_SET" || tradeLink === "MISSING") {
+            console.log("Deposit: chybí tradeLink pro " + dep.username);
+            continue;
+          }
+          const t = parseTradeLink(tradeLink);
+          if (!t) { console.log("Deposit: neplatný tradeLink pro " + dep.username); continue; }
+
+          const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
+          for (const item of dep.items) {
+            const userInv = await new Promise((resolve, reject) => {
+              manager.getInventoryContents(730, 2, true, (err, inv) => err ? reject(err) : resolve(inv));
+            });
+            const found = userInv.find(x => x.assetid === item.assetId);
+            if (found) offer.addTheirItem(found);
+            else console.log("Item nenalezen v inventáři uživatele:", item.name);
+          }
+          if (!offer.items_to_receive || !offer.items_to_receive.length) {
+            console.log("Deposit: žádné položky k přijetí pro " + dep.username);
+            https.get(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username));
+            continue;
+          }
+          const totalValue = dep.items.reduce((s, i) => s + (i.price || 0), 0);
+          offer.setMessage("Deposit " + totalValue.toFixed(2) + " Kč");
+          offer.send((err, status) => {
+            if (err) { console.log("Deposit offer error:", err.message); return; }
+            console.log(`Deposit offer sent to ${dep.username}: ${status}`);
+          });
+          https.get(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username));
+        } catch (e) { console.error("Deposit processing error:", e.message); }
+      }
+    }
+  } catch (e) { console.error("Deposit polling error:", e.message); }
   
   try {
     const result = await new Promise((resolve, reject) => {
