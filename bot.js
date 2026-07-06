@@ -5,7 +5,7 @@ const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzNzyZy62hMv62O6j22adu0vp2ulpfeOqENLtzctfv4iYQeE1RluR1lGprskvjwH2gC1w/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwH6ptGf4w1IEw7iRigdWPc24zu-uXDIlOTGMXneKaw0iM5GdYKeAMkk3PkA9Fp3ZlKDw/exec";
 
 const client = new SteamUser();
 const community = new SteamCommunity();
@@ -93,6 +93,26 @@ function getInventory() {
   });
 }
 
+function getUserInventory(steamId) {
+  return new Promise((resolve, reject) => {
+    const https = require("https");
+    const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=czech&count=500`;
+    const options = {
+      headers: {
+        "Cookie": community._cookies.map(c => c.name + "=" + c.value).join("; "),
+        "User-Agent": "Mozilla/5.0"
+      }
+    };
+    https.get(url, options, (res) => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => {
+        try { resolve(JSON.parse(d)); } catch(e) { resolve({ success: false }); }
+      });
+    }).on("error", reject);
+  });
+}
+
 async function poll() {
   try {
     const items = await gasGet(GAS_URL + "?action=getWithdrawals");
@@ -137,13 +157,16 @@ async function poll() {
           if (!t) { console.log("Deposit: neplatný tradeLink pro " + dep.username); continue; }
 
           const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
-          for (const item of dep.items) {
-            const userInv = await new Promise((resolve, reject) => {
-              manager.getInventoryContents(730, 2, true, (err, inv) => err ? reject(err) : resolve(inv));
-            });
-            const found = userInv.find(x => x.assetid === item.assetId);
-            if (found) offer.addTheirItem(found);
-            else console.log("Item nenalezen v inventáři uživatele:", item.name);
+          const userInv = await getUserInventory(dep.steamId);
+          if (userInv && userInv.success && userInv.assets) {
+            for (const item of dep.items) {
+              const asset = userInv.assets[item.assetId];
+              if (asset) {
+                offer.addTheirItem({ id: item.assetId, amount: asset.amount, contextid: "2" });
+              } else {
+                console.log("Item nenalezen v inventáři uživatele:", item.name);
+              }
+            }
           }
           if (!offer.items_to_receive || !offer.items_to_receive.length) {
             console.log("Deposit: žádné položky k přijetí pro " + dep.username);
@@ -161,36 +184,49 @@ async function poll() {
       }
     }
   } catch (e) { console.error("Deposit polling error:", e.message); }
-  
+
   try {
-    const result = await new Promise((resolve, reject) => {
-      manager.getOffers({ received: true, active: true }, (err, sent, received) => {
-        if (err) return reject(err);
-        resolve(received || []);
-      });
-    });
-    
-    for (const offer of result) {
-      if (offer.state !== 3) continue;
-      
-      const partnerSteamId = offer.partner.toString();
-      const username = await gasGet(GAS_URL + "?action=getUsernameBySteamId&steamId=" + partnerSteamId);
-      if (!username || username === "" || username === "MISSING") { console.log("Deposit: nepodařilo se najít uživatele pro Steam ID " + partnerSteamId); continue; }
-      const itemNames = offer.items_to_receive.map(x => x.market_hash_name || "").filter(Boolean).join(";");
-      if (!itemNames) continue;
-      
-      console.log(`Deposit: ${username} - ${itemNames}`);
-      
-      const depositResult = await gasGet(GAS_URL + "?action=depositSkin&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(itemNames));
-      console.log(`Deposit result: ${depositResult}`);
-      
-      offer.accept((err, status) => {
-        if (err) return console.log("Chyba accept:", err);
-        console.log(`Deposit accepted: ${status}`);
-      });
+    const invRequests = await gasGet(GAS_URL + "?action=getPendingInvRequests");
+    const reqs = typeof invRequests === "string" ? JSON.parse(invRequests) : invRequests;
+    if (reqs && reqs.length) {
+      for (const req of reqs) {
+        try {
+          const username = req.username;
+          const steamId = await gasGet(GAS_URL + "?action=getSteamId&username=" + encodeURIComponent(username));
+          if (!steamId || steamId === "") { console.log("InvRequest: no steamId for " + username); continue; }
+
+          const userInv = await getUserInventory(steamId);
+          if (!userInv || !userInv.success || !userInv.assets) {
+            console.log("InvRequest: inventory fetch failed for " + username);
+            https.get(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]"));
+            continue;
+          }
+
+          const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
+          const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
+
+          const result = [];
+          for (const id in userInv.assets) {
+            const asset = userInv.assets[id];
+            const classId = asset.classid + "_" + asset.instanceid;
+            const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
+            if (!desc) continue;
+            const name = desc.market_hash_name || "";
+            const nameLower = name.toLowerCase();
+            for (const a of accepted) {
+              if (a.name && a.name.toLowerCase() === nameLower && a.price > 0) {
+                result.push({ name: name, price: a.price, assetId: asset.id });
+                break;
+              }
+            }
+          }
+          https.get(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result)));
+          console.log("InvRequest: " + username + " - " + result.length + " items");
+        } catch (e) { console.error("InvRequest error:", e.message); }
+      }
     }
-  } catch (e) { console.error("Deposit check error:", e.message); }
-  
+  } catch (e) { console.error("InvRequest polling error:", e.message); }
+
   setTimeout(poll, 30000);
 }
 

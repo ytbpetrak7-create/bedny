@@ -143,21 +143,71 @@
       case "getPendingDeposits":
         result = getPendingDeposits();
         break;
-      case "removePendingDeposit":
-        result = removePendingDeposit(params.username);
-        break;
-      case "getTradeLink":
-        var tlUser = getSheet(ss, "Users");
-        var tlData = tlUser.getDataRange().getValues();
-        result = "NOT_SET";
-        for (var tli = 1; tli < tlData.length; tli++) {
-          if (tlData[tli][0] && tlData[tli][0].toString().trim() === (params.username || "").trim()) {
-            result = tlData[tli][6] ? tlData[tli][6].toString().trim() : "NOT_SET";
-            break;
-          }
+    case "removePendingDeposit":
+      result = removePendingDeposit(params.username);
+      break;
+    case "getTradeLink":
+      var tlUser = getSheet(ss, "Users");
+      var tlData = tlUser.getDataRange().getValues();
+      result = "NOT_SET";
+      for (var tli = 1; tli < tlData.length; tli++) {
+        if (tlData[tli][0] && tlData[tli][0].toString().trim() === (params.username || "").trim()) {
+          result = tlData[tli][6] ? tlData[tli][6].toString().trim() : "NOT_SET";
+          break;
         }
-        break;
-    }
+      }
+      break;
+    case "requestInventory":
+      var props3 = PropertiesService.getScriptProperties();
+      props3.setProperty("invRequest_" + params.username, new Date().toISOString());
+      props3.deleteProperty("invResult_" + params.username);
+      result = "OK";
+      break;
+    case "getInventoryResult":
+      var props4 = PropertiesService.getScriptProperties();
+      result = props4.getProperty("invResult_" + params.username) || "PENDING";
+      break;
+    case "getPendingInvRequests":
+      var props5 = PropertiesService.getScriptProperties();
+      var allProps5 = props5.getProperties();
+      var invReqs = [];
+      for (var pk5 in allProps5) {
+        if (pk5.indexOf("invRequest_") === 0) {
+          var uname5 = pk5.replace("invRequest_", "");
+          invReqs.push({ username: uname5 });
+        }
+      }
+      result = JSON.stringify(invReqs);
+      break;
+    case "setInventoryResult":
+      var props6 = PropertiesService.getScriptProperties();
+      props6.setProperty("invResult_" + params.username, params.items || "[]");
+      props6.deleteProperty("invRequest_" + params.username);
+      result = "OK";
+      break;
+    case "getSteamId":
+      var sidSheet = getSheet(ss, "Users");
+      var sidData = sidSheet.getDataRange().getValues();
+      result = "";
+      for (var sidi = 1; sidi < sidData.length; sidi++) {
+        if (sidData[sidi][0] && sidData[sidi][0].toString().trim() === (params.username || "").trim()) {
+          result = sidData[sidi][5] ? sidData[sidi][5].toString().trim() : "";
+          break;
+        }
+      }
+      break;
+    case "getDepositSkins":
+      var dsSheet = getSheet(ss, "DepositSkins");
+      var dsData = dsSheet.getDataRange().getValues();
+      var dsArr = [];
+      for (var dsi = 1; dsi < dsData.length; dsi++) {
+        if (dsData[dsi][0] && Number(dsData[dsi][1]) > 0) {
+          dsArr.push({ name: dsData[dsi][0].toString().trim(), price: Number(dsData[dsi][1]) });
+        }
+      }
+      result = JSON.stringify(dsArr);
+      break;
+  }
     
     return ContentService.createTextOutput(result);
   }
@@ -1186,9 +1236,9 @@
       if (name && price > 0) acceptedNames[name] = price;
     }
 
-    try {
-      var url = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
-      var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  try {
+    var url = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { "User-Agent": "Mozilla/5.0" } });
       var json = JSON.parse(response.getContentText());
       if (!json.success || !json.assets) return JSON.stringify([]);
 

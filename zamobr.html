@@ -87,31 +87,48 @@ async function loadInventory() {
   document.getElementById("invItems").innerHTML = "";
   selectedItems = [];
 
-  var res = await callScript("getMySteamInventory", { username: getCurrentUser() });
-  document.getElementById("invLoading").style.display = "none";
-  btn.disabled = false;
-  btn.textContent = "Načíst inventář";
+  await callScript("requestInventory", { username: getCurrentUser() });
 
-  var items;
-  try { items = JSON.parse(res); } catch(e) { items = []; }
+  var attempts = 0;
+  var interval = setInterval(async function() {
+    attempts++;
+    if (attempts > 30) {
+      clearInterval(interval);
+      document.getElementById("invLoading").style.display = "none";
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;">Timeout - zkus znovu</p>';
+      btn.disabled = false;
+      btn.textContent = "Načíst inventář";
+      return;
+    }
+    var res = await callScript("getInventoryResult", { username: getCurrentUser() });
+    if (res === "PENDING") return;
 
-  if (!items.length) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;">Žádné přijatelné skiny v inventáři</p>';
-    return;
-  }
+    clearInterval(interval);
+    document.getElementById("invLoading").style.display = "none";
+    btn.disabled = false;
+    btn.textContent = "Načíst inventář";
 
-  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">';
-  for (var i = 0; i < items.length; i++) {
-    var it = items[i];
-    html += '<div onclick="toggleItem(this,' + i + ')" data-idx="' + i + '" style="padding:10px;border:2px solid #444;border-radius:8px;cursor:pointer;text-align:center;background:#1a1a2e;transition:0.2s;">';
-    html += '<p style="color:#fff;font-size:13px;margin:0;">' + it.name + '</p>';
-    html += '<p style="color:#00ff96;font-size:14px;font-weight:bold;margin:5px 0;">' + it.price.toFixed(2) + ' Kč</p>';
+    var items;
+    try { items = JSON.parse(res); } catch(e) { items = []; }
+
+    if (!items.length) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;">Žádné přijatelné skiny v inventáři</p>';
+      return;
+    }
+
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      html += '<div onclick="toggleItem(this,' + i + ')" data-idx="' + i + '" style="padding:10px;border:2px solid #444;border-radius:8px;cursor:pointer;text-align:center;background:#1a1a2e;transition:0.2s;">';
+      html += '<p style="color:#fff;font-size:13px;margin:0;">' + it.name + '</p>';
+      html += '<p style="color:#00ff96;font-size:14px;font-weight:bold;margin:5px 0;">' + it.price.toFixed(2) + ' Kč</p>';
+      html += '</div>';
+    }
     html += '</div>';
-  }
-  html += '</div>';
-  document.getElementById("invItems").innerHTML = html;
-  window._invItems = items;
-  updateDepositSummary();
+    document.getElementById("invItems").innerHTML = html;
+    window._invItems = items;
+    updateDepositSummary();
+  }, 2000);
 }
 
 function toggleItem(el, idx) {
