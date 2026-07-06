@@ -105,7 +105,7 @@ async function loadInventory() {
   var attempts = 0;
   var interval = setInterval(async function() {
     attempts++;
-    if (attempts > 30) {
+    if (attempts > 60) {
       clearInterval(interval);
       document.getElementById("invLoading").style.display = "none";
       document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Timeout - zkus znovu</p>';
