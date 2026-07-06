@@ -131,6 +131,7 @@ function getUserInventory(steamId) {
 }
 
 async function poll() {
+  console.log("Poll: začátek");
   try {
     const items = await gasGet(GAS_URL + "?action=getWithdrawals");
     if (items && items.length) {
@@ -205,14 +206,18 @@ async function poll() {
   try {
     const invRequests = await gasGet(GAS_URL + "?action=getPendingInvRequests");
     const reqs = typeof invRequests === "string" ? JSON.parse(invRequests) : invRequests;
+    console.log("InvRequest: poll - " + (reqs ? reqs.length : 0) + " pending");
     if (reqs && reqs.length) {
       for (const req of reqs) {
         try {
           const username = req.username;
+          console.log("InvRequest: processing " + username);
           const steamId = await gasGet(GAS_URL + "?action=getSteamId&username=" + encodeURIComponent(username));
           if (!steamId || steamId === "") { console.log("InvRequest: no steamId for " + username); continue; }
+          console.log("InvRequest: steamId " + steamId + " for " + username);
 
           const userInv = await getUserInventory(steamId);
+          console.log("InvRequest: inventory fetched - success=" + (userInv ? userInv.success : "null") + " assets=" + (userInv && userInv.assets ? Object.keys(userInv.assets).length : 0));
           if (!userInv || !userInv.success || !userInv.assets) {
             console.log("InvRequest: inventory fetch failed for " + username);
             https.get(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]"));
