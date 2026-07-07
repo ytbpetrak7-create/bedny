@@ -5,7 +5,7 @@ const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyjalBWFcHFYsLpTNISD0NyQKpK0Upr_8y32Rjgl_XCUgFHTXnYk3Z8o3kw3Z_y1Rf5cA/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwQqeL8HrqXqcuognkydsPVb6jN-Xy0NqH_leF5et2msYbUEAGv_8FaooCt1zPA8vSIOg/exec";
 
 const client = new SteamUser();
 const community = new SteamCommunity();
@@ -254,11 +254,15 @@ async function poll() {
             const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
             if (!desc) continue;
             const name = desc.market_hash_name || "";
-            const nameLower = name.toLowerCase();
+            const wearMatch = name.match(/\(([^)]+)\)\s*$/);
+            const steamWear = wearMatch ? wearMatch[1] : "";
+            const baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
             for (const a of accepted) {
-              if (a.name && a.name.toLowerCase() === nameLower && a.price > 0) {
-                result.push({ name: name, price: a.price, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
-                break;
+              if (a.name && a.name.toLowerCase() === baseName && a.price > 0) {
+                if (!a.wear || a.wear.toLowerCase() === steamWear.toLowerCase()) {
+                  result.push({ name: name, price: a.price, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
+                  break;
+                }
               }
             }
           }

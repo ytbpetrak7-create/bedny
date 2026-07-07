@@ -203,7 +203,7 @@
       var dsArr = [];
       for (var dsi = 1; dsi < dsData.length; dsi++) {
         if (dsData[dsi][0] && Number(dsData[dsi][1]) > 0) {
-          dsArr.push({ name: dsData[dsi][0].toString().trim(), price: Number(dsData[dsi][1]) });
+          dsArr.push({ name: dsData[dsi][0].toString().trim(), price: Number(dsData[dsi][1]), wear: dsData[dsi][2] ? dsData[dsi][2].toString().trim() : "" });
         }
       }
       result = JSON.stringify(dsArr);
