@@ -238,6 +238,15 @@ async function poll() {
 
           const userInv = await getUserInventory(steamId);
           console.log("InvRequest: inventory fetched - success=" + (userInv ? userInv.success : "null") + " assets=" + (userInv && userInv.assets ? Object.keys(userInv.assets).length : 0));
+          var invNames = [];
+          for (var iid in userInv.assets) {
+            var a = userInv.assets[iid];
+            var cl = a.classid + "_" + a.instanceid;
+            var d = userInv.descriptions ? userInv.descriptions[cl] : null;
+            if (d && d.market_hash_name) invNames.push(d.market_hash_name);
+            if (invNames.length >= 5) break;
+          }
+          console.log("InvRequest: first items: " + JSON.stringify(invNames));
           if (!userInv || !userInv.success || !userInv.assets) {
             console.log("InvRequest: inventory fetch failed for " + username);
             https.get(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]"));
@@ -246,6 +255,7 @@ async function poll() {
 
           const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
           const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
+          console.log("InvRequest: accepted skins: " + JSON.stringify(accepted.map(a => a.name + " [" + a.wear + "] " + a.price + "Kc")));
 
           const result = [];
           for (const id in userInv.assets) {
@@ -266,6 +276,7 @@ async function poll() {
               }
             }
           }
+          console.log("InvRequest: " + username + " - " + result.length + " items (accepted: " + accepted.length + ", inventory: " + Object.keys(userInv.assets).length + ")");
           https.get(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result)));
           console.log("InvRequest: " + username + " - " + result.length + " items");
         } catch (e) { console.error("InvRequest error:", e.message); }
