@@ -5,11 +5,11 @@ const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwH6ptGf4w1IEw7iRigdWPc24zu-uXDIlOTGMXneKaw0iM5GdYKeAMkk3PkA9Fp3ZlKDw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyjalBWFcHFYsLpTNISD0NyQKpK0Upr_8y32Rjgl_XCUgFHTXnYk3Z8o3kw3Z_y1Rf5cA/exec";
 
 const client = new SteamUser();
 const community = new SteamCommunity();
-const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 30000 });
+const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 30000, cancelTime: 120000 });
 
 const BOT = {
   accountName: "pet7bot1",
@@ -35,7 +35,7 @@ client.on("webSession", (sessionID, cookies) => {
   console.log("✅ Web session získána");
   manager.setCookies(cookies);
   community.setCookies(cookies);
-  fs.writeFileSync("cookies.json", JSON.stringify(cookies));
+  fs.writeFileSync("cookies.json", JSON.stringify(cookies, null, 2));
   if (!fs.existsSync("sentry")) {
     try {
       var s = client.getSteam && client.getSteam().sentry;
@@ -44,6 +44,11 @@ client.on("webSession", (sessionID, cookies) => {
         console.log("📁 Sentry uloženo z webSession");
       }
     } catch(e) {}
+  }
+  if (!pollStarted) {
+    pollStarted = true;
+    console.log("▶️ Spouštím poll z webSession");
+    poll();
   }
 });
 client.on("sentry", (buffer) => { 
@@ -59,6 +64,8 @@ manager.on("ready", () => {
   poll();
   autoConfirm();
 });
+
+var pollStarted = false;
 
 function autoConfirm() {
   manager.getOffers({ confirmedNeedsConfirmation: true }, (err, sent, received) => {
@@ -90,9 +97,15 @@ if (sentry) {
   process.exit(1);
 }
 
-function gasGet(url) {
+function gasGet(url, redirects) {
+  redirects = redirects || 0;
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve(d); } }); }).on("error", reject);
+    https.get(url, (res) => {
+      if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location && redirects < 5) {
+        return resolve(gasGet(res.headers.location, redirects + 1));
+      }
+      let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch { console.log("GAS raw:", d.substring(0, 200)); resolve(d); } });
+    }).on("error", reject);
   });
 }
 
@@ -114,9 +127,16 @@ function getUserInventory(steamId) {
   return new Promise((resolve, reject) => {
     const https = require("https");
     const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=czech&count=500`;
+    var cookieStr = "";
+    try {
+      var saved = JSON.parse(fs.readFileSync("cookies.json","utf8"));
+      if (Array.isArray(saved)) {
+        cookieStr = saved.map(c => typeof c === "string" ? c : c.name + "=" + c.value).join("; ");
+      }
+    } catch(e) { console.log("Cookie read error:", e.message); }
     const options = {
       headers: {
-        "Cookie": community._cookies.map(c => c.name + "=" + c.value).join("; "),
+        "Cookie": cookieStr,
         "User-Agent": "Mozilla/5.0"
       }
     };

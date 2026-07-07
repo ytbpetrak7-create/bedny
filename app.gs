@@ -8,6 +8,7 @@
   }
 
   function doPost(e) {
+    try {
     if (!e || !e.parameter) {
       return ContentService.createTextOutput("OK");
     }
@@ -210,6 +211,9 @@
   }
     
     return ContentService.createTextOutput(result);
+    } catch(err) {
+      return ContentService.createTextOutput("ERROR: " + err.message);
+    }
   }
 
   function getSheet(ss, name) {
