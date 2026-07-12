@@ -126,20 +126,27 @@ function getInventory() {
 function getUserInventory(steamId) {
   return new Promise((resolve, reject) => {
     const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=czech&count=500`;
-    community.request({
-      url: url,
-      method: "GET",
-      json: true
-    }, (err, res, body) => {
-      if (err) { console.log("InvFetch error:", err.message); return reject(err); }
-      console.log("InvFetch: status=" + (res ? res.statusCode : "?"));
-      if (body && body.success) {
-        console.log("InvFetch: assets=" + (body.assets ? Object.keys(body.assets).length : 0));
-      } else {
-        console.log("InvFetch: body=" + JSON.stringify(body).substring(0, 200));
-      }
-      resolve(body || { success: false });
-    });
+    function attempt(retries) {
+      community.request({
+        url: url,
+        method: "GET",
+        json: true
+      }, (err, res, body) => {
+        if (err) { console.log("InvFetch error:", err.message); return reject(err); }
+        console.log("InvFetch: status=" + (res ? res.statusCode : "?"));
+        if (res && res.statusCode === 429 && retries > 0) {
+          console.log("InvFetch: rate limited, retry za 30s (" + retries + " retries left)");
+          return setTimeout(() => attempt(retries - 1), 30000);
+        }
+        if (body && body.success) {
+          console.log("InvFetch: assets=" + (body.assets ? Object.keys(body.assets).length : 0));
+        } else {
+          console.log("InvFetch: fail=" + JSON.stringify(body).substring(0, 200));
+        }
+        resolve(body || { success: false });
+      });
+    }
+    attempt(3);
   });
 }
 
