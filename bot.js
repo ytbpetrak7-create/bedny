@@ -134,6 +134,8 @@ function getUserInventory(steamId) {
         cookieStr = saved.map(c => typeof c === "string" ? c : c.name + "=" + c.value).join("; ");
       }
     } catch(e) { console.log("Cookie read error:", e.message); }
+    console.log("InvFetch: url=" + url);
+    console.log("InvFetch: cookies=" + (cookieStr ? cookieStr.substring(0, 80) + "..." : "EMPTY"));
     const options = {
       headers: {
         "Cookie": cookieStr,
@@ -141,12 +143,14 @@ function getUserInventory(steamId) {
       }
     };
     https.get(url, options, (res) => {
+      console.log("InvFetch: status=" + res.statusCode);
       let d = "";
       res.on("data", c => d += c);
       res.on("end", () => {
+        console.log("InvFetch: response length=" + d.length + " preview=" + d.substring(0, 200));
         try { resolve(JSON.parse(d)); } catch(e) { resolve({ success: false }); }
       });
-    }).on("error", reject);
+    }).on("error", (e) => { console.log("InvFetch: error=" + e.message); reject(e); });
   });
 }
 
