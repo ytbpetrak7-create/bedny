@@ -125,32 +125,21 @@ function getInventory() {
 
 function getUserInventory(steamId) {
   return new Promise((resolve, reject) => {
-    const https = require("https");
     const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=czech&count=500`;
-    var cookieStr = "";
-    try {
-      var saved = JSON.parse(fs.readFileSync("cookies.json","utf8"));
-      if (Array.isArray(saved)) {
-        cookieStr = saved.map(c => typeof c === "string" ? c : c.name + "=" + c.value).join("; ");
+    community.request({
+      url: url,
+      method: "GET",
+      json: true
+    }, (err, res, body) => {
+      if (err) { console.log("InvFetch error:", err.message); return reject(err); }
+      console.log("InvFetch: status=" + (res ? res.statusCode : "?"));
+      if (body && body.success) {
+        console.log("InvFetch: assets=" + (body.assets ? Object.keys(body.assets).length : 0));
+      } else {
+        console.log("InvFetch: body=" + JSON.stringify(body).substring(0, 200));
       }
-    } catch(e) { console.log("Cookie read error:", e.message); }
-    console.log("InvFetch: url=" + url);
-    console.log("InvFetch: cookies=" + (cookieStr ? cookieStr.substring(0, 80) + "..." : "EMPTY"));
-    const options = {
-      headers: {
-        "Cookie": cookieStr,
-        "User-Agent": "Mozilla/5.0"
-      }
-    };
-    https.get(url, options, (res) => {
-      console.log("InvFetch: status=" + res.statusCode);
-      let d = "";
-      res.on("data", c => d += c);
-      res.on("end", () => {
-        console.log("InvFetch: response length=" + d.length + " preview=" + d.substring(0, 200));
-        try { resolve(JSON.parse(d)); } catch(e) { resolve({ success: false }); }
-      });
-    }).on("error", (e) => { console.log("InvFetch: error=" + e.message); reject(e); });
+      resolve(body || { success: false });
+    });
   });
 }
 
