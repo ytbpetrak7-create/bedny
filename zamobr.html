@@ -93,33 +93,86 @@ async function loadTradeLink() {
 }
 
 async function loadInventory() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání...</p>';
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
   selectedItems = [];
 
-  var res = await callScript("getDepositSkins");
+  var profile = JSON.parse(await callScript("getProfile", { username: getCurrentUser() }));
+  var steamId = "";
+  try {
+    var fullProfile = await callScript("getProfile", { username: getCurrentUser() });
+    var fp = JSON.parse(fullProfile);
+    steamId = fp.steamId || "";
+  } catch(e) {}
 
-  var items;
-  try { items = JSON.parse(res); } catch(e) { items = []; }
+  if (!steamId) {
+    var sid = await callScript("getSteamId", { username: getCurrentUser() });
+    steamId = sid;
+  }
 
-  if (!items.length) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Žádné přijatelné skiny</p>';
+  if (!steamId || steamId === "") {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID</p>';
     return;
   }
 
-  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding-bottom:80px;">';
-  for (var i = 0; i < items.length; i++) {
-    var it = items[i];
-    var wearText = it.wear ? " (" + it.wear + ")" : "";
-    html += '<div onclick="toggleItem(this,' + i + ')" data-idx="' + i + '" class="inv-item" style="border:2px solid #333;border-radius:10px;cursor:pointer;text-align:center;background:#16162a;transition:all 0.2s;overflow:hidden;">';
-    html += '<div style="padding:6px 4px;">';
-    html += '<p style="color:#ddd;font-size:11px;margin:0;line-height:1.3;">' + it.name + wearText + '</p>';
-    html += '<p style="color:#00ff96;font-size:13px;font-weight:bold;margin:4px 0 0;">' + it.price.toFixed(2) + ' Kč</p>';
-    html += '</div></div>';
+  var acceptedRes = await callScript("getDepositSkins");
+  var accepted;
+  try { accepted = JSON.parse(acceptedRes); } catch(e) { accepted = []; }
+  var acceptedNames = {};
+  accepted.forEach(function(a) { acceptedNames[a.name.toLowerCase()] = a.price; });
+
+  var proxyUrl = "https://corsproxy.io/?" + encodeURIComponent("https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500");
+
+  try {
+    var resp = await fetch(proxyUrl);
+    var data = await resp.json();
+
+    if (!data.success || !data.assets) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nepodařilo se načíst inventář</p>';
+      return;
+    }
+
+    var items = [];
+    for (var id in data.assets) {
+      var asset = data.assets[id];
+      var classId = asset.classid + "_" + asset.instanceid;
+      var desc = data.descriptions ? data.descriptions[classId] : null;
+      if (!desc) continue;
+      var name = desc.market_hash_name || "";
+      var baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+      var price = acceptedNames[baseName] || 0;
+      items.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
+    }
+
+    items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
+
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding-bottom:80px;">';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var borderColor = it.depositable ? "#00ff96" : "#222";
+      var bgColor = it.depositable ? "#0d2b1a" : "#16162a";
+      var iconUrl = it.icon ? "https://community.akamai.steamstatic.com/economy/image/" + it.icon + "/128fx128f" : "";
+      var clickAttr = it.depositable ? ' onclick="toggleItem(this,' + i + ')"' : '';
+      var cursor = it.depositable ? "pointer" : "default";
+      html += '<div data-idx="' + i + '" class="inv-item" style="border:2px solid ' + borderColor + ';border-radius:10px;cursor:' + cursor + ';text-align:center;background:' + bgColor + ';transition:all 0.2s;overflow:hidden;">';
+      if (iconUrl) {
+        html += '<div style="background:#1a1a2e;padding:8px;"><img src="' + iconUrl + '" style="width:80px;height:80px;object-fit:contain;" loading="lazy"></div>';
+      }
+      html += '<div style="padding:6px 4px;">';
+      html += '<p style="color:#ddd;font-size:10px;margin:0;line-height:1.3;height:28px;overflow:hidden;">' + it.name + '</p>';
+      if (it.depositable) {
+        html += '<p style="color:#00ff96;font-size:12px;font-weight:bold;margin:3px 0 0;">' + it.price.toFixed(2) + ' Kč</p>';
+      } else {
+        html += '<p style="color:#555;font-size:10px;margin:3px 0 0;"> nelze vložit</p>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+    document.getElementById("invItems").innerHTML = html;
+    window._invItems = items;
+    updateDepositSummary();
+  } catch(e) {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p>';
   }
-  html += '</div>';
-  document.getElementById("invItems").innerHTML = html;
-  window._invItems = items;
-  updateDepositSummary();
 }
 
 function toggleItem(el, idx) {
@@ -155,7 +208,7 @@ async function sendDeposit() {
   var btn = document.getElementById("sendDepositBtn");
   btn.disabled = true;
   btn.textContent = "ODESÍLÁM...";
-  var itemsJson = JSON.stringify(selectedItems.map(function(i) { return { name: i.name, price: i.price }; }));
+  var itemsJson = JSON.stringify(selectedItems.map(function(i) { return { name: i.name, assetId: i.assetId, price: i.price }; }));
   var res = await callScript("requestDeposit", { username: getCurrentUser(), items: itemsJson });
   if (res === "OK") {
     document.getElementById("depositResult").innerHTML = '<div style="padding:15px;border:1px solid #00ff96;border-radius:10px;background:#0d2b1a;text-align:center;">' +
