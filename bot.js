@@ -198,11 +198,19 @@ async function poll() {
           const userInv = await getUserInventory(dep.steamId);
           if (userInv && userInv.success && userInv.assets) {
             for (const item of dep.items) {
-              const asset = userInv.assets[item.assetId];
-              if (asset) {
-                offer.addTheirItem({ id: item.assetId, amount: asset.amount, contextid: "2" });
-              } else {
-                console.log("Item nenalezen v inventáři uživatele:", item.name);
+              var found = false;
+              for (const id in userInv.assets) {
+                const asset = userInv.assets[id];
+                const classId = asset.classid + "_" + asset.instanceid;
+                const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
+                if (desc && desc.market_hash_name && desc.market_hash_name.toLowerCase() === item.name.toLowerCase()) {
+                  offer.addTheirItem({ id: asset.id, amount: asset.amount, contextid: "2" });
+                  found = true;
+                  break;
+                }
+              }
+              if (!found) {
+                console.log("Deposit: item nenalezen:", item.name);
               }
             }
           }
