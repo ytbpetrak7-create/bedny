@@ -147,6 +147,9 @@
     case "removePendingDeposit":
       result = removePendingDeposit(params.username);
       break;
+    case "completeDeposit":
+      result = completeDeposit(ss, params.username, params.amount);
+      break;
     case "getTradeLink":
       var tlUser = getSheet(ss, "Users");
       var tlData = tlUser.getDataRange().getValues();
@@ -1217,6 +1220,28 @@
   function removePendingDeposit(username) {
     PropertiesService.getScriptProperties().deleteProperty("deposit_" + username);
     return "OK";
+  }
+
+  function completeDeposit(ss, username, amount) {
+    if (!username || !amount) return "MISSING";
+    var pts = Number(amount);
+    if (pts <= 0) return "INVALID_AMOUNT";
+    var usersSheet = getSheet(ss, "Users");
+    var data = usersSheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+        var current = Number(data[i][2]) || 0;
+        var bonus = 0;
+        var referrer = data[i][7] || "";
+        if (referrer) {
+          bonus = Math.round(pts * 0.10 * 100) / 100;
+        }
+        usersSheet.getRange(i + 1, 3).setValue(current + pts + bonus);
+        PropertiesService.getScriptProperties().deleteProperty("deposit_" + username);
+        return JSON.stringify({ credited: pts, bonus: bonus, total: pts + bonus });
+      }
+    }
+    return "USER_NOT_FOUND";
   }
 
   function getMySteamInventory(ss, username) {

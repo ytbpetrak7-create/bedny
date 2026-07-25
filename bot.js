@@ -210,8 +210,8 @@ async function poll() {
           offer.send((err, status) => {
             if (err) { console.log("Deposit offer error:", err.message); return; }
             console.log(`Deposit offer sent to ${dep.username}: ${status}`);
+            https.get(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2));
           });
-          https.get(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username));
         } catch (e) { console.error("Deposit processing error:", e.message); }
       }
     }
