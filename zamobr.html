@@ -98,20 +98,11 @@ async function loadInventory() {
   document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
   selectedItems = [];
 
-  var profile = JSON.parse(await callScript("getProfile", { username: getCurrentUser() }));
-  var steamId = "";
-  try {
-    var fullProfile = await callScript("getProfile", { username: getCurrentUser() });
-    var fp = JSON.parse(fullProfile);
-    steamId = fp.steamId || "";
-  } catch(e) {}
+  var fp = JSON.parse(await callScript("getProfile", { username: getCurrentUser() }));
+  var steamId = fp.steamId;
+  console.log("loadInv: steamId=" + steamId);
 
   if (!steamId) {
-    var sid = await callScript("getSteamId", { username: getCurrentUser() });
-    steamId = sid;
-  }
-
-  if (!steamId || steamId === "") {
     document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID</p>';
     return;
   }
@@ -121,12 +112,17 @@ async function loadInventory() {
   try { accepted = JSON.parse(acceptedRes); } catch(e) { accepted = []; }
   var acceptedNames = {};
   accepted.forEach(function(a) { acceptedNames[a.name.toLowerCase()] = a.price; });
+  console.log("loadInv: accepted=" + accepted.length);
 
-  var proxyUrl = "https://corsproxy.io/?" + encodeURIComponent("https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500");
+  var invUrl = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
+  var proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(invUrl);
+  console.log("loadInv: fetching " + proxyUrl);
 
   try {
     var resp = await fetch(proxyUrl);
+    console.log("loadInv: status=" + resp.status);
     var data = await resp.json();
+    console.log("loadInv: success=" + data.success + " assets=" + (data.assets ? Object.keys(data.assets).length : 0));
 
     if (!data.success || !data.assets) {
       document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nepodařilo se načíst inventář</p>';
@@ -173,6 +169,7 @@ async function loadInventory() {
     window._invItems = items;
     updateDepositSummary();
   } catch(e) {
+    console.log("loadInv: error", e);
     document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p>';
   }
 }

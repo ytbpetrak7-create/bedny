@@ -549,6 +549,7 @@
           points: Number(pts),
           registered: data[i][3],
           profilePic: data[i][4] || "",
+          steamId: data[i][5] ? data[i][5].toString().trim() : "",
           tradeLink: data[i][6] || "",
           xp: Number(data[i][9]) || 0
         });
