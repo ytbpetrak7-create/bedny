@@ -135,11 +135,22 @@ async function loadInventory() {
     var firstAsset = data.assets[firstAssetKey];
     var lookupKey = firstAsset.classid + "_" + firstAsset.instanceid;
     console.log("loadInv: first asset lookup key:", lookupKey, "asset:", JSON.stringify(firstAsset));
-    console.log("loadInv: descriptions[lookupKey]:", data.descriptions ? JSON.stringify(data.descriptions[lookupKey]) : "NO DESC");
+    console.log("loadInv: first desc entry:", data.descriptions ? JSON.stringify(data.descriptions[descKeys[0]]).slice(0,300) : "NO DESC");
+    var descMap = {};
+    if (data.descriptions) {
+      var dKeys = Object.keys(data.descriptions);
+      for (var dk = 0; dk < dKeys.length; dk++) {
+        var d = data.descriptions[dKeys[dk]];
+        if (d && d.classid !== undefined) {
+          descMap[d.classid + "_" + (d.instanceid || "0")] = d;
+        }
+      }
+    }
+    console.log("loadInv: descMap size=" + Object.keys(descMap).length);
     for (var id in data.assets) {
       var asset = data.assets[id];
       var classId = asset.classid + "_" + asset.instanceid;
-      var desc = data.descriptions ? data.descriptions[classId] : null;
+      var desc = descMap[classId] || null;
       if (!desc) continue;
       var name = desc.market_hash_name || "";
       var baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
