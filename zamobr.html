@@ -129,6 +129,10 @@ async function loadInventory() {
     }
 
     var items = [];
+    var descKeys = data.descriptions ? Object.keys(data.descriptions).slice(0,3) : [];
+    console.log("loadInv: desc sample keys:", descKeys, "total desc:", data.descriptions ? Object.keys(data.descriptions).length : 0);
+    var assetSample = data.assets ? Object.keys(data.assets).slice(0,2).map(function(k){ return {id:k, classid:data.assets[k].classid, instanceid:data.assets[k].instanceid}; }) : [];
+    console.log("loadInv: asset sample:", JSON.stringify(assetSample));
     for (var id in data.assets) {
       var asset = data.assets[id];
       var classId = asset.classid + "_" + asset.instanceid;
@@ -139,6 +143,8 @@ async function loadInventory() {
       var price = acceptedNames[baseName] || 0;
       items.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
     }
+
+    console.log("loadInv: items=" + items.length + " depositable=" + items.filter(function(x){return x.depositable;}).length);
 
     items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
 
