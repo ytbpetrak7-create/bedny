@@ -204,12 +204,7 @@ async function poll() {
               console.log("Deposit: přeskočeno (bez assetId): " + item.name);
             }
           }
-          console.log("Deposit: items_to_receive=" + (offer.items_to_receive ? offer.items_to_receive.length : "null"));
-          if (!offer.items_to_receive || !offer.items_to_receive.length) {
-            console.log("Deposit: žádné položky k přijetí pro " + dep.username);
-            https.get(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username));
-            continue;
-          }
+          console.log("Deposit: items_to_receive=" + (offer.items_to_receive ? offer.items_to_receive.length : "null") + " them=" + JSON.stringify(offer.them ? offer.them.items : null));
           const totalValue = dep.items.reduce((s, i) => s + (i.price || 0), 0);
           offer.setMessage("Deposit " + totalValue.toFixed(2) + " Kč");
           offer.send((err, status) => {
