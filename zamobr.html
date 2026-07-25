@@ -129,10 +129,13 @@ async function loadInventory() {
     }
 
     var items = [];
-    var descKeys = data.descriptions ? Object.keys(data.descriptions).slice(0,3) : [];
-    console.log("loadInv: desc sample keys:", descKeys, "total desc:", data.descriptions ? Object.keys(data.descriptions).length : 0);
-    var assetSample = data.assets ? Object.keys(data.assets).slice(0,2).map(function(k){ return {id:k, classid:data.assets[k].classid, instanceid:data.assets[k].instanceid}; }) : [];
-    console.log("loadInv: asset sample:", JSON.stringify(assetSample));
+    var descKeys = data.descriptions ? Object.keys(data.descriptions).slice(0,5) : [];
+    console.log("loadInv: desc keys:", JSON.stringify(descKeys));
+    var firstAssetKey = Object.keys(data.assets)[0];
+    var firstAsset = data.assets[firstAssetKey];
+    var lookupKey = firstAsset.classid + "_" + firstAsset.instanceid;
+    console.log("loadInv: first asset lookup key:", lookupKey, "asset:", JSON.stringify(firstAsset));
+    console.log("loadInv: descriptions[lookupKey]:", data.descriptions ? JSON.stringify(data.descriptions[lookupKey]) : "NO DESC");
     for (var id in data.assets) {
       var asset = data.assets[id];
       var classId = asset.classid + "_" + asset.instanceid;
