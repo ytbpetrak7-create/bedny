@@ -183,9 +183,10 @@ async function poll() {
   try {
     const pendingDeposits = await gasGet(GAS_URL + "?action=getPendingDeposits");
     const deps = typeof pendingDeposits === "string" ? JSON.parse(pendingDeposits) : pendingDeposits;
-    if (deps && deps.length) {
+      if (deps && deps.length) {
       for (const dep of deps) {
         try {
+          console.log("Deposit: processing " + dep.username + " items=" + JSON.stringify(dep.items));
           const tradeLink = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(dep.username));
           if (!tradeLink || tradeLink === "NOT_SET" || tradeLink === "MISSING") {
             console.log("Deposit: chybí tradeLink pro " + dep.username);
