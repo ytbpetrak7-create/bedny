@@ -198,12 +198,13 @@ async function poll() {
           const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
           for (const item of dep.items) {
             if (item.assetId) {
-              offer.addTheirItem({ appid: 730, contextid: item.contextid || "2", assetid: item.assetId, amount: item.amount || "1" });
-              console.log("Deposit: added " + item.name + " (assetId=" + item.assetId + ", amount=" + (item.amount || "1") + ")");
+              offer.addTheirItem({ appid: 730, contextid: String(item.contextid || "2"), assetid: String(item.assetId), amount: Number(item.amount) || 1 });
+              console.log("Deposit: added " + item.name + " (assetId=" + item.assetId + ")");
             } else {
               console.log("Deposit: přeskočeno (bez assetId): " + item.name);
             }
           }
+          console.log("Deposit: items_to_receive=" + (offer.items_to_receive ? offer.items_to_receive.length : "null"));
           if (!offer.items_to_receive || !offer.items_to_receive.length) {
             console.log("Deposit: žádné položky k přijetí pro " + dep.username);
             https.get(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username));
