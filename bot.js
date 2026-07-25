@@ -198,7 +198,7 @@ async function poll() {
           const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
           for (const item of dep.items) {
             if (item.assetId) {
-              offer.addTheirItem({ id: item.assetId, amount: item.amount || "1", contextid: item.contextid || "2" });
+              offer.addTheirItem({ appid: 730, contextid: item.contextid || "2", assetid: item.assetId, amount: item.amount || "1" });
               console.log("Deposit: added " + item.name + " (assetId=" + item.assetId + ", amount=" + (item.amount || "1") + ")");
             } else {
               console.log("Deposit: přeskočeno (bez assetId): " + item.name);
