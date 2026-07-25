@@ -195,27 +195,12 @@ async function poll() {
           if (!t) { console.log("Deposit: neplatný tradeLink pro " + dep.username); continue; }
 
           const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
-          const userInv = await getUserInventory(dep.steamId);
-          if (userInv && userInv.success && userInv.assets) {
-            for (const item of dep.items) {
-              if (item.assetId) {
-                const asset = userInv.assets[item.assetId];
-                if (asset) {
-                  offer.addTheirItem({ id: item.assetId, amount: asset.amount, contextid: "2" });
-                } else {
-                  console.log("Deposit: item nenalezen:", item.name);
-                }
-              } else {
-                for (const id in userInv.assets) {
-                  const asset = userInv.assets[id];
-                  const classId = asset.classid + "_" + asset.instanceid;
-                  const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
-                  if (desc && desc.market_hash_name && desc.market_hash_name.toLowerCase() === item.name.toLowerCase()) {
-                    offer.addTheirItem({ id: asset.id, amount: asset.amount, contextid: "2" });
-                    break;
-                  }
-                }
-              }
+          for (const item of dep.items) {
+            if (item.assetId) {
+              offer.addTheirItem({ id: item.assetId, amount: item.amount || "1", contextid: item.contextid || "2" });
+              console.log("Deposit: added " + item.name + " (assetId=" + item.assetId + ", amount=" + (item.amount || "1") + ")");
+            } else {
+              console.log("Deposit: přeskočeno (bez assetId): " + item.name);
             }
           }
           if (!offer.items_to_receive || !offer.items_to_receive.length) {

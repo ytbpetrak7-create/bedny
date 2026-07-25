@@ -142,7 +142,7 @@ async function loadInventory() {
       var name = desc.market_hash_name || "";
       var baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
       var price = acceptedNames[baseName] || 0;
-      items.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
+      items.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: desc.icon_url_large || desc.icon_url || "" });
     }
 
 
@@ -211,7 +211,7 @@ async function sendDeposit() {
   var btn = document.getElementById("sendDepositBtn");
   btn.disabled = true;
   btn.textContent = "ODESÍLÁM...";
-  var itemsJson = JSON.stringify(selectedItems.map(function(i) { return { name: i.name, assetId: i.assetId, price: i.price }; }));
+  var itemsJson = JSON.stringify(selectedItems.map(function(i) { return { name: i.name, assetId: i.assetId, amount: i.amount || "1", contextid: i.contextid || "2", price: i.price }; }));
   var res = await callScript("requestDeposit", { username: getCurrentUser(), items: itemsJson });
   if (res === "OK") {
     document.getElementById("depositResult").innerHTML = '<div style="padding:15px;border:1px solid #00ff96;border-radius:10px;background:#0d2b1a;text-align:center;">' +
