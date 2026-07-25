@@ -98,12 +98,11 @@ async function loadInventory() {
   document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
   selectedItems = [];
 
-  var fp = JSON.parse(await callScript("getProfile", { username: getCurrentUser() }));
-  var steamId = fp.steamId;
-  console.log("loadInv: steamId=" + steamId);
+  var steamId = (await callScript("getSteamId", { username: getCurrentUser() })).trim();
+  console.log("loadInv: steamId=" + JSON.stringify(steamId));
 
   if (!steamId) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID</p>';
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID. Přihlas se znovu přes Steam.</p>';
     return;
   }
 
