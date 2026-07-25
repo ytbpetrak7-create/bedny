@@ -99,7 +99,6 @@ async function loadInventory() {
   selectedItems = [];
 
   var steamId = (await callScript("getSteamId", { username: getCurrentUser() })).trim();
-  console.log("loadInv: steamId=" + JSON.stringify(steamId));
 
   if (!steamId) {
     document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID. Přihlas se znovu přes Steam.</p>';
@@ -111,17 +110,13 @@ async function loadInventory() {
   try { accepted = JSON.parse(acceptedRes); } catch(e) { accepted = []; }
   var acceptedNames = {};
   accepted.forEach(function(a) { acceptedNames[a.name.toLowerCase()] = a.price; });
-  console.log("loadInv: accepted=" + accepted.length);
 
   var invUrl = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
   var proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(invUrl);
-  console.log("loadInv: fetching " + proxyUrl);
 
   try {
     var resp = await fetch(proxyUrl);
-    console.log("loadInv: status=" + resp.status);
     var data = await resp.json();
-    console.log("loadInv: success=" + data.success + " assets=" + (data.assets ? Object.keys(data.assets).length : 0));
 
     if (!data.success || !data.assets) {
       document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nepodařilo se načíst inventář</p>';
@@ -129,13 +124,6 @@ async function loadInventory() {
     }
 
     var items = [];
-    var descKeys = data.descriptions ? Object.keys(data.descriptions).slice(0,5) : [];
-    console.log("loadInv: desc keys:", JSON.stringify(descKeys));
-    var firstAssetKey = Object.keys(data.assets)[0];
-    var firstAsset = data.assets[firstAssetKey];
-    var lookupKey = firstAsset.classid + "_" + firstAsset.instanceid;
-    console.log("loadInv: first asset lookup key:", lookupKey, "asset:", JSON.stringify(firstAsset));
-    console.log("loadInv: first desc entry:", data.descriptions ? JSON.stringify(data.descriptions[descKeys[0]]).slice(0,300) : "NO DESC");
     var descMap = {};
     if (data.descriptions) {
       var dKeys = Object.keys(data.descriptions);
@@ -146,7 +134,6 @@ async function loadInventory() {
         }
       }
     }
-    console.log("loadInv: descMap size=" + Object.keys(descMap).length);
     for (var id in data.assets) {
       var asset = data.assets[id];
       var classId = asset.classid + "_" + asset.instanceid;
@@ -158,7 +145,6 @@ async function loadInventory() {
       items.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
     }
 
-    console.log("loadInv: items=" + items.length + " depositable=" + items.filter(function(x){return x.depositable;}).length);
 
     items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
 
@@ -170,7 +156,7 @@ async function loadInventory() {
       var iconUrl = it.icon ? "https://community.akamai.steamstatic.com/economy/image/" + it.icon + "/128fx128f" : "";
       var clickAttr = it.depositable ? ' onclick="toggleItem(this,' + i + ')"' : '';
       var cursor = it.depositable ? "pointer" : "default";
-      html += '<div data-idx="' + i + '" class="inv-item" style="border:2px solid ' + borderColor + ';border-radius:10px;cursor:' + cursor + ';text-align:center;background:' + bgColor + ';transition:all 0.2s;overflow:hidden;">';
+      html += '<div data-idx="' + i + '" class="inv-item" style="border:2px solid ' + borderColor + ';border-radius:10px;cursor:' + cursor + ';text-align:center;background:' + bgColor + ';transition:all 0.2s;overflow:hidden;"' + clickAttr + '>';
       if (iconUrl) {
         html += '<div style="background:#1a1a2e;padding:8px;"><img src="' + iconUrl + '" style="width:80px;height:80px;object-fit:contain;" loading="lazy"></div>';
       }
@@ -188,7 +174,6 @@ async function loadInventory() {
     window._invItems = items;
     updateDepositSummary();
   } catch(e) {
-    console.log("loadInv: error", e);
     document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p>';
   }
 }
