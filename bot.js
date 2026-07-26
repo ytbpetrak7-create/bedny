@@ -168,7 +168,7 @@ async function poll() {
         const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
         if (!found) { 
           console.log("Item nenalezen v inventáři bota:", w.item, " - markováno jako done");
-          https.get(GAS_URL + "?action=completeWithdrawal&row=" + w.row);
+          gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
           continue; 
         }
         
@@ -178,7 +178,7 @@ async function poll() {
         offer.send((err, status) => {
           if (err) return console.log("Chyba:", err);
           console.log(`Offer sent: ${status}`);
-          https.get(GAS_URL + "?action=completeWithdrawal&row=" + w.row);
+          gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
         });
       }
     }
@@ -211,9 +211,9 @@ async function poll() {
           const totalValue = dep.items.reduce((s, i) => s + (i.price || 0), 0);
           offer.setMessage("Deposit " + totalValue.toFixed(2) + " Kč");
           offer.send((err, status) => {
-            if (err) { console.log("Deposit offer error:", err.message); https.get(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username)); return; }
+            if (err) { console.log("Deposit offer error:", err.message); gasGet(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username)).catch(()=>{}); return; }
             console.log(`Deposit offer sent to ${dep.username}: ${status}`);
-            https.get(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2));
+            gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2)).then(r => console.log("Deposit: completeDeposit response=" + JSON.stringify(r))).catch(e => console.log("Deposit: completeDeposit error:", e.message));
           });
         } catch (e) { console.error("Deposit processing error:", e.message); }
       }
@@ -246,7 +246,7 @@ async function poll() {
           console.log("InvRequest: first items: " + JSON.stringify(invNames));
           if (!userInv || !userInv.success || !userInv.assets) {
             console.log("InvRequest: inventory fetch failed for " + username);
-            https.get(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]"));
+            gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]")).catch(()=>{});
             continue;
           }
 
@@ -274,7 +274,7 @@ async function poll() {
             }
           }
           console.log("InvRequest: " + username + " - " + result.length + " items (accepted: " + accepted.length + ", inventory: " + Object.keys(userInv.assets).length + ")");
-          https.get(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result)));
+          gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result))).catch(()=>{});
           console.log("InvRequest: " + username + " - " + result.length + " items");
         } catch (e) { console.error("InvRequest error:", e.message); }
       }
