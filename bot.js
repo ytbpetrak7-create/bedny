@@ -166,7 +166,11 @@ async function poll() {
         if (!t) { console.log("Neplatný tradeLink"); continue; }
         
         const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
-        if (!found) { console.log("Item nenalezen v inventáři bota:", w.item); continue; }
+        if (!found) { 
+          console.log("Item nenalezen v inventáři bota:", w.item, " - markováno jako done");
+          https.get(GAS_URL + "?action=completeWithdrawal&row=" + w.row);
+          continue; 
+        }
         
         const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
         offer.addMyItem(found);
@@ -186,7 +190,7 @@ async function poll() {
       if (deps && deps.length) {
       for (const dep of deps) {
         try {
-          console.log("Deposit: processing " + dep.username + " items=" + JSON.stringify(dep.items));
+          console.log("Deposit: processing " + dep.username);
           const tradeLink = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(dep.username));
           if (!tradeLink || tradeLink === "NOT_SET" || tradeLink === "MISSING") {
             console.log("Deposit: chybí tradeLink pro " + dep.username);
@@ -204,11 +208,10 @@ async function poll() {
               console.log("Deposit: přeskočeno (bez assetId): " + item.name);
             }
           }
-          console.log("Deposit: items_to_receive=" + (offer.items_to_receive ? offer.items_to_receive.length : "null") + " them=" + JSON.stringify(offer.them ? offer.them.items : null));
           const totalValue = dep.items.reduce((s, i) => s + (i.price || 0), 0);
           offer.setMessage("Deposit " + totalValue.toFixed(2) + " Kč");
           offer.send((err, status) => {
-            if (err) { console.log("Deposit offer error:", err.message); return; }
+            if (err) { console.log("Deposit offer error:", err.message); https.get(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username)); return; }
             console.log(`Deposit offer sent to ${dep.username}: ${status}`);
             https.get(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2));
           });
