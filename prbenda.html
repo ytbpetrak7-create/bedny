@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
 <style>
@@ -10,10 +10,10 @@ h1{font-size:24px;margin-bottom:10px;}
   height:150px;
   margin:20px auto;
   overflow:hidden;
-  border-radius:8px;
-  background:rgba(0,0,0,0.4);
+  border-radius:12px;
+  background:rgba(0,0,0,0.5);
   border:2px solid rgba(255,255,255,0.08);
-  box-shadow:inset 0 0 40px rgba(0,0,0,0.6);
+  box-shadow:inset 0 0 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,0,0,0.4);
 }
 .slot-strip {
   display:flex;
@@ -66,6 +66,20 @@ h1{font-size:24px;margin-bottom:10px;}
   z-index:3;
   pointer-events:none;
 }
+.slot-flash {
+  position:absolute;
+  top:0;left:0;width:100%;height:100%;
+  background:radial-gradient(circle at 50% 50%,rgba(255,215,0,0.4),transparent 70%);
+  opacity:0;
+  pointer-events:none;
+  z-index:2;
+  border-radius:10px;
+}
+@keyframes flashIn {
+  0%{opacity:0;}
+  20%{opacity:1;}
+  100%{opacity:0;}
+}
 .skin-strip {
   display:flex;
   gap:8px;
@@ -115,6 +129,13 @@ h1{font-size:24px;margin-bottom:10px;}
   margin:10px 0;
   min-height:30px;
 }
+#boxCounter {
+  color:#aaa;
+  font-size:16px;
+  text-align:center;
+  margin:5px 0;
+  min-height:24px;
+}
 .open-btn-wrap { text-align:center; }
 #openBoxButton {
   padding:15px 50px;
@@ -139,7 +160,15 @@ h1{font-size:24px;margin-bottom:10px;}
   display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
   margin:15px 0;
 }
-.results-grid .skin-card { width:90px; }
+.results-grid .skin-card {
+  width:90px;
+  opacity:0;
+  transform:scale(0.8) translateY(20px);
+  animation: cardAppear 0.4s ease forwards;
+}
+@keyframes cardAppear {
+  to { opacity:1; transform:scale(1) translateY(0); }
+}
 .sell-mini {
   display:block;
   margin:4px auto 0;
@@ -149,14 +178,31 @@ h1{font-size:24px;margin-bottom:10px;}
   border:none;border-radius:5px;
   color:#fff;cursor:pointer;
 }
+#progressBar {
+  width:700px;
+  max-width:100%;
+  height:4px;
+  margin:0 auto 10px;
+  background:rgba(255,255,255,0.1);
+  border-radius:2px;
+  overflow:hidden;
+  display:none;
+}
+#progressFill {
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#00ff96,#ffd700);
+  border-radius:2px;
+  transition:width 0.3s ease;
+}
 </style>
 </head>
 <body>
-<a href="hlav.html" class="back-link">← Zpět</a>
+<a href="hlav.html" class="back-link">â† ZpÄ›t</a>
 <h1>Boxes1</h1>
 
 <div class="count-wrap">
-  <label for="openCount">Počet:</label>
+  <label for="openCount">PoÄŤet:</label>
   <select id="openCount">
     <option value="1">1</option>
     <option value="2">2</option>
@@ -166,19 +212,22 @@ h1{font-size:24px;margin-bottom:10px;}
   </select>
 </div>
 <div class="open-btn-wrap">
-  <button type="button" id="openBoxButton">Otevřít</button>
+  <button type="button" id="openBoxButton">OtevĹ™Ă­t</button>
 </div>
 
+<div id="progressBar"><div id="progressFill"></div></div>
+<p id="boxCounter"></p>
 <div class="slot-wrap" id="slotWrap">
   <div class="slot-strip" id="slotStrip"></div>
   <div class="slot-indicator"></div>
+  <div class="slot-flash" id="slotFlash"></div>
 </div>
 <p id="itemname"></p>
 
 <div id="resultsContainer"></div>
 <div id="itemActions" style="display:none;text-align:center;margin-top:10px;">
   <button onclick="sellCurrentItem()" id="sellBtn" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-right:10px;box-shadow:0 4px 15px rgba(255,68,68,0.3);"></button>
-  <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Otevřít znova</button>
+  <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">OtevĹ™Ă­t znova</button>
 </div>
 <div class="skin-strip" id="skinStrip"></div>
 
@@ -235,6 +284,17 @@ function playRare() {
   o.start(); o.stop(audioCtx.currentTime + 0.5);
 }
 
+function playTickFast() {
+  var o = audioCtx.createOscillator();
+  var g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.frequency.value = 1000 + Math.random() * 200;
+  o.type = "square";
+  g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+  o.start(); o.stop(audioCtx.currentTime + 0.03);
+}
+
 async function showChances() {
   var result = await getBoxInfo("Boxes1");
   allItems = JSON.parse(result);
@@ -245,10 +305,10 @@ async function showChances() {
     var rareStyle = item.rare ? 'border:2px solid #ff00ff;box-shadow:0 0 10px rgba(255,0,255,0.5);' : '';
     html += '<div class="skin-card" style="' + rareStyle + '">';
     if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '" loading="lazy">'; }
-    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
+    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">đźŽ</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
-    if (item.rare) { html += '<span style="color:#ff00ff;font-size:9px;">★ RARE</span>'; }
-    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
+    if (item.rare) { html += '<span style="color:#ff00ff;font-size:9px;">â… RARE</span>'; }
+    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' KÄŤ</span>';
     html += '</div>';
   });
   document.getElementById("skinStrip").innerHTML = html;
@@ -273,19 +333,22 @@ function buildSlotStrip(winnerName, winnerImg, winnerPrice, rareMode) {
     var isWinner = (i === winnerIndex);
     html += '<div class="skin-card' + (isWinner ? ' winner' : '') + '">';
     if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '">'; }
-    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
+    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">đźŽ</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
-    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
+    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' KÄŤ</span>';
     html += '</div>';
   }
   strip.innerHTML = html;
   return { winnerIndex: winnerIndex, cardWidth: 106 };
 }
 
-function animateSlot(winnerIndex, cardWidth) {
+function animateSlot(winnerIndex, cardWidth, speed) {
+  speed = speed || 1;
+  var animDuration = Math.round(2800 / speed);
   return new Promise(function(resolve) {
     var strip = document.getElementById("slotStrip");
     var wrap = document.getElementById("slotWrap");
+    var flash = document.getElementById("slotFlash");
     var visibleCards = Math.floor(wrap.offsetWidth / cardWidth);
     var centerOffset = Math.floor(visibleCards / 2);
     var targetPos = winnerIndex - centerOffset;
@@ -295,22 +358,21 @@ function animateSlot(winnerIndex, cardWidth) {
     strip.style.transform = "translateX(0px)";
     void strip.offsetWidth;
     
-    strip.style.transition = "transform 2.8s cubic-bezier(0.1, 0.8, 0.05, 1)";
+    strip.style.transition = "transform " + animDuration + "ms cubic-bezier(0.1, 0.8, 0.05, 1)";
     strip.style.transform = "translateX(" + maxX + "px)";
     
     var lastTickPos = 0;
     var startTime = performance.now();
-    var duration = 2800;
     function tickCheck() {
       var elapsed = performance.now() - startTime;
-      if (elapsed >= duration) return;
-      var progress = elapsed / duration;
+      if (elapsed >= animDuration) return;
+      var progress = elapsed / animDuration;
       var eased = 1 - Math.pow(1 - progress, 3);
       var currentPos = eased * Math.abs(maxX);
       var cardIndex = Math.floor(currentPos / cardWidth);
       if (cardIndex > lastTickPos) {
         lastTickPos = cardIndex;
-        playTick();
+        speed > 1 ? playTickFast() : playTick();
       }
       requestAnimationFrame(tickCheck);
     }
@@ -322,24 +384,80 @@ function animateSlot(winnerIndex, cardWidth) {
         winner.style.transition = "transform 0.3s ease";
         winner.style.transform = "scale(1.1)";
       }
+      if (flash) {
+        flash.style.animation = "flashIn 0.6s ease forwards";
+        setTimeout(function() { flash.style.animation = ""; }, 600);
+      }
       playWin();
       resolve();
-    }, 3000);
+    }, animDuration + 200);
   });
+}
+
+async function handleRareAnimation(itemName, itemImg, itemPrice, rareMode) {
+  var info = buildSlotStrip(itemName, itemImg, itemPrice, false);
+  await animateSlot(info.winnerIndex, info.cardWidth);
+  
+  document.getElementById("itemname").innerText = "?? RARE ??";
+  document.getElementById("itemname").style.color = "#ff00ff";
+  playRare();
+  
+  var slotWrap = document.getElementById("slotWrap");
+  var c4div = document.createElement("div");
+  c4div.id = "c4overlay";
+  c4div.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:10;background:rgba(0,0,0,0.7);border-radius:8px;";
+  c4div.innerHTML = '<img src="c4.webp" style="width:120px;height:120px;object-fit:contain;animation:c4Pulse 0.4s ease-in-out 3;">';
+  slotWrap.appendChild(c4div);
+  
+  var style = document.createElement("style");
+  style.textContent = "@keyframes c4Pulse{0%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.3);filter:brightness(2) saturate(2)}100%{transform:scale(1);filter:brightness(1)}}";
+  document.head.appendChild(style);
+  
+  await new Promise(function(r) { setTimeout(r, 1500); });
+  
+  var c4el = document.getElementById("c4overlay");
+  if (c4el) c4el.remove();
+  slotWrap.style.transition = "none";
+  slotWrap.style.transform = "translateX(0px)";
+  document.getElementById("slotStrip").innerHTML = "";
+  
+  var info2 = buildSlotStrip(itemName, itemImg, itemPrice, true);
+  await animateSlot(info2.winnerIndex, info2.cardWidth);
+}
+
+function addItemToResults(name, img, price, index) {
+  var container = document.getElementById("resultsContainer");
+  var grid = container.querySelector(".results-grid");
+  if (!grid) {
+    container.innerHTML = '<div class="results-grid"></div>';
+    grid = container.querySelector(".results-grid");
+  }
+  if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
+  var card = document.createElement("div");
+  card.className = "skin-card";
+  card.style.animationDelay = (index * 0.1) + "s";
+  var cardHtml = '';
+  if (img) { cardHtml += '<img src="' + fixImg(img) + '" alt="' + name + '" loading="lazy">'; }
+  else { cardHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">đźŽ</div>'; }
+  cardHtml += '<span class="sname">' + name + '</span>';
+  cardHtml += '<span class="sprice">' + Number(price).toFixed(2) + ' KÄŤ</span>';
+  card.innerHTML = cardHtml;
+  grid.appendChild(card);
 }
 
 document.getElementById("openBoxButton").addEventListener("click", async () => {
     document.getElementById("resultsContainer").innerHTML = "";
     document.getElementById("itemActions").style.display = "none";
     document.getElementById("itemname").innerText = "";
+    document.getElementById("itemname").style.color = "#ffd700";
     document.getElementById("slotStrip").innerHTML = "";
+    document.getElementById("boxCounter").innerText = "";
     document.getElementById("openBoxButton").disabled = true;
     
     var count = parseInt(document.getElementById("openCount").value) || 1;
-    var result = count > 1 ? await openMultiple("Boxes1", count) : await open("Boxes1");
-    var invPromise = getInventory();
     
     if (count === 1) {
+      var result = await open("Boxes1");
       var parts = result.split("|");
       var itemName = parts[0], itemImg = parts[1] || "", itemPrice = Number(parts[2]) || 0;
       
@@ -350,34 +468,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       var isRare = winnerItem && Number(winnerItem.rare) === 1;
       
       if (isRare) {
-        var info = buildSlotStrip(itemName, itemImg, itemPrice, false);
-        await animateSlot(info.winnerIndex, info.cardWidth);
-        
-        document.getElementById("itemname").innerText = "?? RARE ??";
-        document.getElementById("itemname").style.color = "#ff00ff";
-        playRare();
-        
-        var slotWrap = document.getElementById("slotWrap");
-        var c4div = document.createElement("div");
-        c4div.id = "c4overlay";
-        c4div.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:10;background:rgba(0,0,0,0.7);border-radius:8px;";
-        c4div.innerHTML = '<img src="c4.webp" style="width:120px;height:120px;object-fit:contain;animation:c4Pulse 0.4s ease-in-out 3;">';
-        slotWrap.appendChild(c4div);
-        
-        var style = document.createElement("style");
-        style.textContent = "@keyframes c4Pulse{0%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.3);filter:brightness(2) saturate(2)}100%{transform:scale(1);filter:brightness(1)}}";
-        document.head.appendChild(style);
-        
-        await new Promise(function(r) { setTimeout(r, 1500); });
-        
-        var c4el = document.getElementById("c4overlay");
-        if (c4el) c4el.remove();
-        slotWrap.style.transition = "none";
-        slotWrap.style.transform = "translateX(0px)";
-        document.getElementById("slotStrip").innerHTML = "";
-        
-        var info2 = buildSlotStrip(itemName, itemImg, itemPrice, true);
-        await animateSlot(info2.winnerIndex, info2.cardWidth);
+        await handleRareAnimation(itemName, itemImg, itemPrice, false);
       } else {
         var info = buildSlotStrip(itemName, itemImg, itemPrice, false);
         await animateSlot(info.winnerIndex, info.cardWidth);
@@ -387,130 +478,71 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       document.getElementById("itemname").style.color = "#ffd700";
       lastItemPrice = itemPrice;
       
-      var inv = JSON.parse(await invPromise);
+      var inv = JSON.parse(await getInventory());
       var found = inv.filter(function(x) { return x.name === itemName; });
       var lastItemRow = found.length > 0 ? found[found.length - 1].row : null;
       
       if (itemPrice > 0 && lastItemRow) {
-        document.getElementById("sellBtn").textContent = "Prodat za " + Number(itemPrice).toFixed(2) + " Kč";
+        document.getElementById("sellBtn").textContent = "Prodat za " + Number(itemPrice).toFixed(2) + " KÄŤ";
         document.getElementById("itemActions").style.display = "block";
       }
     } else {
+      var result = await openMultiple("Boxes1", count);
       var items = result.split(";");
-      var lastParts = items[items.length - 1].split("|");
-      var lastItemName = lastParts[0], lastItemImg = lastParts[1] || "", lastItemPrice = Number(lastParts[2]) || 0;
-      if (lastItemImg && !lastItemImg.startsWith("http")) lastItemImg = "https://ytbpetrak7-create.github.io/bedny/" + lastItemImg;
-      var lastWinnerItem = null;
-      for (var w = 0; w < allItems.length; w++) {
-        if (allItems[w].name === lastItemName) { lastWinnerItem = allItems[w]; break; }
-      }
-      var isLastRare = lastWinnerItem && Number(lastWinnerItem.rare) === 1;
       
-      if (isLastRare) {
-        var pool = allItems.filter(function(x) { return x.rare; });
-        var stripItems = [];
-        for (var si = 0; si < 35; si++) { stripItems.push(pool[Math.floor(Math.random() * pool.length)]); }
-        var wIdx = 28 + Math.floor(Math.random() * 4);
-        stripItems[wIdx] = lastWinnerItem;
-        var stripHtml = '';
-        for (var si = 0; si < stripItems.length; si++) {
-          var si2 = stripItems[si];
-          var simg = si2.image || '';
-          if (simg && !simg.startsWith("http")) simg = "https://ytbpetrak7-create.github.io/bedny/" + simg;
-          stripHtml += '<div class="skin-card' + (si === wIdx ? ' winner' : '') + '">';
-          if (simg) { stripHtml += '<img src="' + fixImg(simg) + '" alt="' + si2.name + '">'; }
-          else { stripHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
-          stripHtml += '<span class="sname">' + si2.name + '</span>';
-          stripHtml += '<span class="sprice">' + Number(si2.sellPrice).toFixed(2) + ' Kč</span>';
-          stripHtml += '</div>';
-        }
-        document.getElementById("slotStrip").innerHTML = stripHtml;
-        await animateSlot(wIdx, 106);
+      var progressBar = document.getElementById("progressBar");
+      var progressFill = document.getElementById("progressFill");
+      progressBar.style.display = "block";
+      progressFill.style.width = "0%";
+      
+      var totalValue = 0;
+      
+      for (var i = 0; i < items.length; i++) {
+        var p = items[i].split("|");
+        var itemName = p[0], itemImg = p[1] || "", itemPrice = Number(p[2]) || 0;
         
-        document.getElementById("itemname").innerText = "?? RARE ??";
-        document.getElementById("itemname").style.color = "#ff00ff";
-        playRare();
-        var slotWrap = document.getElementById("slotWrap");
-        var c4div = document.createElement("div");
-        c4div.id = "c4overlay";
-        c4div.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:10;background:rgba(0,0,0,0.7);border-radius:8px;";
-        c4div.innerHTML = '<img src="c4.webp" style="width:120px;height:120px;object-fit:contain;animation:c4Pulse 0.4s ease-in-out 3;">';
-        slotWrap.appendChild(c4div);
-        var style = document.createElement("style");
-        style.textContent = "@keyframes c4Pulse{0%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.3);filter:brightness(2) saturate(2)}100%{transform:scale(1);filter:brightness(1)}}";
-        document.head.appendChild(style);
-        await new Promise(function(r) { setTimeout(r, 1500); });
-        var c4el = document.getElementById("c4overlay");
-        if (c4el) c4el.remove();
-        slotWrap.style.transition = "none";
-        slotWrap.style.transform = "translateX(0px)";
+        document.getElementById("boxCounter").innerText = "Bedna " + (i + 1) + " / " + items.length;
+        document.getElementById("itemname").innerText = "";
         document.getElementById("slotStrip").innerHTML = "";
         
-        var pool2 = allItems.filter(function(x) { return x.rare; });
-        var stripItems2 = [];
-        for (var si = 0; si < 35; si++) { stripItems2.push(pool2[Math.floor(Math.random() * pool2.length)]); }
-        stripItems2[wIdx] = lastWinnerItem;
-        var stripHtml2 = '';
-        for (var si = 0; si < stripItems2.length; si++) {
-          var si2 = stripItems2[si];
-          var simg = si2.image || '';
-          if (simg && !simg.startsWith("http")) simg = "https://ytbpetrak7-create.github.io/bedny/" + simg;
-          stripHtml2 += '<div class="skin-card' + (si === wIdx ? ' winner' : '') + '">';
-          if (simg) { stripHtml2 += '<img src="' + fixImg(simg) + '" alt="' + si2.name + '">'; }
-          else { stripHtml2 += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
-          stripHtml2 += '<span class="sname">' + si2.name + '</span>';
-          stripHtml2 += '<span class="sprice">' + Number(si2.sellPrice).toFixed(2) + ' Kč</span>';
-          stripHtml2 += '</div>';
+        var winnerItem = null;
+        for (var w = 0; w < allItems.length; w++) {
+          if (allItems[w].name === itemName) { winnerItem = allItems[w]; break; }
         }
-        document.getElementById("slotStrip").innerHTML = stripHtml2;
-        await animateSlot(wIdx, 106);
-      } else {
-        var pool = allItems;
-        var stripItems = [];
-        for (var si = 0; si < 35; si++) { stripItems.push(pool[Math.floor(Math.random() * pool.length)]); }
-        var wIdx = 28 + Math.floor(Math.random() * 4);
-        var winnerFull = lastWinnerItem || { name: lastItemName, image: lastItemImg, sellPrice: lastItemPrice };
-        stripItems[wIdx] = winnerFull;
-        var stripHtml = '';
-        for (var si = 0; si < stripItems.length; si++) {
-          var si2 = stripItems[si];
-          var simg = si2.image || '';
-          if (simg && !simg.startsWith("http")) simg = "https://ytbpetrak7-create.github.io/bedny/" + simg;
-          stripHtml += '<div class="skin-card' + (si === wIdx ? ' winner' : '') + '">';
-          if (simg) { stripHtml += '<img src="' + fixImg(simg) + '" alt="' + si2.name + '">'; }
-          else { stripHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
-          stripHtml += '<span class="sname">' + si2.name + '</span>';
-          stripHtml += '<span class="sprice">' + Number(si2.sellPrice).toFixed(2) + ' Kč</span>';
-          stripHtml += '</div>';
+        var isRare = winnerItem && Number(winnerItem.rare) === 1;
+        var animSpeed = i < items.length - 1 ? 1.5 : 1;
+        
+        if (isRare) {
+          await handleRareAnimation(itemName, itemImg, itemPrice, false);
+        } else {
+          var info = buildSlotStrip(itemName, itemImg, itemPrice, false);
+          await animateSlot(info.winnerIndex, info.cardWidth, animSpeed);
         }
-        document.getElementById("slotStrip").innerHTML = stripHtml;
-        await animateSlot(wIdx, 106);
+        
+        document.getElementById("itemname").innerText = itemName;
+        document.getElementById("itemname").style.color = isRare ? "#ff00ff" : "#ffd700";
+        
+        totalValue += itemPrice;
+        addItemToResults(itemName, itemImg, itemPrice, i);
+        
+        var pct = Math.round(((i + 1) / items.length) * 100);
+        progressFill.style.width = pct + "%";
+        
+        if (i < items.length - 1) {
+          await new Promise(function(r) { setTimeout(r, 500); });
+        }
       }
       
-      document.getElementById("itemname").innerText = "Otevřeno " + items.length + " beden";
+      document.getElementById("boxCounter").innerText = "";
+      document.getElementById("itemname").innerText = "OtevĹ™eno " + items.length + " beden";
       document.getElementById("itemname").style.color = "#ffd700";
       
-      var html = '<div class="results-grid">';
-      var totalValue = 0;
-      items.forEach(function(itemStr, idx) {
-        var p = itemStr.split("|");
-        var name = p[0], img = p[1] || "", price = Number(p[2]) || 0;
-        if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
-        totalValue += price;
-        html += '<div class="skin-card">';
-        if (img) { html += '<img src="' + fixImg(img) + '" alt="' + name + '" loading="lazy">'; }
-        else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
-        html += '<span class="sname">' + name + '</span>';
-        html += '<span class="sprice">' + Number(price).toFixed(2) + ' Kč</span>';
-        html += '</div>';
-      });
-      html += '</div>';
-      html += '<p style="color:#aaa;text-align:center;font-size:13px;">Celkem: ' + items.length + ' itemů, hodnota ' + totalValue.toFixed(2) + ' Kč</p>';
-      html += '<div style="text-align:center;margin:10px 0;"><button id="sellAllBtn" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">Prodat vše (' + totalValue.toFixed(2) + ' Kč)</button></div>';
-      document.getElementById("resultsContainer").innerHTML = html;
+      var totalHtml = '<p style="color:#aaa;text-align:center;font-size:13px;margin-top:15px;">Celkem: ' + items.length + ' itemĹŻ, hodnota ' + totalValue.toFixed(2) + ' KÄŤ</p>';
+      totalHtml += '<div style="text-align:center;margin:10px 0;"><button id="sellAllBtn" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">Prodat vĹˇe (' + totalValue.toFixed(2) + ' KÄŤ)</button></div>';
+      document.getElementById("resultsContainer").innerHTML += totalHtml;
       
       document.getElementById("sellAllBtn").addEventListener("click", async function() {
-        if (!confirm("Prodat vše za " + totalValue.toFixed(2) + " Kč?")) return;
+        if (!confirm("Prodat vĹˇe za " + totalValue.toFixed(2) + " KÄŤ?")) return;
         var res = await callScript("sellAll", { username: getCurrentUser() });
         if (res && res.startsWith("SOLD")) {
           updatePoints();
@@ -518,6 +550,8 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
           document.getElementById("itemname").innerText = "";
         }
       });
+      
+      setTimeout(function() { progressBar.style.display = "none"; }, 1000);
     }
     
     document.getElementById("openBoxButton").disabled = false;
@@ -544,6 +578,7 @@ function openAgain() {
   document.getElementById("itemActions").style.display = "none";
   document.getElementById("itemname").innerText = "";
   document.getElementById("slotStrip").innerHTML = "";
+  document.getElementById("boxCounter").innerText = "";
 }
 </script>
 </html>
