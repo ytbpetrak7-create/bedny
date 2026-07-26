@@ -596,7 +596,6 @@
     
     if (foundRow === -1) return "NOT_FOUND";
     
-    invSheet.deleteRow(foundRow);
     
     const usersSheet = getSheet(ss, "Users");
     const userData = usersSheet.getDataRange().getValues();
