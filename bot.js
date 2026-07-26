@@ -5,7 +5,7 @@ const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxhE-UcffyZclPKYrsGp-L-2tAvqmbyzVCmbQjucO99nO7spDCxNOKJp2eFFWf0O_1qCw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyN5S44RJfE-FWSj0Xku8m277go2QZgWa0dYLAfBWiUSEJIHLp1TuV7bNcS5hsF4srOpQ/exec";
 
 const client = new SteamUser();
 const community = new SteamCommunity();
