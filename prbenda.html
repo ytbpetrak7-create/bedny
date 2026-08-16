@@ -198,11 +198,11 @@ h1{font-size:24px;margin-bottom:10px;}
 </style>
 </head>
 <body>
-<a href="hlav.html" class="back-link">â† ZpÄ›t</a>
+<a href="hlav.html" class="back-link">← Zpět</a>
 <h1>Boxes1</h1>
 
 <div class="count-wrap">
-  <label for="openCount">PoÄŤet:</label>
+  <label for="openCount">Počet:</label>
   <select id="openCount">
     <option value="1">1</option>
     <option value="2">2</option>
@@ -212,7 +212,7 @@ h1{font-size:24px;margin-bottom:10px;}
   </select>
 </div>
 <div class="open-btn-wrap">
-  <button type="button" id="openBoxButton">OtevĹ™Ă­t</button>
+  <button type="button" id="openBoxButton">Otevřít</button>
 </div>
 
 <div id="progressBar"><div id="progressFill"></div></div>
@@ -227,7 +227,7 @@ h1{font-size:24px;margin-bottom:10px;}
 <div id="resultsContainer"></div>
 <div id="itemActions" style="display:none;text-align:center;margin-top:10px;">
   <button onclick="sellCurrentItem()" id="sellBtn" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-right:10px;box-shadow:0 4px 15px rgba(255,68,68,0.3);"></button>
-  <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">OtevĹ™Ă­t znova</button>
+  <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Otevřít znova</button>
 </div>
 <div class="skin-strip" id="skinStrip"></div>
 
@@ -304,11 +304,11 @@ async function showChances() {
     if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
     var rareStyle = item.rare ? 'border:2px solid #ff00ff;box-shadow:0 0 10px rgba(255,0,255,0.5);' : '';
     html += '<div class="skin-card" style="' + rareStyle + '">';
-    if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:none;align-items:center;justify-content:center;font-size:28px;">đźŽ</div>';
-    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">đźŽ</div>'; }
+    if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:none;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
+    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
-    if (item.rare) { html += '<span style="color:#ff00ff;font-size:9px;">â… RARE</span>'; }
-    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' KÄŤ</span>';
+    if (item.rare) { html += '<span style="color:#ff00ff;font-size:9px;">★ RARE</span>'; }
+    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
     html += '</div>';
   });
   document.getElementById("skinStrip").innerHTML = html;
@@ -332,10 +332,10 @@ function buildSlotStrip(winnerName, winnerImg, winnerPrice, rareMode) {
     var img = item.image || '';
     var isWinner = (i === winnerIndex);
     html += '<div class="skin-card' + (isWinner ? ' winner' : '') + '">';
-    if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:none;align-items:center;justify-content:center;font-size:24px;">đźŽ</div>'; }
-    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">đźŽ</div>'; }
+    if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:none;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
+    else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
-    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' KÄŤ</span>';
+    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
     html += '</div>';
   }
   strip.innerHTML = html;
@@ -438,9 +438,9 @@ function addItemToResults(name, img, price, index) {
   card.style.animationDelay = (index * 0.1) + "s";
   var cardHtml = '';
   if (img) { cardHtml += '<img src="' + fixImg(img) + '" alt="' + name + '" loading="lazy">'; }
-  else { cardHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">đźŽ</div>'; }
+  else { cardHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
   cardHtml += '<span class="sname">' + name + '</span>';
-  cardHtml += '<span class="sprice">' + Number(price).toFixed(2) + ' KÄŤ</span>';
+  cardHtml += '<span class="sprice">' + Number(price).toFixed(2) + ' Kč</span>';
   card.innerHTML = cardHtml;
   grid.appendChild(card);
 }
@@ -483,7 +483,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       var lastItemRow = found.length > 0 ? found[found.length - 1].row : null;
       
       if (itemPrice > 0 && lastItemRow) {
-        document.getElementById("sellBtn").textContent = "Prodat za " + Number(itemPrice).toFixed(2) + " KÄŤ";
+        document.getElementById("sellBtn").textContent = "Prodat za " + Number(itemPrice).toFixed(2) + " Kč";
         document.getElementById("itemActions").style.display = "block";
       }
     } else {
@@ -534,15 +534,15 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       }
       
       document.getElementById("boxCounter").innerText = "";
-      document.getElementById("itemname").innerText = "OtevĹ™eno " + items.length + " beden";
+      document.getElementById("itemname").innerText = "Otevřeno " + items.length + " beden";
       document.getElementById("itemname").style.color = "#ffd700";
       
-      var totalHtml = '<p style="color:#aaa;text-align:center;font-size:13px;margin-top:15px;">Celkem: ' + items.length + ' itemĹŻ, hodnota ' + totalValue.toFixed(2) + ' KÄŤ</p>';
-      totalHtml += '<div style="text-align:center;margin:10px 0;"><button id="sellAllBtn" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">Prodat vĹˇe (' + totalValue.toFixed(2) + ' KÄŤ)</button></div>';
+      var totalHtml = '<p style="color:#aaa;text-align:center;font-size:13px;margin-top:15px;">Celkem: ' + items.length + ' itemů, hodnota ' + totalValue.toFixed(2) + ' Kč</p>';
+      totalHtml += '<div style="text-align:center;margin:10px 0;"><button id="sellAllBtn" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">Prodat vše (' + totalValue.toFixed(2) + ' Kč)</button></div>';
       document.getElementById("resultsContainer").innerHTML += totalHtml;
       
       document.getElementById("sellAllBtn").addEventListener("click", async function() {
-        if (!confirm("Prodat vĹˇe za " + totalValue.toFixed(2) + " KÄŤ?")) return;
+        if (!confirm("Prodat vše za " + totalValue.toFixed(2) + " Kč?")) return;
         var res = await callScript("sellAll", { username: getCurrentUser() });
         if (res && res.startsWith("SOLD")) {
           updatePoints();
