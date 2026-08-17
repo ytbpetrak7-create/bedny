@@ -23,6 +23,73 @@ h1{font-size:24px;margin-bottom:10px;}
   left:0;
   will-change:transform;
 }
+.slot-strip-vertical {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:10px 12px;
+  position:absolute;
+  top:0;
+  will-change:transform;
+}
+.slot-wrap-vertical {
+  position:relative;
+  width:160px;
+  height:150px;
+  overflow:hidden;
+  border-radius:12px;
+  background:rgba(0,0,0,0.5);
+  border:2px solid rgba(255,255,255,0.08);
+  box-shadow:inset 0 0 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,0,0,0.4);
+  flex-shrink:0;
+}
+.slot-wrap-vertical .slot-indicator-v {
+  position:absolute;
+  left:-2px;
+  top:50%;
+  transform:translateY(-50%);
+  width:0;height:0;
+  border-top:14px solid transparent;
+  border-bottom:14px solid transparent;
+  border-left:14px solid #ffd700;
+  filter:drop-shadow(0 0 6px rgba(255,215,0,0.8));
+  z-index:3;
+  pointer-events:none;
+}
+.slot-wrap-vertical .slot-card-v {
+  flex-shrink:0;
+  width:120px;
+  height:130px;
+  background:rgba(255,255,255,0.04);
+  border-radius:8px;
+  padding:6px 4px;
+  text-align:center;
+}
+.slot-wrap-vertical .slot-card-v img {
+  width:90px;height:90px;
+  object-fit:contain;
+  display:block;
+  margin:0 auto 2px;
+}
+.slot-wrap-vertical .slot-card-v .sname {
+  color:#ccc;font-size:9px;line-height:1.1;display:block;word-break:break-word;
+}
+.slot-wrap-vertical .slot-card-v .sprice {
+  color:#ff4444;font-size:8px;display:block;
+}
+.slot-wrap-vertical .slot-card-v.winner {
+  background:rgba(255,215,0,0.15);
+  border:2px solid #ffd700;
+  box-shadow:0 0 25px rgba(255,215,0,0.6);
+  animation: winGlow 1s ease-in-out infinite alternate;
+}
+#multiSlotContainer {
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin:10px auto;
+}
 .slot-strip .skin-card {
   flex-shrink:0;
   width:100px;
@@ -217,6 +284,7 @@ h1{font-size:24px;margin-bottom:10px;}
 
 <div id="progressBar"><div id="progressFill"></div></div>
 <p id="boxCounter"></p>
+<div id="multiSlotContainer"></div>
 <div class="slot-wrap" id="slotWrap">
   <div class="slot-strip" id="slotStrip"></div>
   <div class="slot-indicator"></div>
@@ -407,6 +475,76 @@ function animateSlot(winnerIndex, cardWidth, speed) {
   });
 }
 
+function buildVerticalSlotStrip(stripEl, winnerName, winnerImg, winnerPrice) {
+  var pool = allItems;
+  var items = [];
+  for (var i = 0; i < 35; i++) {
+    var item = pool[Math.floor(Math.random() * pool.length)];
+    items.push(item);
+  }
+  var winnerIndex = 28 + Math.floor(Math.random() * 4);
+  items[winnerIndex] = { name: winnerName, image: winnerImg, sellPrice: winnerPrice };
+  var html = '';
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var img = item.image || '';
+    var isWinner = (i === winnerIndex);
+    html += '<div class="slot-card-v' + (isWinner ? ' winner' : '') + '">';
+    if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div style="width:90px;height:90px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:none;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
+    else { html += '<div style="width:90px;height:90px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎁</div>'; }
+    html += '<span class="sname">' + item.name + '</span>';
+    html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
+    html += '</div>';
+  }
+  stripEl.innerHTML = html;
+  return { winnerIndex: winnerIndex, cardHeight: 136 };
+}
+
+function animateVerticalSlot(stripEl, wrapEl, winnerIndex, cardHeight, speed) {
+  speed = speed || 1;
+  var animDuration = Math.round(2800 / speed);
+  return new Promise(function(resolve) {
+    var visibleCards = Math.floor(wrapEl.offsetHeight / cardHeight);
+    var centerOffset = Math.floor(visibleCards / 2);
+    var targetPos = winnerIndex - centerOffset;
+    var maxY = -(targetPos * cardHeight);
+
+    stripEl.style.transition = "none";
+    stripEl.style.transform = "translateY(0px)";
+    void stripEl.offsetWidth;
+
+    stripEl.style.transition = "transform " + animDuration + "ms cubic-bezier(0.1, 0.8, 0.05, 1)";
+    stripEl.style.transform = "translateY(" + maxY + "px)";
+
+    var lastTickPos = 0;
+    var startTime = performance.now();
+    function tickCheck() {
+      var elapsed = performance.now() - startTime;
+      if (elapsed >= animDuration) return;
+      var progress = elapsed / animDuration;
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var currentPos = eased * Math.abs(maxY);
+      var cardIndex = Math.floor(currentPos / cardHeight);
+      if (cardIndex > lastTickPos) {
+        lastTickPos = cardIndex;
+        playTickFast();
+      }
+      requestAnimationFrame(tickCheck);
+    }
+    requestAnimationFrame(tickCheck);
+
+    setTimeout(function() {
+      var winner = stripEl.querySelector(".winner");
+      if (winner) {
+        winner.style.transition = "transform 0.3s ease";
+        winner.style.transform = "scale(1.1)";
+      }
+      playWin();
+      resolve();
+    }, animDuration + 200);
+  });
+}
+
 async function handleRareAnimation(itemName, itemImg, itemPrice, rareMode) {
   var info = buildSlotStrip(itemName, itemImg, itemPrice, false);
   await animateSlot(info.winnerIndex, info.cardWidth);
@@ -464,6 +602,8 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
     document.getElementById("itemname").innerText = "";
     document.getElementById("itemname").style.color = "#ffd700";
     document.getElementById("slotStrip").innerHTML = "";
+    document.getElementById("multiSlotContainer").innerHTML = "";
+    document.getElementById("slotWrap").style.display = "";
     document.getElementById("boxCounter").innerText = "";
     document.getElementById("openBoxButton").disabled = true;
     
@@ -503,51 +643,40 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       var result = await openMultiple("Boxes2", count);
       var items = result.split(";");
       
-      var progressBar = document.getElementById("progressBar");
-      var progressFill = document.getElementById("progressFill");
-      progressBar.style.display = "block";
-      progressFill.style.width = "0%";
+      document.getElementById("slotWrap").style.display = "none";
+      var multiContainer = document.getElementById("multiSlotContainer");
+      multiContainer.innerHTML = "";
       
-      var totalValue = 0;
+      var slotData = [];
+      var wrapElements = [];
       
       for (var i = 0; i < items.length; i++) {
-        var p = items[i];
-        var parsed = parseItemResult(p);
-        var itemName = parsed.name, itemImg = parsed.img, itemPrice = parsed.price;
+        var parsed = parseItemResult(items[i]);
         
-        document.getElementById("boxCounter").innerText = "Bedna " + (i + 1) + " / " + items.length;
-        document.getElementById("itemname").innerText = "";
-        document.getElementById("slotStrip").innerHTML = "";
+        var wrapDiv = document.createElement("div");
+        wrapDiv.className = "slot-wrap-vertical";
+        wrapDiv.innerHTML = '<div class="slot-strip-vertical" id="vStrip' + i + '"></div><div class="slot-indicator-v"></div>';
+        multiContainer.appendChild(wrapDiv);
+        wrapElements.push(wrapDiv);
         
-        var winnerItem = null;
-        for (var w = 0; w < allItems.length; w++) {
-          if (allItems[w].name === itemName) { winnerItem = allItems[w]; break; }
-        }
-        var isRare = winnerItem && Number(winnerItem.rare) === 1;
-        var animSpeed = i < items.length - 1 ? 1.5 : 1;
-        
-        if (isRare) {
-          await handleRareAnimation(itemName, itemImg, itemPrice, false);
-        } else {
-          var info = buildSlotStrip(itemName, itemImg, itemPrice, false);
-          await animateSlot(info.winnerIndex, info.cardWidth, animSpeed);
-        }
-        
-        document.getElementById("itemname").innerText = itemName;
-        document.getElementById("itemname").style.color = isRare ? "#ff00ff" : "#ffd700";
-        
-        totalValue += itemPrice;
-        addItemToResults(itemName, itemImg, itemPrice, i);
-        
-        var pct = Math.round(((i + 1) / items.length) * 100);
-        progressFill.style.width = pct + "%";
-        
-        if (i < items.length - 1) {
-          await new Promise(function(r) { setTimeout(r, 500); });
-        }
+        var stripEl = document.getElementById("vStrip" + i);
+        var info = buildVerticalSlotStrip(stripEl, parsed.name, parsed.img, parsed.price);
+        slotData.push({ strip: stripEl, wrap: wrapDiv, winnerIndex: info.winnerIndex, cardHeight: info.cardHeight, name: parsed.name, img: parsed.img, price: parsed.price });
       }
       
-      document.getElementById("boxCounter").innerText = "";
+      var promises = slotData.map(function(sd, idx) {
+        return animateVerticalSlot(sd.strip, sd.wrap, sd.winnerIndex, sd.cardHeight, 1.3);
+      });
+      
+      await Promise.all(promises);
+      
+      var totalValue = 0;
+      for (var i = 0; i < slotData.length; i++) {
+        var sd = slotData[i];
+        totalValue += sd.price;
+        addItemToResults(sd.name, sd.img, sd.price, i);
+      }
+      
       document.getElementById("itemname").innerText = "Otevřeno " + items.length + " beden";
       document.getElementById("itemname").style.color = "#ffd700";
       
@@ -564,8 +693,6 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
           document.getElementById("itemname").innerText = "";
         }
       });
-      
-      setTimeout(function() { progressBar.style.display = "none"; }, 1000);
     }
     
     document.getElementById("openBoxButton").disabled = false;
@@ -592,6 +719,8 @@ function openAgain() {
   document.getElementById("itemActions").style.display = "none";
   document.getElementById("itemname").innerText = "";
   document.getElementById("slotStrip").innerHTML = "";
+  document.getElementById("multiSlotContainer").innerHTML = "";
+  document.getElementById("slotWrap").style.display = "";
   document.getElementById("boxCounter").innerText = "";
 }
 </script>
