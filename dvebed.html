@@ -685,7 +685,6 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       document.getElementById("resultsContainer").innerHTML += totalHtml;
       
       document.getElementById("sellAllBtn").addEventListener("click", async function() {
-        if (!confirm("Prodat vše za " + totalValue.toFixed(2) + " Kč?")) return;
         var res = await callScript("sellAll", { username: getCurrentUser() });
         if (res && res.startsWith("SOLD")) {
           updatePoints();

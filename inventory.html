@@ -115,7 +115,6 @@ async function loadInventory() {
 }
 
 async function requestWithdraw(itemName, row) {
-  if (!confirm("Vyzvednout " + itemName + "?")) return;
   var uname = getCurrentUser();
   var res = await callScript("requestWithdraw", { username: uname, itemName: itemName, row: row });
   if (res === "WITHDRAW_REQUESTED") {
@@ -126,7 +125,6 @@ async function requestWithdraw(itemName, row) {
 }
 
 async function removeItem(name, row) {
-  if (!confirm("Smazat " + name + " z inventáře?")) return;
   var res = await deleteInventoryItem(name, row);
   if (res === "DELETED") {
     loadInventory();
@@ -136,7 +134,6 @@ async function removeItem(name, row) {
 }
 
 async function sellFromInv(row, name, price) {
-  if (!confirm("Prodat " + name + " za " + Number(price).toFixed(2) + " Kč?")) return;
   var res = await sellItem(row, price);
   if (res === "SOLD") {
     loadInventory();
@@ -146,7 +143,6 @@ async function sellFromInv(row, name, price) {
 }
 
 async function sellAll() {
-  if (!confirm("Prodat všechny prodejné předměty?")) return;
   var res = await callScript("sellAll", { username: getCurrentUser() });
   if (res && res.startsWith("SOLD")) {
     loadInventory();
