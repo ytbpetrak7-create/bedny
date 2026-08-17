@@ -293,6 +293,9 @@ h1{font-size:24px;margin-bottom:10px;}
 <p id="itemname"></p>
 
 <div id="resultsContainer"></div>
+<div id="sellSelectedWrap" style="display:none;text-align:center;margin:10px 0;">
+  <button id="sellSelectedBtn" onclick="sellSelectedItems()" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;"></button>
+</div>
 <div id="itemActions" style="display:none;text-align:center;margin-top:10px;">
   <button onclick="sellCurrentItem()" id="sellBtn" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-right:10px;box-shadow:0 4px 15px rgba(255,68,68,0.3);"></button>
   <button onclick="openAgain()" style="padding:10px 25px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Otevřít znova</button>
@@ -388,6 +391,7 @@ async function showChances() {
     if (img) { html += '<img src="' + fixImg(img) + '" alt="' + item.name + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:none;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
     else { html += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
     html += '<span class="sname">' + item.name + '</span>';
+    html += '<span style="color:#aaa;font-size:10px;">' + item.chance + '%</span>';
     if (item.rare) { html += '<span style="color:#ff00ff;font-size:9px;">★ RARE</span>'; }
     html += '<span class="sprice">' + Number(item.sellPrice).toFixed(2) + ' Kč</span>';
     html += '</div>';
@@ -576,7 +580,9 @@ async function handleRareAnimation(itemName, itemImg, itemPrice, rareMode) {
   await animateSlot(info2.winnerIndex, info2.cardWidth);
 }
 
-function addItemToResults(name, img, price, index) {
+var selectedResults = [];
+
+function addItemToResults(name, img, price, index, row) {
   var container = document.getElementById("resultsContainer");
   var grid = container.querySelector(".results-grid");
   if (!grid) {
@@ -587,13 +593,62 @@ function addItemToResults(name, img, price, index) {
   var card = document.createElement("div");
   card.className = "skin-card";
   card.style.animationDelay = (index * 0.1) + "s";
+  card.style.cursor = "pointer";
+  card.setAttribute("data-idx", index);
   var cardHtml = '';
   if (img) { cardHtml += '<img src="' + fixImg(img) + '" alt="' + name + '" loading="lazy">'; }
   else { cardHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
   cardHtml += '<span class="sname">' + name + '</span>';
   cardHtml += '<span class="sprice">' + Number(price).toFixed(2) + ' Kč</span>';
   card.innerHTML = cardHtml;
+  card.addEventListener("click", function() { toggleResultItem(card, index, name, img, price, row); });
   grid.appendChild(card);
+  updateSellSelectedBtn();
+}
+
+function toggleResultItem(card, index, name, img, price, row) {
+  var pos = -1;
+  for (var i = 0; i < selectedResults.length; i++) {
+    if (selectedResults[i].index === index) { pos = i; break; }
+  }
+  if (pos >= 0) {
+    selectedResults.splice(pos, 1);
+    card.style.borderColor = "rgba(255,255,255,0.05)";
+    card.style.boxShadow = "none";
+  } else {
+    selectedResults.push({ index: index, name: name, img: img, price: price, row: row });
+    card.style.borderColor = "#00ff96";
+    card.style.boxShadow = "0 0 12px rgba(0,255,150,0.4)";
+  }
+  updateSellSelectedBtn();
+}
+
+function updateSellSelectedBtn() {
+  var btn = document.getElementById("sellSelectedBtn");
+  var wrap = document.getElementById("sellSelectedWrap");
+  if (!btn || !wrap) return;
+  var total = 0;
+  for (var i = 0; i < selectedResults.length; i++) total += selectedResults[i].price;
+  if (selectedResults.length > 0) {
+    wrap.style.display = "block";
+    btn.textContent = "Prodat vybrané (" + selectedResults.length + " za " + total.toFixed(2) + " Kč)";
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+async function sellSelectedItems() {
+  if (!selectedResults.length) return;
+  for (var i = 0; i < selectedResults.length; i++) {
+    var item = selectedResults[i];
+    if (item.row) {
+      await sellItem(item.row, item.price);
+    }
+  }
+  selectedResults = [];
+  updatePoints();
+  document.getElementById("resultsContainer").innerHTML = "";
+  document.getElementById("itemname").innerText = "";
 }
 
 document.getElementById("openBoxButton").addEventListener("click", async () => {
@@ -606,6 +661,8 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
     document.getElementById("slotWrap").style.display = "";
     document.getElementById("boxCounter").innerText = "";
     document.getElementById("openBoxButton").disabled = true;
+    selectedResults = [];
+    document.getElementById("sellSelectedWrap").style.display = "none";
     
     var count = parseInt(document.getElementById("openCount").value) || 1;
     
@@ -670,11 +727,14 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       
       await Promise.all(promises);
       
+      var inv = JSON.parse(await getInventory());
       var totalValue = 0;
       for (var i = 0; i < slotData.length; i++) {
         var sd = slotData[i];
         totalValue += sd.price;
-        addItemToResults(sd.name, sd.img, sd.price, i);
+        var found = inv.filter(function(x) { return x.name === sd.name; });
+        var row = found.length > 0 ? found[found.length - 1].row : null;
+        addItemToResults(sd.name, sd.img, sd.price, i, row);
       }
       
       document.getElementById("itemname").innerText = "Otevřeno " + items.length + " beden";
@@ -721,6 +781,8 @@ function openAgain() {
   document.getElementById("multiSlotContainer").innerHTML = "";
   document.getElementById("slotWrap").style.display = "";
   document.getElementById("boxCounter").innerText = "";
+  selectedResults = [];
+  document.getElementById("sellSelectedWrap").style.display = "none";
 }
 </script>
 </html>
