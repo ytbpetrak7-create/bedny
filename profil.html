@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<body>
+<a href="hlav.html" class="back-link">← Zpět</a>
+<h1>Profil</h1>
+<div id="profile"></div>
+
+<link rel="stylesheet" href="inventory.css">
+</body>
+<script src="user.js?ver=6"></script>
+<script>
+if (!getCurrentUser()) {
+  window.location.href = "index.html";
+} else {
+  createPointsDisplay();
+  loadProfile();
+}
+
+function getLevel(pts) {
+  if (pts < 100) return 1;
+  if (pts < 300) return 2;
+  if (pts < 600) return 3;
+  if (pts < 1000) return 4;
+  if (pts < 1500) return 5;
+  if (pts < 2500) return 6;
+  if (pts < 5000) return 7;
+  return 8;
+}
+
+function getLevelBounds(lvl) {
+  var bounds = [0, 100, 300, 600, 1000, 1500, 2500, 5000, 99999];
+  return { min: bounds[lvl - 1], max: bounds[lvl] };
+}
+
+async function changePic() {
+  var url = prompt("Zadej URL profilovky:");
+  if (!url) return;
+  await saveProfilePic(url);
+  loadProfile();
+}
+
+async function loadProfile() {
+  var res = await getProfile();
+  if (res === "NOT_FOUND") {
+    document.getElementById("profile").innerHTML = "<p style='color:#fff;'>Uživatel nenalezen</p>";
+    return;
+  }
+  var data = JSON.parse(res);
+  var pts = Number(data.points);
+  var xp = Number(data.xp) || 0;
+  var lvl = getLevel(xp);
+  var bounds = getLevelBounds(lvl);
+  var progress = ((xp - bounds.min) / (bounds.max - bounds.min)) * 100;
+  if (progress > 100) progress = 100;
+  var picStyle = data.profilePic ? "background:url('" + data.profilePic + "') center/cover;" : "";
+  
+  var html = '<div style="color:#fff;font-size:18px;text-align:center;">';
+  html += '<div onclick="changePic()" style="width:120px;height:120px;border-radius:50%;' + picStyle + 'background-color:#6f42c1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:bold;margin:0 auto 20px;cursor:pointer;border:3px solid #00ff96;">';
+  html += data.profilePic ? "" : data.username.charAt(0).toUpperCase();
+  html += '</div>';
+  html += '<p><strong>' + data.username + '</strong></p>';
+  html += '<p>Kč: ' + pts.toFixed(2) + '</p>';
+  html += '<p>Level ' + lvl + '</p>';
+  html += '<div style="width:80%;max-width:300px;margin:10px auto;background:#444;border-radius:10px;overflow:hidden;height:20px;">';
+  html += '<div style="width:' + progress + '%;background:#00ff96;height:20px;border-radius:10px;"></div>';
+  html += '</div>';
+  html += '<p style="font-size:14px;color:#aaa;">' + xp + ' / ' + bounds.max + ' XP na další level</p>';
+  html += '<hr style="border-color:#444;margin:20px 0;">';
+  html += '<p style="font-size:16px;color:#aaa;">Steam Trade Link</p>';
+  html += '<p style="font-size:12px;color:#666;">Najdeš ho na <a href="https://steamcommunity.com/profiles/76561198785128182/tradeoffers/privacy" target="_blank" style="color:#00ff96;">této stránce</a> (dole)</p>';
+  html += '<input id="tradeLinkInput" type="text" value="' + (data.tradeLink || "") + '" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..." style="width:80%;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:14px;outline:none;">';
+  html += '<br><br>';
+  html += '<button onclick="saveTrade()" style="padding:10px 30px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Uložit trade link</button>';
+  html += '<hr style="border-color:#444;margin:20px 0;">';
+  html += '<p style="font-size:16px;color:#aaa;">Partnerský program</p>';
+  html += '<p style="font-size:12px;color:#888;">Sdílej svůj kód a získej odměny:</p>';
+  html += '<p style="font-size:12px;color:#00ff96;">• Tvůj kamarád dostane <b>6 Kč</b> zdarma + <b>10%</b> bonus při depositu</p>';
+  html += '<p style="font-size:12px;color:#ffd700;">• Ty dostaneš <b>1%</b> z každého Kč co utratí za bedny</p>';
+  html += '<div id="refCodeSection"></div>';
+  html += '<hr style="border-color:#444;margin:20px 0;">';
+  html += '<p style="font-size:16px;color:#aaa;">Denní odměna</p>';
+  html += '<div id="dailySection"></div>';
+  html += '</div>';
+  
+  document.getElementById("profile").innerHTML = html;
+  updateProfilePic(data.profilePic);
+  loadRefStats();
+  loadDailyStatus();
+}
+
+async function saveTrade() {
+  var link = document.getElementById("tradeLinkInput").value.trim();
+  if (!link) link = "";
+  await saveTradeLink(link);
+  alert("Trade link uložen");
+}
+
+function copyRef() {
+  var input = document.getElementById("refLink");
+  input.select();
+  document.execCommand("copy");
+  alert("Odkaz zkopírován!");
+}
+
+async function loadRefStats() {
+  var uname = getCurrentUser();
+  var codeRes = await callScript("getRefCode", { username: uname });
+  var code = codeRes.trim();
+  
+  var el = document.getElementById("refCodeSection");
+  if (!el) return;
+  
+  if (code.startsWith("pending:")) {
+    var pendingCode = code.replace("pending:", "");
+    el.innerHTML = '<p style="font-size:20px;color:#ffa500;font-weight:bold;letter-spacing:4px;margin:10px 0;">' + pendingCode + '</p>' +
+      '<p style="font-size:14px;color:#ffa500;">Čeká na schválení...</p>';
+  } else if (code) {
+    var refLink = "https://ytbpetrak7-create.github.io/bedny/index.html?ref=" + code;
+    el.innerHTML = '<p style="font-size:20px;color:#ffd700;font-weight:bold;letter-spacing:4px;margin:10px 0;">' + code + '</p>' +
+      '<input id="refLink" type="text" value="' + refLink + '" readonly style="width:80%;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:14px;outline:none;">' +
+      '<br><br>' +
+      '<button onclick="copyRef()" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Kopírovat odkaz</button>';
+  } else {
+    el.innerHTML = '<p style="font-size:14px;color:#888;margin-bottom:10px;">Nemáš svůj referral kód</p>' +
+      '<button onclick="showCustomCodeForm()" style="padding:10px 30px;background:linear-gradient(135deg,#6f42c1,#5a32a3);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Vytvořit vlastní kód</button>' +
+      '<div id="customCodeForm" style="display:none;margin-top:15px;">' +
+      '<input id="customCodeInput" type="text" maxlength="4" placeholder="4 znaky (např. M777)" style="width:150px;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:18px;text-align:center;letter-spacing:3px;text-transform:uppercase;outline:none;">' +
+      '<br><br>' +
+      '<button onclick="requestCustomCode()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:10px;color:#1a1a2e;font-size:14px;font-weight:bold;cursor:pointer;">Odeslat žádost</button>' +
+      '<p style="font-size:11px;color:#888;margin-top:8px;">Admin musí kód schválit</p>' +
+      '</div>';
+  }
+  
+  var statsRes = await callScript("getReferralStats", { username: uname });
+  try {
+    var stats = JSON.parse(statsRes);
+    el.innerHTML += '<div style="margin-top:15px;padding:15px;border:1px solid #444;border-radius:10px;">';
+    el.innerHTML += '<p style="font-size:14px;color:#00ff96;">Pozvaní hráči: <b>' + stats.count + '</b></p>';
+    el.innerHTML += '<p style="font-size:13px;color:#aaa;">Celkem XP od referralů: <b>' + stats.totalXp + '</b></p>';
+    el.innerHTML += '<p style="font-size:13px;color:#ffd700;">Získáno z provize: <b>' + stats.earned + ' Kč</b></p>';
+    el.innerHTML += '</div>';
+  } catch(e) {}
+}
+
+function showCustomCodeForm() {
+  var form = document.getElementById("customCodeForm");
+  form.style.display = form.style.display === "none" ? "block" : "none";
+}
+
+async function requestCustomCode() {
+  var code = document.getElementById("customCodeInput").value.trim();
+  if (code.length !== 4) { alert("Kód musí mít 4 znaky"); return; }
+  var res = await callScript("requestRefCode", { username: getCurrentUser(), code: code });
+  if (res === "OK") {
+    alert("Žádost odeslána! Počkej na schválení adminem.");
+    document.getElementById("customCodeForm").style.display = "none";
+    loadRefStats();
+  } else {
+    alert("Chyba: " + res);
+  }
+}
+
+function updateProfilePic(url) {
+  var pic = document.getElementById("profilePic");
+  if (!pic) return;
+  if (url) {
+    pic.style.background = "url('" + url + "') center/cover";
+    pic.textContent = "";
+  }
+}
+
+async function loadDailyStatus() {
+  var el = document.getElementById("dailySection");
+  if (!el) return;
+  var res = await callScript("getDailyStatus", { username: getCurrentUser() });
+  try {
+    var s = JSON.parse(res);
+    var days = [
+      { day: 1, reward: 0.10 }, { day: 2, reward: 0.20 }, { day: 3, reward: 0.30 },
+      { day: 4, reward: 0.40 }, { day: 5, reward: 0.50 }, { day: 6, reward: 0.60 }, { day: 7, reward: 0.70 }
+    ];
+    var html = '<div style="display:flex;gap:6px;justify-content:center;margin:10px 0;flex-wrap:wrap;">';
+    for (var i = 0; i < days.length; i++) {
+      var d = days[i];
+      var active = d.day <= s.streak;
+      var next = d.day === s.nextDay && !s.claimed;
+      var bg = active ? "#00ff96" : next ? "#ffa500" : "#333";
+      var col = active ? "#1a1a2e" : next ? "#1a1a2e" : "#888";
+      html += '<div style="width:50px;text-align:center;padding:8px 0;background:' + bg + ';border-radius:8px;color:' + col + ';">';
+      html += '<div style="font-size:11px;">Den ' + d.day + '</div>';
+      html += '<div style="font-size:13px;font-weight:bold;">' + d.reward.toFixed(2) + ' Kč</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    if (s.claimed) {
+      html += '<p style="color:#00ff96;font-size:14px;text-align:center;">Dnes už máš splněno!</p>';
+    } else {
+      html += '<div style="text-align:center;margin-top:10px;">';
+      html += '<button onclick="claimDaily()" style="padding:12px 40px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Vyzvednout ' + s.nextReward.toFixed(2) + ' Kč</button>';
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#888;">Načítání...</p>';
+  }
+}
+
+async function claimDaily() {
+  var btn = document.querySelector("#dailySection button");
+  if (btn) { btn.disabled = true; btn.textContent = "Načítání..."; }
+  var res = await callScript("claimDailyReward", { username: getCurrentUser() });
+  if (res === "ALREADY_CLAIMED") {
+    alert("Už sis dnes odměnu vyzvedl!");
+    loadDailyStatus();
+    return;
+  }
+  try {
+    var s = JSON.parse(res);
+    alert("Získal jsi " + s.reward.toFixed(2) + " Kč! (Den " + s.streak + "/7)");
+    createPointsDisplay();
+    loadDailyStatus();
+  } catch(e) {
+    alert("Chyba: " + res);
+    loadDailyStatus();
+  }
+}
+</script>
+</html>

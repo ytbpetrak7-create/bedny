@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<body>
+<a href="hlav.html" class="back-link">← Zpět</a>
+<h1>Zamořit body</h1>
+
+<div style="text-align:center;margin-bottom:20px;">
+  <button onclick="showTab('code')" id="tabCode" style="padding:10px 30px;background:#00ff96;border:none;border-radius:10px 0 0 10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Kód</button>
+  <button onclick="showTab('skin')" id="tabSkin" style="padding:10px 30px;background:#444;border:none;border-radius:0;color:#fff;font-size:16px;cursor:pointer;">Skin</button>
+  <button onclick="showTab('ref')" id="tabRef" style="padding:10px 30px;background:#444;border:none;border-radius:0 10px 10px 0;color:#fff;font-size:16px;cursor:pointer;">Referral</button>
+</div>
+
+<div id="codeTab">
+  <p>Zadej kód níže</p>
+  <input class="intex" type="text" id="kod">
+  <input class="inok" type="button" value="ok" id="ok-button" onclick="overitkod()">
+</div>
+
+<div id="skinTab" style="display:none;">
+  <div style="text-align:center;margin-bottom:15px;">
+    <p style="color:#aaa;font-size:14px;">Přijaté skiny pro vložení</p>
+    <div id="tradeInfo"></div>
+  </div>
+  <div id="invItems" style="max-height:50vh;overflow-y:auto;padding:5px;"></div>
+  <div id="depositSummary" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:15px 20px;background:#0a0a1a;border-top:2px solid #00ff96;z-index:100;">
+    <div style="display:flex;justify-content:space-between;align-items:center;max-width:800px;margin:0 auto;">
+      <div>
+        <span style="color:#aaa;font-size:14px;">Vybráno: <span id="selectedCount" style="color:#fff;font-weight:bold;">0</span> skinů</span>
+        <span style="color:#444;margin:0 10px;">|</span>
+        <span style="color:#ffd700;font-size:18px;font-weight:bold;"><span id="selectedTotal">0.00</span> Kč</span>
+      </div>
+      <button onclick="sendDeposit()" id="sendDepositBtn" style="padding:12px 35px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">VLOŽIT</button>
+    </div>
+  </div>
+  <div id="depositResult" style="margin-top:10px;"></div>
+</div>
+
+<div id="refTab" style="display:none;">
+  <p>Zadej referral kód kamaráda</p>
+  <input class="intex" type="text" id="refCodeInput" maxlength="4" placeholder="4 znaky" style="text-transform:uppercase;letter-spacing:3px;text-align:center;">
+  <br><br>
+  <button onclick="applyRefCode()" style="padding:10px 30px;background:#00ff96;border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Použít kód</button>
+  <p style="font-size:13px;color:#aaa;margin-top:15px;">Získej <b>6 Kč</b> zdarma + <b>10%</b> bonus při depositu</p>
+  <div id="refResult"></div>
+</div>
+
+<link rel="stylesheet" href="zam obr.css">
+<link rel="stylesheet" href="inventory.css">
+<link rel="stylesheet" href="1bed.css">
+<style>
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.inv-item:hover { border-color: #555 !important; transform: scale(1.02); }
+.inv-item:active { transform: scale(0.95); }
+</style>
+</body>
+<script src="script.js"></script>
+<script src="user.js?ver=6"></script>
+<script>
+if (!getCurrentUser()) {
+  window.location.href = "index.html";
+} else {
+  createPointsDisplay();
+  loadTradeLink();
+  checkReferralStatus();
+  showTab('skin');
+}
+
+function showTab(tab) {
+  document.getElementById("codeTab").style.display = tab === "code" ? "block" : "none";
+  document.getElementById("skinTab").style.display = tab === "skin" ? "block" : "none";
+  document.getElementById("refTab").style.display = tab === "ref" ? "block" : "none";
+  document.getElementById("tabCode").style.background = tab === "code" ? "#00ff96" : "#444";
+  document.getElementById("tabCode").style.color = tab === "code" ? "#1a1a2e" : "#fff";
+  document.getElementById("tabSkin").style.background = tab === "skin" ? "#00ff96" : "#444";
+  document.getElementById("tabSkin").style.color = tab === "skin" ? "#1a1a2e" : "#fff";
+  document.getElementById("tabRef").style.background = tab === "ref" ? "#00ff96" : "#444";
+  document.getElementById("tabRef").style.color = tab === "ref" ? "#1a1a2e" : "#fff";
+  if (tab === "skin" && !window._invLoaded) {
+    window._invLoaded = true;
+    loadInventory();
+  }
+}
+
+var selectedItems = [];
+
+async function loadTradeLink() {
+  var info = document.getElementById("tradeInfo");
+  if (!info) return;
+  var botLink = await callScript("getBotTradeLink");
+  if (botLink && botLink !== "NOT_SET") {
+    info.innerHTML = '<p style="color:#aaa;font-size:14px;">Bot: <a href="' + botLink + '" target="_blank" style="color:#00ff96;">otevřít profil bota</a></p>';
+  } else {
+    info.innerHTML = '<p style="color:#f80;font-size:14px;">Bot trade link není nastaven, kontaktuj admina</p>';
+  }
+}
+
+async function loadInventory() {
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
+  selectedItems = [];
+
+  var steamId = (await callScript("getSteamId", { username: getCurrentUser() })).trim();
+
+  if (!steamId) {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID. Přihlas se znovu přes Steam.</p>';
+    return;
+  }
+
+  var acceptedRes = await callScript("getDepositSkins");
+  var accepted;
+  try { accepted = JSON.parse(acceptedRes); } catch(e) { accepted = []; }
+  var acceptedNames = {};
+  accepted.forEach(function(a) { acceptedNames[a.name.toLowerCase()] = a.price; });
+
+  var invUrl = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
+  var proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(invUrl);
+
+  try {
+    var resp = await fetch(proxyUrl);
+    var data = await resp.json();
+
+    if (!data.success || !data.assets) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nepodařilo se načíst inventář</p>';
+      return;
+    }
+
+    var items = [];
+    var descMap = {};
+    if (data.descriptions) {
+      var dKeys = Object.keys(data.descriptions);
+      for (var dk = 0; dk < dKeys.length; dk++) {
+        var d = data.descriptions[dKeys[dk]];
+        if (d && d.classid !== undefined) {
+          descMap[d.classid + "_" + (d.instanceid || "0")] = d;
+        }
+      }
+    }
+    for (var id in data.assets) {
+      var asset = data.assets[id];
+      var classId = asset.classid + "_" + asset.instanceid;
+      var desc = descMap[classId] || null;
+      if (!desc) continue;
+      var name = desc.market_hash_name || "";
+      var baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+      var price = acceptedNames[baseName] || 0;
+      items.push({ name: name, price: price, depositable: price > 0, assetId: asset.assetid || asset.id || id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: desc.icon_url_large || desc.icon_url || "" });
+    }
+
+
+    items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
+
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding-bottom:80px;">';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var borderColor = it.depositable ? "#00ff96" : "#222";
+      var bgColor = it.depositable ? "#0d2b1a" : "#16162a";
+      var iconUrl = it.icon ? "https://community.akamai.steamstatic.com/economy/image/" + it.icon + "/128fx128f" : "";
+      var clickAttr = it.depositable ? ' onclick="toggleItem(this,' + i + ')"' : '';
+      var cursor = it.depositable ? "pointer" : "default";
+      html += '<div data-idx="' + i + '" class="inv-item" style="border:2px solid ' + borderColor + ';border-radius:10px;cursor:' + cursor + ';text-align:center;background:' + bgColor + ';transition:all 0.2s;overflow:hidden;"' + clickAttr + '>';
+      if (iconUrl) {
+        html += '<div style="background:#1a1a2e;padding:8px;"><img src="' + iconUrl + '" style="width:80px;height:80px;object-fit:contain;" loading="lazy"></div>';
+      }
+      html += '<div style="padding:6px 4px;">';
+      html += '<p style="color:#ddd;font-size:10px;margin:0;line-height:1.3;height:28px;overflow:hidden;">' + it.name + '</p>';
+      if (it.depositable) {
+        html += '<p style="color:#00ff96;font-size:12px;font-weight:bold;margin:3px 0 0;">' + it.price.toFixed(2) + ' Kč</p>';
+      } else {
+        html += '<p style="color:#555;font-size:10px;margin:3px 0 0;"> nelze vložit</p>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+    document.getElementById("invItems").innerHTML = html;
+    window._invItems = items;
+    updateDepositSummary();
+  } catch(e) {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p>';
+  }
+}
+
+function toggleItem(el, idx) {
+  var item = window._invItems[idx];
+  var pos = -1;
+  for (var i = 0; i < selectedItems.length; i++) {
+    if (selectedItems[i].assetId === item.assetId) { pos = i; break; }
+  }
+  if (pos >= 0) {
+    selectedItems.splice(pos, 1);
+    el.style.borderColor = "#333";
+    el.style.background = "#16162a";
+    el.style.transform = "scale(1)";
+  } else {
+    selectedItems.push(item);
+    el.style.borderColor = "#00ff96";
+    el.style.background = "#0d2b1a";
+    el.style.transform = "scale(0.97)";
+  }
+  updateDepositSummary();
+}
+
+function updateDepositSummary() {
+  var sum = 0;
+  for (var i = 0; i < selectedItems.length; i++) sum += selectedItems[i].price;
+  document.getElementById("selectedCount").textContent = selectedItems.length;
+  document.getElementById("selectedTotal").textContent = sum.toFixed(2);
+  document.getElementById("depositSummary").style.display = selectedItems.length ? "block" : "none";
+}
+
+async function sendDeposit() {
+  if (!selectedItems.length) return;
+  var btn = document.getElementById("sendDepositBtn");
+  btn.disabled = true;
+  btn.textContent = "ODESÍLÁM...";
+  var itemsJson = JSON.stringify(selectedItems.map(function(i) { return { name: i.name, assetId: i.assetId, amount: i.amount || "1", contextid: i.contextid || "2", price: i.price }; }));
+  var res = await callScript("requestDeposit", { username: getCurrentUser(), items: itemsJson });
+  if (res === "OK") {
+    document.getElementById("depositResult").innerHTML = '<div style="padding:15px;border:1px solid #00ff96;border-radius:10px;background:#0d2b1a;text-align:center;">' +
+      '<p style="color:#00ff96;font-size:16px;font-weight:bold;">Požadavek odeslán!</p>' +
+      '<p style="color:#aaa;font-size:13px;margin-top:5px;">Bot zkontroluje tvůj inventář a pošle trade offer</p>' +
+      '<p style="color:#aaa;font-size:13px;">Po přijetí se ti automaticky připíší Kč</p></div>';
+    selectedItems = [];
+    updateDepositSummary();
+    document.getElementById("invItems").innerHTML = "";
+  } else {
+    document.getElementById("depositResult").innerHTML = '<p style="color:#f44;text-align:center;">Chyba: ' + res + '</p>';
+  }
+  btn.disabled = false;
+  btn.textContent = "VLOŽIT";
+}
+
+async function applyRefCode() {
+  var code = document.getElementById("refCodeInput").value.trim();
+  if (!code) { alert("Zadej kód"); return; }
+  var res = await callScript("applyReferral", { username: getCurrentUser(), code: code });
+  var el = document.getElementById("refResult");
+  if (res === "OK") {
+    el.innerHTML = '<p style="color:#00ff96;margin-top:15px;">Kód použit! Získal jsi 6 Kč + 10% deposit bonus.</p>';
+    document.getElementById("refCodeInput").value = "";
+    createPointsDisplay();
+  } else if (res === "ALREADY_REFERRED") {
+    el.innerHTML = '<p style="color:#ffa500;margin-top:15px;">Už máš přiřazený referral kód.</p>';
+  } else {
+    el.innerHTML = '<p style="color:#f44;margin-top:15px;">Chyba: ' + res + '</p>';
+  }
+}
+
+async function checkReferralStatus() {
+  var res = await callScript("hasReferral", { username: getCurrentUser() });
+  var el = document.getElementById("refTab");
+  if (res === "YES") {
+    el.innerHTML = '<p style="color:#ffa500;font-size:14px;">Už máš přiřazený referral kód.</p>';
+  }
+}
+</script>
+</html>
