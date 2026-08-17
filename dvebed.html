@@ -245,6 +245,19 @@ if (!getCurrentUser()) {
 var lastItemPrice = 0;
 var allItems = [];
 
+function parseItemResult(str) {
+  var last = str.lastIndexOf("|");
+  var secondLast = str.lastIndexOf("|", last - 1);
+  if (last === -1 || secondLast === -1) {
+    var parts = str.split("|");
+    return { name: parts[0] || "", img: parts[1] || "", price: Number(parts[2]) || 0 };
+  }
+  var price = Number(str.substring(last + 1)) || 0;
+  var img = str.substring(secondLast + 1, last);
+  var name = str.substring(0, secondLast);
+  return { name: name, img: img, price: price };
+}
+
 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playTick() {
@@ -458,8 +471,8 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
     
     if (count === 1) {
       var result = await open("Boxes2");
-      var parts = result.split("|");
-      var itemName = parts[0], itemImg = parts[1] || "", itemPrice = Number(parts[2]) || 0;
+      var parsed = parseItemResult(result);
+      var itemName = parsed.name, itemImg = parsed.img, itemPrice = parsed.price;
       
       var winnerItem = null;
       for (var w = 0; w < allItems.length; w++) {
@@ -498,8 +511,9 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       var totalValue = 0;
       
       for (var i = 0; i < items.length; i++) {
-        var p = items[i].split("|");
-        var itemName = p[0], itemImg = p[1] || "", itemPrice = Number(p[2]) || 0;
+        var p = items[i];
+        var parsed = parseItemResult(p);
+        var itemName = parsed.name, itemImg = parsed.img, itemPrice = parsed.price;
         
         document.getElementById("boxCounter").innerText = "Bedna " + (i + 1) + " / " + items.length;
         document.getElementById("itemname").innerText = "";
