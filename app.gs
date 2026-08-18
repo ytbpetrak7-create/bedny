@@ -211,6 +211,9 @@
       }
       result = JSON.stringify(dsArr);
       break;
+    case "exchangeSkins":
+      result = exchangeSkins(ss, params.username, params.removeRows, params.removeNames, params.addNames, params.priceDiff);
+      break;
   }
     
     return ContentService.createTextOutput(result);
@@ -1288,4 +1291,44 @@
     } catch (e) {
       return "[]";
     }
+  }
+
+  function exchangeSkins(ss, username, removeRows, removeNames, addNames, priceDiff) {
+    if (!username || !removeRows || !addNames) return "MISSING";
+
+    var diff = Number(priceDiff) || 0;
+
+    var usersSheet = getSheet(ss, "Users");
+    var userData = usersSheet.getDataRange().getValues();
+    var userRow = -1;
+    var userPts = 0;
+    for (var i = 1; i < userData.length; i++) {
+      if (userData[i][0] && userData[i][0].toString().trim() === username.trim()) {
+        userRow = i + 1;
+        userPts = Number(userData[i][2]) || 0;
+        break;
+      }
+    }
+    if (userRow === -1) return "USER_NOT_FOUND";
+
+    if (diff > 0 && userPts < diff) return "NOT_ENOUGH";
+
+    var invSheet = getSheet(ss, "Inventory");
+    var rows = removeRows.split(";").map(function(r) { return Number(r); }).sort(function(a,b) { return b - a; });
+    for (var j = 0; j < rows.length; j++) {
+      if (rows[j] > 0) invSheet.deleteRow(rows[j]);
+    }
+
+    var names = addNames.split(";").map(function(n) { return n.trim(); });
+    for (var k = 0; k < names.length; k++) {
+      if (names[k]) invSheet.appendRow([username, names[k], new Date()]);
+    }
+
+    if (diff > 0) {
+      usersSheet.getRange(userRow, 3).setValue(userPts - diff);
+    } else if (diff < 0) {
+      usersSheet.getRange(userRow, 3).setValue(userPts + Math.abs(diff));
+    }
+
+    return "EXCHANGED";
   }

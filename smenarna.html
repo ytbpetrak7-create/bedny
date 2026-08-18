@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="cs" translate="no">
+<head>
+<meta name="google" content="notranslate">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#1a1a2e;color:#fff;font-family:'Segoe UI',sans-serif;padding:20px;min-height:100vh;}
+h1{text-align:center;margin:10px 0 5px;font-size:24px;}
+.subtitle{text-align:center;color:#888;font-size:13px;margin-bottom:15px;}
+.columns{display:flex;gap:20px;max-width:1200px;margin:0 auto;}
+.col{flex:1;background:rgba(255,255,255,0.03);border-radius:12px;padding:15px;border:1px solid rgba(255,255,255,0.06);}
+.col h2{font-size:15px;color:#aaa;margin-bottom:10px;text-align:center;}
+.items{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:500px;overflow-y:auto;padding:5px;}
+.item{background:rgba(255,255,255,0.05);border-radius:8px;padding:8px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .2s;}
+.item:hover{border-color:#00ff96;background:rgba(0,255,150,0.05);}
+.item.selected{border-color:#00ff96;background:rgba(0,255,150,0.1);}
+.item img{width:100%;height:80px;object-fit:contain;border-radius:4px;}
+.item .name{font-size:10px;color:#ccc;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.item .price{font-size:11px;color:#00ff96;font-weight:bold;}
+.summary{max-width:1200px;margin:15px auto;background:rgba(255,255,255,0.05);border-radius:12px;padding:15px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.summary .total{font-size:16px;}
+.summary .diff{font-size:14px;}
+.summary .diff.positive{color:#00ff96;}
+.summary .diff.negative{color:#f44;}
+.summary .diff.neutral{color:#aaa;}
+.exchange-btn{padding:12px 40px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:25px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;transition:transform .2s;}
+.exchange-btn:hover{transform:scale(1.05);}
+.exchange-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.back-link{position:fixed;top:15px;left:15px;color:#00ff96;text-decoration:none;font-size:14px;z-index:10;}
+</style>
+</head>
+<body>
+<a href="hlav.html" class="back-link">&larr; Zpět</a>
+<h1>Směnárna skinů</h1>
+<p class="subtitle">Vyber skiny ze svého inventáře a vyměň je za jiné. Rozdíl v ceně se přičte/odečte z Kč.</p>
+
+<div class="columns">
+  <div class="col">
+    <h2>Tvoje skiny</h2>
+    <div id="myItems" class="items"></div>
+  </div>
+  <div class="col">
+    <h2>K dispozici</h2>
+    <div id="allItems" class="items"></div>
+  </div>
+</div>
+
+<div class="summary">
+  <div>
+    <span class="total">Tvá kůže: <span id="myTotal">0</span> Kč</span>
+  </div>
+  <div>
+    <span class="total">Vybrané: <span id="targetTotal">0</span> Kč</span>
+  </div>
+  <div>
+    <span class="diff neutral" id="diffText">Rozdíl: 0 Kč</span>
+  </div>
+  <button class="exchange-btn" id="exchangeBtn" disabled>Vyměnit</button>
+</div>
+
+<script src="user.js?ver=9"></script>
+<script>
+if (!getCurrentUser()) { window.location.href = "index.html"; }
+
+var itemMap = {};
+var myInv = [];
+var selectedMy = [];
+var selectedTarget = [];
+
+async function load() {
+  var r1 = await getBoxInfo("Boxes1");
+  var r2 = await getBoxInfo("Boxes2");
+  JSON.parse(r1).forEach(function(x) {
+    var img = x.image || "";
+    if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
+    itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img };
+  });
+  JSON.parse(r2).forEach(function(x) {
+    var img = x.image || "";
+    if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
+    if (!itemMap[x.name.trim()]) itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img };
+  });
+
+  var invResult = await getInventory();
+  myInv = JSON.parse(invResult);
+  renderMyItems();
+  renderAllItems();
+}
+
+function renderMyItems() {
+  var c = document.getElementById("myItems");
+  c.innerHTML = "";
+  myInv.forEach(function(item, idx) {
+    var d = itemMap[item.name.trim()] || { price: 0, image: "" };
+    var div = document.createElement("div");
+    div.className = "item" + (selectedMy.indexOf(idx) !== -1 ? " selected" : "");
+    div.innerHTML = '<img src="' + (d.image || "") + '" onerror="this.style.display=\'none\'">' +
+      '<div class="name" title="' + item.name + '">' + item.name + '</div>' +
+      '<div class="price">' + (d.price > 0 ? d.price.toFixed(2) + " Kč" : "-") + '</div>';
+    div.onclick = function() { toggleMy(idx); };
+    c.appendChild(div);
+  });
+}
+
+function renderAllItems() {
+  var c = document.getElementById("allItems");
+  c.innerHTML = "";
+  var allNames = Object.keys(itemMap);
+  allNames.forEach(function(name) {
+    var d = itemMap[name];
+    var div = document.createElement("div");
+    div.className = "item" + (selectedTarget.indexOf(name) !== -1 ? " selected" : "");
+    div.innerHTML = '<img src="' + (d.image || "") + '" onerror="this.style.display=\'none\'">' +
+      '<div class="name" title="' + name + '">' + name + '</div>' +
+      '<div class="price">' + (d.price > 0 ? d.price.toFixed(2) + " Kč" : "-") + '</div>';
+    div.onclick = function() { toggleTarget(name); };
+    c.appendChild(div);
+  });
+}
+
+function toggleMy(idx) {
+  var i = selectedMy.indexOf(idx);
+  if (i === -1) selectedMy.push(idx); else selectedMy.splice(i, 1);
+  renderMyItems();
+  updateSummary();
+}
+
+function toggleTarget(name) {
+  var i = selectedTarget.indexOf(name);
+  if (i === -1) selectedTarget.push(name); else selectedTarget.splice(i, 1);
+  renderAllItems();
+  updateSummary();
+}
+
+function updateSummary() {
+  var myTotal = 0;
+  selectedMy.forEach(function(idx) {
+    var d = itemMap[myInv[idx].name.trim()] || { price: 0 };
+    myTotal += d.price;
+  });
+  var targetTotal = 0;
+  selectedTarget.forEach(function(name) {
+    var d = itemMap[name] || { price: 0 };
+    targetTotal += d.price;
+  });
+  var diff = targetTotal - myTotal;
+  document.getElementById("myTotal").textContent = myTotal.toFixed(2);
+  document.getElementById("targetTotal").textContent = targetTotal.toFixed(2);
+  var diffEl = document.getElementById("diffText");
+  if (diff > 0) {
+    diffEl.textContent = "Zaplatíš: " + diff.toFixed(2) + " Kč";
+    diffEl.className = "diff negative";
+  } else if (diff < 0) {
+    diffEl.textContent = "Dostaneš: " + Math.abs(diff).toFixed(2) + " Kč";
+    diffEl.className = "diff positive";
+  } else {
+    diffEl.textContent = "Rozdíl: 0 Kč";
+    diffEl.className = "diff neutral";
+  }
+  document.getElementById("exchangeBtn").disabled = selectedMy.length === 0 || selectedTarget.length === 0;
+}
+
+async function doExchange() {
+  var myItems = selectedMy.map(function(idx) { return { name: myInv[idx].name, row: myInv[idx].row }; });
+  var myTotal = 0;
+  selectedMy.forEach(function(idx) {
+    myTotal += (itemMap[myInv[idx].name.trim()] || { price: 0 }).price;
+  });
+  var targetNames = selectedTarget.slice();
+  var targetTotal = 0;
+  selectedTarget.forEach(function(name) {
+    targetTotal += (itemMap[name] || { price: 0 }).price;
+  });
+  var diff = targetTotal - myTotal;
+
+  document.getElementById("exchangeBtn").disabled = true;
+  var res = await callScript("exchangeSkins", {
+    username: getCurrentUser(),
+    removeRows: myItems.map(function(x) { return x.row; }).join(";"),
+    removeNames: myItems.map(function(x) { return x.name; }).join(";"),
+    addNames: targetNames.join(";"),
+    priceDiff: diff.toFixed(2)
+  });
+  if (res === "EXCHANGED") {
+    selectedMy = [];
+    selectedTarget = [];
+    await load();
+    updatePoints();
+    updateSummary();
+  } else {
+    alert("Chyba: " + res);
+    document.getElementById("exchangeBtn").disabled = false;
+  }
+}
+
+document.getElementById("exchangeBtn").onclick = doExchange;
+load();
+</script>
+</body>
+</html>

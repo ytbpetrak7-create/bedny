@@ -108,6 +108,10 @@ async function sellItem(row, price) {
   return await callScript("sellItem", { username: uname, row: row, price: price });
 }
 
+async function exchangeSkins(username, removeRows, removeNames, addNames, priceDiff) {
+  return await callScript("exchangeSkins", { username: username, removeRows: removeRows, removeNames: removeNames, addNames: addNames, priceDiff: priceDiff });
+}
+
 function createPointsDisplay() {
   var profilePic = document.getElementById("profilePic");
   if (!profilePic) {
