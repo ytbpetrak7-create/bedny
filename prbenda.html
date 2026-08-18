@@ -634,6 +634,8 @@ function updateSellSelectedBtn() {
 
 async function sellSelectedItems() {
   if (!selectedResults.length) return;
+  var btn = document.getElementById("sellSelectedBtn");
+  if (btn) btn.disabled = true;
   var totalSell = 0;
   for (var i = 0; i < selectedResults.length; i++) totalSell += selectedResults[i].price;
   var el = document.getElementById("pointsDisplay");
@@ -641,16 +643,18 @@ async function sellSelectedItems() {
     var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
     el.textContent = "Kč: " + (cur + totalSell).toFixed(2);
   }
-  for (var i = 0; i < selectedResults.length; i++) {
-    var item = selectedResults[i];
-    if (item.row) {
-      await sellItem(item.row, item.price);
-    }
-  }
+  var toSell = selectedResults.slice();
   selectedResults = [];
   document.getElementById("sellSelectedWrap").style.display = "none";
   document.getElementById("resultsContainer").innerHTML = "";
   document.getElementById("itemname").innerText = "";
+  document.getElementById("itemActions").style.display = "none";
+  for (var i = 0; i < toSell.length; i++) {
+    var item = toSell[i];
+    if (item.row) {
+      await sellItem(item.row, item.price);
+    }
+  }
   updatePoints();
 }
 
@@ -754,11 +758,16 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       document.getElementById("resultsContainer").innerHTML += totalHtml;
       
       document.getElementById("sellAllBtn").addEventListener("click", async function() {
+        var btn = document.getElementById("sellAllBtn");
+        btn.disabled = true;
+        btn.textContent = "Prodávám...";
         var el = document.getElementById("pointsDisplay");
         if (el) {
           var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
           el.textContent = "Kč: " + (cur + totalValue).toFixed(2);
         }
+        document.getElementById("resultsContainer").innerHTML = "";
+        document.getElementById("itemname").innerText = "";
         var res = await callScript("sellAll", { username: getCurrentUser() });
         if (res && res.startsWith("SOLD")) {
           updatePoints();
@@ -774,11 +783,14 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
 
 async function sellCurrentItem() {
   if (!lastItemPrice) return;
+  var sellBtn = document.getElementById("sellBtn");
+  if (sellBtn) sellBtn.disabled = true;
   var el = document.getElementById("pointsDisplay");
   if (el) {
     var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
     el.textContent = "Kč: " + (cur + lastItemPrice).toFixed(2);
   }
+  document.getElementById("itemActions").style.display = "none";
   var inv = JSON.parse(await getInventory());
   var itemname = document.getElementById("itemname").innerText;
   var found = inv.filter(function(x) { return x.name === itemname; });
@@ -786,7 +798,6 @@ async function sellCurrentItem() {
   var row = found[found.length - 1].row;
   var res = await sellItem(row, lastItemPrice);
   if (res === "SOLD") {
-    document.getElementById("itemActions").style.display = "none";
     document.getElementById("itemname").innerText = "";
     updatePoints();
   }
