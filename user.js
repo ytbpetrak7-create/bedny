@@ -109,26 +109,40 @@ async function sellItem(row, price) {
 }
 
 function createPointsDisplay() {
-  var pointsDiv = document.createElement("div");
-  var profilLink = document.createElement("a");
-  profilLink.href = "profil.html";
-  profilLink.id = "profilePic";
-  profilLink.style.cssText = "position:fixed;top:10px;right:10px;width:50px;height:50px;border-radius:50%;background:#6f42c1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:bold;text-decoration:none;z-index:9999;overflow:hidden;";
-  profilLink.textContent = getCurrentUser().charAt(0).toUpperCase();
-  document.body.appendChild(profilLink);
+  var profilePic = document.getElementById("profilePic");
+  if (!profilePic) {
+    profilePic = document.createElement("a");
+    profilePic.href = "profil.html";
+    profilePic.id = "profilePic";
+    profilePic.style.cssText = "position:fixed;top:10px;right:10px;width:50px;height:50px;border-radius:50%;background:#6f42c1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:bold;text-decoration:none;z-index:9999;overflow:hidden;";
+    profilePic.textContent = getCurrentUser().charAt(0).toUpperCase();
+    document.body.appendChild(profilePic);
+  } else {
+    profilePic.onclick = function() { window.location.href = "profil.html"; };
+    if (!profilePic.textContent.trim()) profilePic.textContent = getCurrentUser().charAt(0).toUpperCase();
+  }
 
-  pointsDiv.id = "pointsDisplay";
-  pointsDiv.style.cssText = "position:fixed;top:18px;right:75px;background:#333;color:#fff;padding:8px 12px;z-index:9999;font-size:14px;border-radius:5px;cursor:pointer;";
+  var pointsDiv = document.getElementById("pointsDisplay");
+  if (!pointsDiv) {
+    pointsDiv = document.createElement("div");
+    pointsDiv.id = "pointsDisplay";
+    pointsDiv.style.cssText = "position:fixed;top:18px;right:75px;background:#333;color:#fff;padding:8px 12px;z-index:9999;font-size:14px;border-radius:5px;cursor:pointer;";
+    document.body.prepend(pointsDiv);
+  }
   pointsDiv.onclick = function() { window.location.href = "zamobr.html"; };
-  document.body.prepend(pointsDiv);
-  updatePoints();
+  pointsDiv.style.cursor = "pointer";
 
-  var invLink = document.createElement("a");
-  invLink.href = "inventory.html";
-  invLink.id = "inventoryLink";
-  invLink.textContent = "Inventář";
-  invLink.style.cssText = "position:fixed;top:80px;right:10px;color:#fff;background:#007bff;padding:8px 16px;text-decoration:none;z-index:9999;font-size:14px;border-radius:5px;";
-  document.body.appendChild(invLink);
+  var invLink = document.getElementById("inventoryLink");
+  if (!invLink) {
+    invLink = document.createElement("a");
+    invLink.href = "inventory.html";
+    invLink.id = "inventoryLink";
+    invLink.textContent = "Inventář";
+    invLink.style.cssText = "position:fixed;top:80px;right:10px;color:#fff;background:#007bff;padding:8px 16px;text-decoration:none;z-index:9999;font-size:14px;border-radius:5px;";
+    document.body.appendChild(invLink);
+  }
+
+  updatePoints();
 }
 
 async function updatePoints() {
