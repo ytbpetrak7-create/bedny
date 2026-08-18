@@ -5,9 +5,12 @@
 <link rel="stylesheet" href="1.css">
 </head>
 <body>
-    <div id="pointsDisplay"></div>
+    <div id="topBar">
+        <div id="profilePic">P</div>
+        <div id="pointsDisplay">Kč: 0.00</div>
+        <div id="userInitial"></div>
+    </div>
     <a href="inventory.html" id="inventoryLink">Inventář</a>
-    <div id="profilePic" style="position:fixed;top:15px;right:170px;width:50px;height:50px;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;z-index:1002;cursor:pointer;border:2px solid #00ff96;">logo</div>
 
     <div class="boxes">
         <a href="prbenda.html" class="box-link">
@@ -39,6 +42,9 @@ async function loadProfilePic() {
       pic.style.background = "url('" + data.profilePic + "') center/cover";
       pic.textContent = "";
     }
+  } else if (data.username) {
+    var pic = document.getElementById("profilePic");
+    if (pic) pic.textContent = data.username.charAt(0).toUpperCase();
   }
 }
 
