@@ -134,6 +134,11 @@ async function removeItem(name, row) {
 }
 
 async function sellFromInv(row, name, price) {
+  var el = document.getElementById("pointsDisplay");
+  if (el) {
+    var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
+    el.textContent = "Kč: " + (cur + price).toFixed(2);
+  }
   var res = await sellItem(row, price);
   if (res === "SOLD") {
     loadInventory();
@@ -143,6 +148,16 @@ async function sellFromInv(row, name, price) {
 }
 
 async function sellAll() {
+  var items = window._invItems || [];
+  var total = 0;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].price > 0) total += items[i].price;
+  }
+  var el = document.getElementById("pointsDisplay");
+  if (el && total > 0) {
+    var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
+    el.textContent = "Kč: " + (cur + total).toFixed(2);
+  }
   var res = await callScript("sellAll", { username: getCurrentUser() });
   if (res && res.startsWith("SOLD")) {
     loadInventory();

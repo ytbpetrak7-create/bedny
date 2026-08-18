@@ -229,12 +229,6 @@ h1{font-size:24px;margin-bottom:10px;}
 }
 .results-grid .skin-card {
   width:90px;
-  opacity:0;
-  transform:scale(0.8) translateY(20px);
-  animation: cardAppear 0.4s ease forwards;
-}
-@keyframes cardAppear {
-  to { opacity:1; transform:scale(1) translateY(0); }
 }
 .sell-mini {
   display:block;
@@ -639,6 +633,13 @@ function updateSellSelectedBtn() {
 
 async function sellSelectedItems() {
   if (!selectedResults.length) return;
+  var totalSell = 0;
+  for (var i = 0; i < selectedResults.length; i++) totalSell += selectedResults[i].price;
+  var el = document.getElementById("pointsDisplay");
+  if (el) {
+    var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
+    el.textContent = "Kč: " + (cur + totalSell).toFixed(2);
+  }
   for (var i = 0; i < selectedResults.length; i++) {
     var item = selectedResults[i];
     if (item.row) {
@@ -646,9 +647,10 @@ async function sellSelectedItems() {
     }
   }
   selectedResults = [];
-  updatePoints();
+  document.getElementById("sellSelectedWrap").style.display = "none";
   document.getElementById("resultsContainer").innerHTML = "";
   document.getElementById("itemname").innerText = "";
+  updatePoints();
 }
 
 document.getElementById("openBoxButton").addEventListener("click", async () => {
@@ -751,6 +753,11 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       document.getElementById("resultsContainer").innerHTML += totalHtml;
       
       document.getElementById("sellAllBtn").addEventListener("click", async function() {
+        var el = document.getElementById("pointsDisplay");
+        if (el) {
+          var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
+          el.textContent = "Kč: " + (cur + totalValue).toFixed(2);
+        }
         var res = await callScript("sellAll", { username: getCurrentUser() });
         if (res && res.startsWith("SOLD")) {
           updatePoints();
@@ -766,6 +773,11 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
 
 async function sellCurrentItem() {
   if (!lastItemPrice) return;
+  var el = document.getElementById("pointsDisplay");
+  if (el) {
+    var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
+    el.textContent = "Kč: " + (cur + lastItemPrice).toFixed(2);
+  }
   var inv = JSON.parse(await getInventory());
   var itemname = document.getElementById("itemname").innerText;
   var found = inv.filter(function(x) { return x.name === itemname; });
