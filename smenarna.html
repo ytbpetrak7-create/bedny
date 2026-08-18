@@ -40,7 +40,7 @@ h1{text-align:center;margin:10px 0 5px;font-size:24px;}
     <div id="myItems" class="items"></div>
   </div>
   <div class="col">
-    <h2>K dispozici</h2>
+    <h2>Botův inventář</h2>
     <div id="allItems" class="items"></div>
   </div>
 </div>
@@ -64,6 +64,7 @@ if (!getCurrentUser()) { window.location.href = "index.html"; }
 
 var itemMap = {};
 var myInv = [];
+var botInv = [];
 var selectedMy = [];
 var selectedTarget = [];
 
@@ -83,6 +84,10 @@ async function load() {
 
   var invResult = await getInventory();
   myInv = JSON.parse(invResult);
+
+  var botResult = await getBotInventory();
+  try { botInv = JSON.parse(botResult); } catch(e) { botInv = []; }
+
   renderMyItems();
   renderAllItems();
 }
@@ -105,14 +110,13 @@ function renderMyItems() {
 function renderAllItems() {
   var c = document.getElementById("allItems");
   c.innerHTML = "";
-  myInv.forEach(function(item, idx) {
-    if (selectedMy.indexOf(idx) !== -1) return;
-    var d = itemMap[item.name.trim()] || { price: 0, image: "" };
+  botInv.forEach(function(item, idx) {
     var div = document.createElement("div");
     div.className = "item" + (selectedTarget.indexOf(idx) !== -1 ? " selected" : "");
-    div.innerHTML = '<img src="' + (d.image || "") + '" onerror="this.style.display=\'none\'">' +
+    var imgSrc = item.image || itemMap[item.name.trim()]?.image || "";
+    div.innerHTML = '<img src="' + imgSrc + '" onerror="this.style.display=\'none\'">' +
       '<div class="name" title="' + item.name + '">' + item.name + '</div>' +
-      '<div class="price">' + (d.price > 0 ? d.price.toFixed(2) + " Kč" : "-") + '</div>';
+      '<div class="price">' + (item.price > 0 ? item.price.toFixed(2) + " Kč" : "-") + '</div>';
     div.onclick = function() { toggleTarget(idx); };
     c.appendChild(div);
   });
@@ -140,8 +144,7 @@ function updateSummary() {
   });
   var targetTotal = 0;
   selectedTarget.forEach(function(idx) {
-    var d = itemMap[myInv[idx].name.trim()] || { price: 0 };
-    targetTotal += d.price;
+    targetTotal += botInv[idx].price || 0;
   });
   var diff = targetTotal - myTotal;
   document.getElementById("myTotal").textContent = myTotal.toFixed(2);
@@ -162,14 +165,14 @@ function updateSummary() {
 
 async function doExchange() {
   var removeItems = selectedMy.map(function(idx) { return { name: myInv[idx].name, row: myInv[idx].row }; });
-  var addItems = selectedTarget.map(function(idx) { return myInv[idx].name; });
+  var addItems = selectedTarget.map(function(idx) { return botInv[idx].name; });
   var myTotal = 0;
   selectedMy.forEach(function(idx) {
     myTotal += (itemMap[myInv[idx].name.trim()] || { price: 0 }).price;
   });
   var targetTotal = 0;
   selectedTarget.forEach(function(idx) {
-    targetTotal += (itemMap[myInv[idx].name.trim()] || { price: 0 }).price;
+    targetTotal += botInv[idx].price || 0;
   });
   var diff = targetTotal - myTotal;
 

@@ -214,6 +214,9 @@
     case "exchangeSkins":
       result = exchangeSkins(ss, params.username, params.removeRows, params.removeNames, params.addNames, params.priceDiff);
       break;
+    case "getBotInventory":
+      result = getBotInventory(ss);
+      break;
   }
     
     return ContentService.createTextOutput(result);
@@ -1331,4 +1334,43 @@
     }
 
     return "EXCHANGED";
+  }
+
+  function getBotInventory(ss) {
+    var BOT_STEAM_ID = "76561198032693842";
+    var depSheet = getSheet(ss, "DepositSkins");
+    var depData = depSheet.getDataRange().getValues();
+    var acceptedNames = {};
+    for (var i = 1; i < depData.length; i++) {
+      var name = depData[i][0] ? depData[i][0].toString().trim().toLowerCase() : "";
+      var price = Number(depData[i][1]) || 0;
+      if (name && price > 0) acceptedNames[name] = price;
+    }
+
+    try {
+      var url = "https://steamcommunity.com/inventory/" + BOT_STEAM_ID + "/730/2?l=czech&count=500";
+      var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { "User-Agent": "Mozilla/5.0" } });
+      var json = JSON.parse(response.getContentText());
+      if (!json.success || !json.assets) return "[]";
+
+      var result = [];
+      var seen = {};
+      for (var id in json.assets) {
+        var asset = json.assets[id];
+        var classId = asset.classid + "_" + asset.instanceid;
+        var desc = json.descriptions ? json.descriptions[classId] : null;
+        if (!desc) continue;
+        var name = desc.market_hash_name || "";
+        var nameLower = name.toLowerCase();
+        if (acceptedNames[nameLower] !== undefined && !seen[nameLower]) {
+          seen[nameLower] = true;
+          var img = desc.icon_url_large || desc.icon_url || "";
+          if (img) img = "https://community.akamai.steamstatic.com/economy/image/" + img;
+          result.push({ name: name, price: acceptedNames[nameLower], image: img, assetId: asset.id, count: Number(asset.amount) || 1 });
+        }
+      }
+      return JSON.stringify(result);
+    } catch (e) {
+      return "[]";
+    }
   }

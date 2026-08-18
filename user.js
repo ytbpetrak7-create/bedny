@@ -112,6 +112,10 @@ async function exchangeSkins(username, removeRows, removeNames, addNames, priceD
   return await callScript("exchangeSkins", { username: username, removeRows: removeRows, removeNames: removeNames, addNames: addNames, priceDiff: priceDiff });
 }
 
+async function getBotInventory() {
+  return await callScript("getBotInventory");
+}
+
 function createPointsDisplay() {
   var profilePic = document.getElementById("profilePic");
   if (!profilePic) {
