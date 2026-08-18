@@ -148,3 +148,29 @@ async function updatePoints() {
 function fixImg(url) {
   return url || url;
 }
+
+function requestNotificationPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+async function checkDailyReward() {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  var cacheKey = "dailyNotified_" + getCurrentUser() + "_" + new Date().toDateString();
+  if (localStorage.getItem(cacheKey)) return;
+  try {
+    var res = await callScript("getDailyStatus", { username: getCurrentUser() });
+    var s = JSON.parse(res);
+    if (!s.claimed) {
+      new Notification("Denní odměna!", {
+        body: "Nezapomeň si vyzvednout denní odměnu na profilu!",
+        icon: "https://ytbpetrak7-create.github.io/bedny/emka.png"
+      });
+      localStorage.setItem(cacheKey, "1");
+    }
+  } catch(e) {}
+}
+
+requestNotificationPermission();
+checkDailyReward();
