@@ -6,19 +6,18 @@
 </head>
 <body>
   <div class="container">
-    <h1>Bedny</h1>
+    <h1>Vítejte</h1>
     <div id="loginForm">
-      <h2>Přihlášení</h2>
-      <label style="display:flex;align-items:flex-start;gap:8px;margin:15px 0 5px;color:#aaa;font-size:13px;cursor:pointer;text-align:left;">
-        <input type="checkbox" id="chkTerms" style="margin-top:3px;width:18px;height:18px;accent-color:#00ff96;">
-        <span>Souhlasím s <a href="#" style="color:#00ff96;">podmínkami použití</a> a <a href="#" style="color:#00ff96;">ochranou soukromí</a></span>
+      <label>
+        <span>Souhlasím s <a href="#">podmínkami použití</a> a <a href="#">ochranou soukromí</a></span>
+        <input type="checkbox" id="chkTerms">
       </label>
-      <label style="display:flex;align-items:flex-start;gap:8px;margin:5px 0 15px;color:#aaa;font-size:13px;cursor:pointer;text-align:left;">
-        <input type="checkbox" id="chkAge" style="margin-top:3px;width:18px;height:18px;accent-color:#00ff96;">
-        <span>Je mi 18 let nebo více</span>
+      <label>
+        <span>Je mi <a href="#">18</a> nebo více</span>
+        <input type="checkbox" id="chkAge">
       </label>
       <p id="consentError" style="color:#f80;font-size:12px;display:none;margin-bottom:10px;">Musíš souhlasit se vším</p>
-      <button class="steam-btn" onclick="checkConsent()" style="padding:15px 50px;background:linear-gradient(135deg,#1b2838,#2a475e);border:none;border-radius:10px;color:#fff;font-size:18px;font-weight:bold;cursor:pointer;margin:0 0;">Přihlásit se přes Steam</button>
+      <button class="steam-btn" onclick="checkConsent()">Přihlásit se přes STEAM</button>
     </div>
   </div>
 
@@ -36,9 +35,6 @@
     }
 
     function steamLogin() {
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
-      }
       var base = "https://ytbpetrak7-create.github.io/bedny/";
       var returnTo = base + "callback.html";
       var steamUrl = "https://steamcommunity.com/openid/login?" +
