@@ -663,8 +663,14 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
     document.getElementById("openBoxButton").disabled = true;
     selectedResults = [];
     document.getElementById("sellSelectedWrap").style.display = "none";
-    
+
     var count = parseInt(document.getElementById("openCount").value) || 1;
+    var boxPrice = 5;
+    var el = document.getElementById("pointsDisplay");
+    if (el) {
+      var cur = parseFloat(el.textContent.replace("Kč:", "").trim()) || 0;
+      el.textContent = "Kč: " + (cur - boxPrice * count).toFixed(2);
+    }
     
     if (count === 1) {
       var result = await open("Boxes2");
