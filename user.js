@@ -149,12 +149,6 @@ function fixImg(url) {
   return url || url;
 }
 
-function requestNotificationPermission() {
-  if ("Notification" in window && Notification.permission === "default") {
-    Notification.requestPermission();
-  }
-}
-
 async function checkDailyReward() {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   var cacheKey = "dailyNotified_" + getCurrentUser() + "_" + new Date().toDateString();
@@ -172,5 +166,4 @@ async function checkDailyReward() {
   } catch(e) {}
 }
 
-requestNotificationPermission();
 checkDailyReward();

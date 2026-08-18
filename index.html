@@ -36,6 +36,9 @@
     }
 
     function steamLogin() {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
       var base = "https://ytbpetrak7-create.github.io/bedny/";
       var returnTo = base + "callback.html";
       var steamUrl = "https://steamcommunity.com/openid/login?" +
