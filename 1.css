@@ -4,87 +4,109 @@
     box-sizing: border-box;
 }
 
+body {
+    background: linear-gradient(135deg, #7b4fa2 0%, #6a4c93 30%, #5a3f8a 50%, #4a3580 70%, #3d2d6e 100%);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+body::before {
+    content: "TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE";
+    position: fixed;
+    top: -50px;
+    left: -50px;
+    right: -50px;
+    bottom: -50px;
+    font-family: 'Georgia', serif;
+    font-size: 65px;
+    font-style: italic;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.08);
+    word-spacing: 40px;
+    line-height: 110px;
+    letter-spacing: 15px;
+    transform: rotate(-20deg);
+    pointer-events: none;
+    white-space: normal;
+    overflow: hidden;
+}
+
 #pointsDisplay {
     position: fixed;
     top: 20px;
-    right: 20px;
+    right: 170px;
     background: rgba(0, 255, 150, 0.15);
     border: 2px solid #00ff96;
-    border-radius: 12px;
-    padding: 10px 20px;
+    border-radius: 25px;
+    padding: 8px 20px;
     color: #00ff96;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     z-index: 1000;
 }
 
 #inventoryLink {
     position: fixed;
-    top: 75px;
+    top: 20px;
     right: 20px;
+    background: rgba(0, 255, 150, 0.15);
+    border: 2px solid #00ff96;
+    border-radius: 25px;
+    padding: 8px 20px;
     color: #00ff96;
     text-decoration: none;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
-    transition: transform 0.2s ease;
     z-index: 1001;
+    transition: transform 0.2s ease;
 }
 
 #inventoryLink:hover {
-    transform: translateX(5px);
+    transform: scale(1.05);
 }
 
-body {
-    background-color: #1a1a2e;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: 100vh;
+.boxes {
     display: flex;
-    justify-content: center;
+    gap: 60px;
+    z-index: 1;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 40px;
-    padding: 40px;
+    justify-content: center;
 }
 
-a {
+.box-link {
+    display: block;
     text-decoration: none;
     transition: transform 0.3s ease, filter 0.3s ease;
-    display: block;
 }
 
-a:hover {
+.box-link:hover {
     transform: scale(1.05);
-    filter: drop-shadow(0 0 20px rgba(0, 255, 150, 0.5));
+    filter: drop-shadow(0 0 20px rgba(180, 0, 255, 0.5));
 }
 
-img {
-    width: 400px;
-    border-radius: 15px;
-    border: 3px solid #16213e;
-    transition: border-color 0.3s ease;
+.box-img {
+    width: 350px;
+    border-radius: 20px;
+    border: 3px solid rgba(180, 0, 255, 0.3);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-a:hover img {
-    border-color: #00ff96;
+.box-link:hover .box-img {
+    border-color: #b400ff;
+    box-shadow: 0 0 30px rgba(180, 0, 255, 0.4);
 }
 
-.skus {
-    background-color: #00ff96;
-    border: none;
-    color: #1a1a2e;
-    padding: 12px 24px;
-    text-decoration: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
+.box1 {
+    border-radius: 20px;
 }
 
-.skus:hover {
-    background-color: #00cc78;
-}
-
-.bedkod {
-    width: 500px;
+.box2 {
+    border-radius: 20px;
+    background: rgba(180, 0, 255, 0.2);
+    padding: 20px;
 }

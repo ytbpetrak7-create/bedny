@@ -1,16 +1,25 @@
 ﻿<!DOCTYPE html>
 <html lang="cs" translate="no">
-<body>
-                    <a href="prbenda.html">
-    <img  class="1" src="Snímek obrazovky 2026-04-23 174559.png"></a>
-<a href="dvebed.html">
-    <img class="1" src="emka.png"></a>
-    
-    
-
+<head>
+<meta name="google" content="notranslate">
 <link rel="stylesheet" href="1.css">
+</head>
+<body>
+    <div id="pointsDisplay"></div>
+    <a href="inventory.html" id="inventoryLink">Inventář</a>
+    <div id="profilePic" style="position:fixed;top:15px;right:170px;width:50px;height:50px;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;z-index:1002;cursor:pointer;border:2px solid #00ff96;">logo</div>
+
+    <div class="boxes">
+        <a href="prbenda.html" class="box-link">
+            <img class="box-img box1" src="Snímek obrazovky 2026-04-23 174559.png">
+        </a>
+        <a href="dvebed.html" class="box-link">
+            <img class="box-img box2" src="emka.png">
+        </a>
+    </div>
+
 <script src="script.js"></script>
-<script src="user.js?ver=6"></script>
+<script src="user.js?ver=8"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
