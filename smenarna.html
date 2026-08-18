@@ -105,15 +105,15 @@ function renderMyItems() {
 function renderAllItems() {
   var c = document.getElementById("allItems");
   c.innerHTML = "";
-  var allNames = Object.keys(itemMap);
-  allNames.forEach(function(name) {
-    var d = itemMap[name];
+  myInv.forEach(function(item, idx) {
+    if (selectedMy.indexOf(idx) !== -1) return;
+    var d = itemMap[item.name.trim()] || { price: 0, image: "" };
     var div = document.createElement("div");
-    div.className = "item" + (selectedTarget.indexOf(name) !== -1 ? " selected" : "");
+    div.className = "item" + (selectedTarget.indexOf(idx) !== -1 ? " selected" : "");
     div.innerHTML = '<img src="' + (d.image || "") + '" onerror="this.style.display=\'none\'">' +
-      '<div class="name" title="' + name + '">' + name + '</div>' +
+      '<div class="name" title="' + item.name + '">' + item.name + '</div>' +
       '<div class="price">' + (d.price > 0 ? d.price.toFixed(2) + " Kč" : "-") + '</div>';
-    div.onclick = function() { toggleTarget(name); };
+    div.onclick = function() { toggleTarget(idx); };
     c.appendChild(div);
   });
 }
@@ -125,9 +125,9 @@ function toggleMy(idx) {
   updateSummary();
 }
 
-function toggleTarget(name) {
-  var i = selectedTarget.indexOf(name);
-  if (i === -1) selectedTarget.push(name); else selectedTarget.splice(i, 1);
+function toggleTarget(idx) {
+  var i = selectedTarget.indexOf(idx);
+  if (i === -1) selectedTarget.push(idx); else selectedTarget.splice(i, 1);
   renderAllItems();
   updateSummary();
 }
@@ -139,8 +139,8 @@ function updateSummary() {
     myTotal += d.price;
   });
   var targetTotal = 0;
-  selectedTarget.forEach(function(name) {
-    var d = itemMap[name] || { price: 0 };
+  selectedTarget.forEach(function(idx) {
+    var d = itemMap[myInv[idx].name.trim()] || { price: 0 };
     targetTotal += d.price;
   });
   var diff = targetTotal - myTotal;
@@ -161,24 +161,24 @@ function updateSummary() {
 }
 
 async function doExchange() {
-  var myItems = selectedMy.map(function(idx) { return { name: myInv[idx].name, row: myInv[idx].row }; });
+  var removeItems = selectedMy.map(function(idx) { return { name: myInv[idx].name, row: myInv[idx].row }; });
+  var addItems = selectedTarget.map(function(idx) { return myInv[idx].name; });
   var myTotal = 0;
   selectedMy.forEach(function(idx) {
     myTotal += (itemMap[myInv[idx].name.trim()] || { price: 0 }).price;
   });
-  var targetNames = selectedTarget.slice();
   var targetTotal = 0;
-  selectedTarget.forEach(function(name) {
-    targetTotal += (itemMap[name] || { price: 0 }).price;
+  selectedTarget.forEach(function(idx) {
+    targetTotal += (itemMap[myInv[idx].name.trim()] || { price: 0 }).price;
   });
   var diff = targetTotal - myTotal;
 
   document.getElementById("exchangeBtn").disabled = true;
   var res = await callScript("exchangeSkins", {
     username: getCurrentUser(),
-    removeRows: myItems.map(function(x) { return x.row; }).join(";"),
-    removeNames: myItems.map(function(x) { return x.name; }).join(";"),
-    addNames: targetNames.join(";"),
+    removeRows: removeItems.map(function(x) { return x.row; }).join(";"),
+    removeNames: removeItems.map(function(x) { return x.name; }).join(";"),
+    addNames: addItems.join(";"),
     priceDiff: diff.toFixed(2)
   });
   if (res === "EXCHANGED") {
