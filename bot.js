@@ -281,6 +281,32 @@ async function poll() {
     }
   } catch (e) { console.error("InvRequest polling error:", e.message); }
 
+  try {
+    const botInv = await getInventory();
+    const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
+    const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
+    const priceMap = {};
+    for (const a of accepted) {
+      if (a.name && a.price > 0) priceMap[a.name.toLowerCase()] = a.price;
+    }
+    const seen = {};
+    const botItems = [];
+    for (const item of botInv) {
+      const name = item.market_hash_name || "";
+      if (!name || seen[name.toLowerCase()]) continue;
+      seen[name.toLowerCase()] = true;
+      botItems.push({
+        name: name,
+        price: priceMap[name.toLowerCase()] || 0,
+        image: item.icon_url_large ? "https://community.akamai.steamstatic.com/economy/image/" + item.icon_url_large : "",
+        assetId: item.id,
+        count: 1
+      });
+    }
+    await gasGet(GAS_URL + "?action=saveBotInventory&data=" + encodeURIComponent(JSON.stringify(botItems)));
+    console.log("Bot inventory saved: " + botItems.length + " items");
+  } catch(e) { console.error("Bot inventory save error:", e.message); }
+
   setTimeout(poll, 30000);
 }
 
