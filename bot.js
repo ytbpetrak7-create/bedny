@@ -109,6 +109,20 @@ function gasGet(url, redirects) {
   });
 }
 
+function gasPost(url, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body || {});
+    const u = new URL(url);
+    const options = { hostname: u.hostname, path: u.pathname + u.search, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) } };
+    const req = https.request(options, (res) => {
+      let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve(d); } });
+    });
+    req.on("error", reject);
+    req.write(data);
+    req.end();
+  });
+}
+
 function parseTradeLink(url) {
   const m = url.match(/partner=(\d+)&token=(\w+)/);
   return m ? { partner: m[1], token: m[2] } : null;
@@ -303,7 +317,8 @@ async function poll() {
         count: 1
       });
     }
-    await gasGet(GAS_URL + "?action=saveBotInventory&data=" + encodeURIComponent(JSON.stringify(botItems)));
+    const jsonStr = JSON.stringify(botItems);
+    await gasPost(GAS_URL + "?action=saveBotInventory", { data: jsonStr });
     console.log("Bot inventory saved: " + botItems.length + " items");
   } catch(e) { console.error("Bot inventory save error:", e.message); }
 

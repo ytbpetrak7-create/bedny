@@ -10,10 +10,28 @@
   function doPost(e) {
     try {
     if (!e || !e.parameter) {
-      return ContentService.createTextOutput("OK");
+      if (e && e.postData && e.postData.contents) {
+        try {
+          var pb = JSON.parse(e.postData.contents);
+          if (pb.action) {
+            e.parameter = pb;
+          } else {
+            return ContentService.createTextOutput("OK");
+          }
+        } catch(pe) { return ContentService.createTextOutput("OK"); }
+      } else {
+        return ContentService.createTextOutput("OK");
+      }
     }
     const action = e.parameter.action;
-    const params = e.parameter;
+    var params = e.parameter;
+    
+    if (e.postData && e.postData.contents) {
+      try {
+        var postBody = JSON.parse(e.postData.contents);
+        for (var pk in postBody) { params[pk] = postBody[pk]; }
+      } catch(pe) {}
+    }
     
     const ss = SpreadsheetApp.openById(SHEET_ID);
     
@@ -219,7 +237,26 @@
       break;
     case "saveBotInventory":
       var props7 = PropertiesService.getScriptProperties();
-      props7.setProperty("botInventory", params.data || "[]");
+      var chunk = parseInt(params.chunk) || 0;
+      var total = parseInt(params.total) || 1;
+      if (total === 1) {
+        props7.setProperty("botInventory", params.data || "[]");
+      } else {
+        var existing = props7.getProperty("botInventory_chunks") || "{}";
+        var chunks = JSON.parse(existing);
+        chunks[chunk] = params.data || "";
+        if (Object.keys(chunks).length === total) {
+          var full = "";
+          for (var ci = 0; ci < total; ci++) {
+            full += chunks[ci] || "";
+          }
+          props7.setProperty("botInventory", full);
+          props7.deleteProperty("botInventory_chunks");
+        } else {
+          props7.setProperty("botInventory_chunks", JSON.stringify(chunks));
+        }
+        result = "OK";
+      }
       result = "OK";
       break;
   }
