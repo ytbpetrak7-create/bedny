@@ -116,6 +116,10 @@ async function getBotInventory() {
   return await callScript("getBotInventory");
 }
 
+async function getSteamInventoryAll(username) {
+  return await callScript("getSteamInventoryAll", { username: username });
+}
+
 function createPointsDisplay() {
   var profilePic = document.getElementById("profilePic");
   if (!profilePic) {

@@ -235,6 +235,9 @@
     case "getBotInventory":
       result = getBotInventory(ss);
       break;
+    case "getSteamInventoryAll":
+      result = getSteamInventoryAll(ss, params.username);
+      break;
     case "saveBotInventory":
       var props7 = PropertiesService.getScriptProperties();
       var chunk = parseInt(params.chunk) || 0;
@@ -1382,4 +1385,52 @@
     var props = PropertiesService.getScriptProperties();
     var data = props.getProperty("botInventory");
     return data || "[]";
+  }
+
+  function getSteamInventoryAll(ss, username) {
+    if (!username) return "[]";
+    var usersSheet = getSheet(ss, "Users");
+    var data = usersSheet.getDataRange().getValues();
+    var steamId = null;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+        steamId = data[i][5] ? data[i][5].toString().trim() : null;
+        break;
+      }
+    }
+    if (!steamId) return "[]";
+
+    var depSheet = getSheet(ss, "DepositSkins");
+    var depData = depSheet.getDataRange().getValues();
+    var priceMap = {};
+    for (var i = 1; i < depData.length; i++) {
+      var name = depData[i][0] ? depData[i][0].toString().trim().toLowerCase() : "";
+      var price = Number(depData[i][1]) || 0;
+      if (name && price > 0) priceMap[name] = price;
+    }
+
+    try {
+      var url = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
+      var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { "User-Agent": "Mozilla/5.0" } });
+      var json = JSON.parse(response.getContentText());
+      if (!json.success || !json.assets) return "[]";
+
+      var result = [];
+      for (var id in json.assets) {
+        var asset = json.assets[id];
+        var classId = asset.classid + "_" + asset.instanceid;
+        var desc = json.descriptions ? json.descriptions[classId] : null;
+        if (!desc) continue;
+        var name = desc.market_hash_name || "";
+        if (!name) continue;
+        var baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+        var price = priceMap[baseName] || 0;
+        var img = desc.icon_url_large || desc.icon_url || "";
+        if (img) img = "https://community.akamai.steamstatic.com/economy/image/" + img;
+        result.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: img });
+      }
+      return JSON.stringify(result);
+    } catch (e) {
+      return "[]";
+    }
   }

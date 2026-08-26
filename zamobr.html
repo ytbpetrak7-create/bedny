@@ -54,7 +54,7 @@
 </style>
 </body>
 <script src="script.js"></script>
-<script src="user.js?ver=6"></script>
+<script src="user.js?ver=10"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
@@ -98,84 +98,42 @@ async function loadInventory() {
   document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
   selectedItems = [];
 
-  var steamId = (await callScript("getSteamId", { username: getCurrentUser() })).trim();
+  var res = await getSteamInventoryAll(getCurrentUser());
+  var items;
+  try { items = JSON.parse(res); } catch(e) { items = []; }
 
-  if (!steamId) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID. Přihlas se znovu přes Steam.</p>';
+  if (!items || items.length === 0) {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nepodařilo se načíst inventář. Přihlas se přes Steam.</p>';
     return;
   }
 
-  var acceptedRes = await callScript("getDepositSkins");
-  var accepted;
-  try { accepted = JSON.parse(acceptedRes); } catch(e) { accepted = []; }
-  var acceptedNames = {};
-  accepted.forEach(function(a) { acceptedNames[a.name.toLowerCase()] = a.price; });
+  items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
 
-  var invUrl = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
-  var proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(invUrl);
-
-  try {
-    var resp = await fetch(proxyUrl);
-    var data = await resp.json();
-
-    if (!data.success || !data.assets) {
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nepodařilo se načíst inventář</p>';
-      return;
+  var html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-bottom:80px;">';
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    var borderColor = it.depositable ? "#00ff96" : "#222";
+    var bgColor = it.depositable ? "#0d2b1a" : "#16162a";
+    var iconUrl = it.icon || "";
+    var clickAttr = it.depositable ? ' onclick="toggleItem(this,' + i + ')"' : '';
+    var cursor = it.depositable ? "pointer" : "default";
+    html += '<div data-idx="' + i + '" class="inv-item" style="border:2px solid ' + borderColor + ';border-radius:10px;cursor:' + cursor + ';text-align:center;background:' + bgColor + ';transition:all 0.2s;overflow:hidden;"' + clickAttr + '>';
+    if (iconUrl) {
+      html += '<div style="background:#1a1a2e;padding:8px;"><img src="' + iconUrl + '" style="width:80px;height:80px;object-fit:contain;" loading="lazy"></div>';
     }
-
-    var items = [];
-    var descMap = {};
-    if (data.descriptions) {
-      var dKeys = Object.keys(data.descriptions);
-      for (var dk = 0; dk < dKeys.length; dk++) {
-        var d = data.descriptions[dKeys[dk]];
-        if (d && d.classid !== undefined) {
-          descMap[d.classid + "_" + (d.instanceid || "0")] = d;
-        }
-      }
+    html += '<div style="padding:6px 4px;">';
+    html += '<p style="color:#ddd;font-size:10px;margin:0;line-height:1.3;height:28px;overflow:hidden;">' + it.name + '</p>';
+    if (it.depositable) {
+      html += '<p style="color:#00ff96;font-size:12px;font-weight:bold;margin:3px 0 0;">' + it.price.toFixed(2) + ' Kč</p>';
+    } else {
+      html += '<p style="color:#555;font-size:10px;margin:3px 0 0;"> nelze vložit</p>';
     }
-    for (var id in data.assets) {
-      var asset = data.assets[id];
-      var classId = asset.classid + "_" + asset.instanceid;
-      var desc = descMap[classId] || null;
-      if (!desc) continue;
-      var name = desc.market_hash_name || "";
-      var baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
-      var price = acceptedNames[baseName] || 0;
-      items.push({ name: name, price: price, depositable: price > 0, assetId: asset.assetid || asset.id || id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: desc.icon_url_large || desc.icon_url || "" });
-    }
-
-
-    items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
-
-    var html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-bottom:80px;">';
-    for (var i = 0; i < items.length; i++) {
-      var it = items[i];
-      var borderColor = it.depositable ? "#00ff96" : "#222";
-      var bgColor = it.depositable ? "#0d2b1a" : "#16162a";
-      var iconUrl = it.icon ? "https://community.akamai.steamstatic.com/economy/image/" + it.icon + "/128fx128f" : "";
-      var clickAttr = it.depositable ? ' onclick="toggleItem(this,' + i + ')"' : '';
-      var cursor = it.depositable ? "pointer" : "default";
-      html += '<div data-idx="' + i + '" class="inv-item" style="border:2px solid ' + borderColor + ';border-radius:10px;cursor:' + cursor + ';text-align:center;background:' + bgColor + ';transition:all 0.2s;overflow:hidden;"' + clickAttr + '>';
-      if (iconUrl) {
-        html += '<div style="background:#1a1a2e;padding:8px;"><img src="' + iconUrl + '" style="width:80px;height:80px;object-fit:contain;" loading="lazy"></div>';
-      }
-      html += '<div style="padding:6px 4px;">';
-      html += '<p style="color:#ddd;font-size:10px;margin:0;line-height:1.3;height:28px;overflow:hidden;">' + it.name + '</p>';
-      if (it.depositable) {
-        html += '<p style="color:#00ff96;font-size:12px;font-weight:bold;margin:3px 0 0;">' + it.price.toFixed(2) + ' Kč</p>';
-      } else {
-        html += '<p style="color:#555;font-size:10px;margin:3px 0 0;"> nelze vložit</p>';
-      }
-      html += '</div></div>';
-    }
-    html += '</div>';
-    document.getElementById("invItems").innerHTML = html;
-    window._invItems = items;
-    updateDepositSummary();
-  } catch(e) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p>';
+    html += '</div></div>';
   }
+  html += '</div>';
+  document.getElementById("invItems").innerHTML = html;
+  window._invItems = items;
+  updateDepositSummary();
 }
 
 function toggleItem(el, idx) {
