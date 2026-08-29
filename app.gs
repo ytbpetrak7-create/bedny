@@ -1413,9 +1413,10 @@
       var url = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
       var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true, headers: { "User-Agent": "Mozilla/5.0" } });
       var text = response.getContentText();
+      var code = response.getResponseCode();
       var json;
-      try { json = JSON.parse(text); } catch(pe) { return JSON.stringify({ error: "NOT_JSON", steamId: steamId, preview: (text || "").substring(0, 200) }); }
-      if (!json) return JSON.stringify({ error: "NULL_JSON", steamId: steamId });
+      try { json = JSON.parse(text); } catch(pe) { return JSON.stringify({ error: "NOT_JSON", steamId: steamId, code: code, preview: (text || "").substring(0, 300) }); }
+      if (!json) return JSON.stringify({ error: "NULL_JSON", steamId: steamId, code: code, textLen: (text || "").length, preview: (text || "").substring(0, 300) });
       if (!json.success) return JSON.stringify({ error: "STEAM_FAIL", steamId: steamId });
       if (!json.assets) return JSON.stringify({ error: "NO_ASSETS", steamId: steamId, keys: Object.keys(json).join(",") });
 
