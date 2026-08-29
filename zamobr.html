@@ -98,12 +98,20 @@ async function loadInventory() {
   document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
   selectedItems = [];
 
+  var steamIdRes = await callScript("getSteamId", { username: getCurrentUser() });
+  var steamId = (steamIdRes || "").trim();
+
+  if (!steamId) {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID. Přihlas se přes Steam (odhlas se a znovu klikni na Přihlásit se přes Steam).</p>';
+    return;
+  }
+
   var res = await getSteamInventoryAll(getCurrentUser());
   var items;
   try { items = JSON.parse(res); } catch(e) { items = []; }
 
   if (!items || items.length === 0) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nepodařilo se načíst inventář. Přihlas se přes Steam.</p>';
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo je soukromý. Nastav inventář jako veřejný v nastavení Soukromí na Steamu.</p>';
     return;
   }
 
