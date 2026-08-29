@@ -149,8 +149,8 @@ function getUserInventory(steamId) {
         if (err) { console.log("InvFetch error:", err.message); return reject(err); }
         console.log("InvFetch: status=" + (res ? res.statusCode : "?"));
         if (res && res.statusCode === 429 && retries > 0) {
-          console.log("InvFetch: rate limited, retry za 60s (" + retries + " retries left)");
-          return setTimeout(() => attempt(retries - 1), 60000);
+          console.log("InvFetch: rate limited, retry za 120s (" + retries + " retries left)");
+          return setTimeout(() => attempt(retries - 1), 120000);
         }
         if (body && body.success) {
           console.log("InvFetch: assets=" + (body.assets ? Object.keys(body.assets).length : 0));
@@ -160,32 +160,35 @@ function getUserInventory(steamId) {
         resolve(body || { success: false });
       });
     }
-    attempt(5);
+    attempt(2);
   });
 }
 
+var pollCount = 0;
+
 async function poll() {
-  console.log("Poll: začátek");
+  pollCount++;
+  console.log("Poll #" + pollCount + ": začátek");
+
+  var botInv = null;
+  try {
+    botInv = await getInventory();
+    console.log("Poll: bot inventory loaded - " + botInv.length + " items");
+  } catch(e) { console.error("Bot inventory error:", e.message); }
+
   try {
     const items = await gasGet(GAS_URL + "?action=getWithdrawals");
-    if (items && items.length) {
-      const botInv = await getInventory();
-      
+    if (items && items.length && botInv) {
       for (const w of items) {
         if (w.status !== "approved") continue;
-        console.log(`${w.username} - ${w.item}`);
-        if (!w.tradeLink) { console.log("Chybí tradeLink"); continue; }
-        
+        if (!w.tradeLink) continue;
         const t = parseTradeLink(w.tradeLink);
-        if (!t) { console.log("Neplatný tradeLink"); continue; }
-        
+        if (!t) continue;
         const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
-        if (!found) { 
-          console.log("Item nenalezen v inventáři bota:", w.item, " - markováno jako done");
+        if (!found) {
           gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
-          continue; 
+          continue;
         }
-        
         const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
         offer.addMyItem(found);
         offer.setMessage(w.item);
@@ -201,33 +204,25 @@ async function poll() {
   try {
     const pendingDeposits = await gasGet(GAS_URL + "?action=getPendingDeposits");
     const deps = typeof pendingDeposits === "string" ? JSON.parse(pendingDeposits) : pendingDeposits;
-      if (deps && deps.length) {
+    if (deps && deps.length) {
       for (const dep of deps) {
         try {
-          console.log("Deposit: processing " + dep.username);
           const tradeLink = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(dep.username));
-          if (!tradeLink || tradeLink === "NOT_SET" || tradeLink === "MISSING") {
-            console.log("Deposit: chybí tradeLink pro " + dep.username);
-            continue;
-          }
+          if (!tradeLink || tradeLink === "NOT_SET" || tradeLink === "MISSING") continue;
           const t = parseTradeLink(tradeLink);
-          if (!t) { console.log("Deposit: neplatný tradeLink pro " + dep.username); continue; }
-
+          if (!t) continue;
           const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
           for (const item of dep.items) {
             if (item.assetId) {
               offer.addTheirItem({ appid: 730, contextid: String(item.contextid || "2"), assetid: String(item.assetId), amount: Number(item.amount) || 1 });
-              console.log("Deposit: added " + item.name + " (assetId=" + item.assetId + ")");
-            } else {
-              console.log("Deposit: přeskočeno (bez assetId): " + item.name);
             }
           }
           const totalValue = dep.items.reduce((s, i) => s + (i.price || 0), 0);
           offer.setMessage("Deposit " + totalValue.toFixed(2) + " Kč");
           offer.send((err, status) => {
-            if (err) { console.log("Deposit offer error:", err.message); gasGet(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username)).catch(()=>{}); return; }
+            if (err) { gasGet(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username)).catch(()=>{}); return; }
             console.log(`Deposit offer sent to ${dep.username}: ${status}`);
-            gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2)).then(r => console.log("Deposit: completeDeposit response=" + JSON.stringify(r))).catch(e => console.log("Deposit: completeDeposit error:", e.message));
+            gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2)).catch(()=>{});
           });
         } catch (e) { console.error("Deposit processing error:", e.message); }
       }
@@ -237,93 +232,68 @@ async function poll() {
   try {
     const invRequests = await gasGet(GAS_URL + "?action=getPendingInvRequests");
     const reqs = typeof invRequests === "string" ? JSON.parse(invRequests) : invRequests;
-    console.log("InvRequest: poll - " + (reqs ? reqs.length : 0) + " pending");
     if (reqs && reqs.length) {
-      for (const req of reqs) {
-        try {
-          const username = req.username;
-          console.log("InvRequest: processing " + username);
-          const steamId = await gasGet(GAS_URL + "?action=getSteamId&username=" + encodeURIComponent(username));
-          if (!steamId || steamId === "") { console.log("InvRequest: no steamId for " + username); continue; }
-          console.log("InvRequest: steamId " + steamId + " for " + username);
-
+      const req = reqs[0];
+      try {
+        const username = req.username;
+        console.log("InvRequest: processing " + username);
+        const steamId = await gasGet(GAS_URL + "?action=getSteamId&username=" + encodeURIComponent(username));
+        if (!steamId || steamId === "") {
+          console.log("InvRequest: no steamId for " + username);
+          gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify([]))).catch(()=>{});
+        } else {
           const userInv = await getUserInventory(steamId);
-          console.log("InvRequest: inventory fetched - success=" + (userInv ? userInv.success : "null") + " assets=" + (userInv && userInv.assets ? Object.keys(userInv.assets).length : 0));
-          var invNames = [];
-          for (var iid in userInv.assets) {
-            var a = userInv.assets[iid];
-            var cl = a.classid + "_" + a.instanceid;
-            var d = userInv.descriptions ? userInv.descriptions[cl] : null;
-            if (d && d.market_hash_name) invNames.push(d.market_hash_name);
-            if (invNames.length >= 5) break;
-          }
-          console.log("InvRequest: first items: " + JSON.stringify(invNames));
           if (!userInv || !userInv.success || !userInv.assets) {
             console.log("InvRequest: inventory fetch failed for " + username);
             gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]")).catch(()=>{});
-            continue;
-          }
-
-          const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
-          const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
-          console.log("InvRequest: accepted skins: " + JSON.stringify(accepted.map(a => a.name + " [" + a.wear + "] " + a.price + "Kc")));
-
-          const result = [];
-          for (const id in userInv.assets) {
-            const asset = userInv.assets[id];
-            const classId = asset.classid + "_" + asset.instanceid;
-            const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
-            if (!desc) continue;
-            const name = desc.market_hash_name || "";
-            const wearMatch = name.match(/\(([^)]+)\)\s*$/);
-            const steamWear = wearMatch ? wearMatch[1] : "";
-            const baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
-            for (const a of accepted) {
-              if (a.name && a.name.toLowerCase() === baseName && a.price > 0) {
-                if (!a.wear || a.wear.toLowerCase() === steamWear.toLowerCase()) {
-                  result.push({ name: name, price: a.price, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
-                  break;
+          } else {
+            const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
+            const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
+            const result = [];
+            for (const id in userInv.assets) {
+              const asset = userInv.assets[id];
+              const classId = asset.classid + "_" + asset.instanceid;
+              const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
+              if (!desc) continue;
+              const name = desc.market_hash_name || "";
+              const wearMatch = name.match(/\(([^)]+)\)\s*$/);
+              const steamWear = wearMatch ? wearMatch[1] : "";
+              const baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+              for (const a of accepted) {
+                if (a.name && a.name.toLowerCase() === baseName && a.price > 0) {
+                  if (!a.wear || a.wear.toLowerCase() === steamWear.toLowerCase()) {
+                    result.push({ name: name, price: a.price, depositable: true, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
+                    break;
+                  }
                 }
               }
             }
+            console.log("InvRequest: " + username + " - " + result.length + " depositable items");
+            gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result))).catch(()=>{});
           }
-          console.log("InvRequest: " + username + " - " + result.length + " items (accepted: " + accepted.length + ", inventory: " + Object.keys(userInv.assets).length + ")");
-          gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result))).catch(()=>{});
-          console.log("InvRequest: " + username + " - " + result.length + " items");
-          await new Promise(r => setTimeout(r, 15000));
-        } catch (e) { console.error("InvRequest error:", e.message); }
-      }
+        }
+      } catch (e) { console.error("InvRequest error:", e.message); }
     }
   } catch (e) { console.error("InvRequest polling error:", e.message); }
 
-  await new Promise(r => setTimeout(r, 10000));
-
-  try {
-    const botInv = await getInventory();
-    const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
-    const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
-    const priceMap = {};
-    for (const a of accepted) {
-      if (a.name && a.price > 0) priceMap[a.name.toLowerCase()] = a.price;
-    }
-    const seen = {};
-    const botItems = [];
-    for (const item of botInv) {
-      const name = item.market_hash_name || "";
-      if (!name || seen[name.toLowerCase()]) continue;
-      seen[name.toLowerCase()] = true;
-      botItems.push({
-        name: name,
-        price: priceMap[name.toLowerCase()] || 0,
-        image: item.icon_url_large ? "https://community.akamai.steamstatic.com/economy/image/" + item.icon_url_large : "",
-        assetId: item.id,
-        count: 1
-      });
-    }
-    const jsonStr = JSON.stringify(botItems);
-    await gasPost(GAS_URL + "?action=saveBotInventory", { data: jsonStr });
-    console.log("Bot inventory saved: " + botItems.length + " items");
-  } catch(e) { console.error("Bot inventory save error:", e.message); }
+  if (pollCount % 5 === 0 && botInv) {
+    try {
+      const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
+      const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
+      const priceMap = {};
+      for (const a of accepted) { if (a.name && a.price > 0) priceMap[a.name.toLowerCase()] = a.price; }
+      const seen = {};
+      const botItems = [];
+      for (const item of botInv) {
+        const name = item.market_hash_name || "";
+        if (!name || seen[name.toLowerCase()]) continue;
+        seen[name.toLowerCase()] = true;
+        botItems.push({ name: name, price: priceMap[name.toLowerCase()] || 0, image: item.icon_url_large ? "https://community.akamai.steamstatic.com/economy/image/" + item.icon_url_large : "", assetId: item.id, count: 1 });
+      }
+      await gasPost(GAS_URL + "?action=saveBotInventory", { data: JSON.stringify(botItems) });
+      console.log("Bot inventory saved: " + botItems.length + " items");
+    } catch(e) { console.error("Bot inventory save error:", e.message); }
+  }
 
   setTimeout(poll, 30000);
 }
