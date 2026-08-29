@@ -1414,6 +1414,7 @@
       var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true, headers: { "User-Agent": "Mozilla/5.0" } });
       var text = response.getContentText();
       var code = response.getResponseCode();
+      if (code === 404) return JSON.stringify({ error: "INVENTAR_404", steamId: steamId, msg: "Steam inventář nenalezen - uživatel nemá CS2 nebo je inventář prázdný" });
       var json;
       try { json = JSON.parse(text); } catch(pe) { return JSON.stringify({ error: "NOT_JSON", steamId: steamId, code: code, preview: (text || "").substring(0, 300) }); }
       if (!json) return JSON.stringify({ error: "NULL_JSON", steamId: steamId, code: code, textLen: (text || "").length, preview: (text || "").substring(0, 300) });

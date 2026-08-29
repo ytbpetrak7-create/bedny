@@ -111,7 +111,13 @@ async function loadInventory() {
   try { items = JSON.parse(res); } catch(e) { items = []; }
 
   if (items && items.error) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + items.error + (items.steamId ? ' (steamId: ' + items.steamId + ')' : '') + (items.message ? ' - ' + items.message : '') + '</p>';
+    var debug = 'Chyba: ' + items.error;
+    if (items.steamId) debug += ' (steamId: ' + items.steamId + ')';
+    if (items.code) debug += ' HTTP:' + items.code;
+    if (items.textLen !== undefined) debug += ' len:' + items.textLen;
+    if (items.message) debug += ' - ' + items.message;
+    if (items.preview) debug += ' [' + items.preview + ']';
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;font-size:12px;">' + debug + '</p>';
     return;
   }
 
