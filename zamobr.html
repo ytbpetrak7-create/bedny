@@ -114,7 +114,7 @@ async function loadInventory() {
       }
       items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
       renderDepositItems(items);
-    } else if (attempts >= 30) {
+    } else if (attempts >= 60) {
       clearInterval(pollInv);
       document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Timeout - bot nestihl stáhnout inventář. Zkus znovu.</p>';
     }

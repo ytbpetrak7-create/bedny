@@ -139,7 +139,7 @@ function getInventory() {
 
 function getUserInventory(steamId) {
   return new Promise((resolve, reject) => {
-    const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=czech&count=500`;
+    const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=english&count=500`;
     function attempt(retries) {
       community.request({
         url: url,
@@ -149,8 +149,8 @@ function getUserInventory(steamId) {
         if (err) { console.log("InvFetch error:", err.message); return reject(err); }
         console.log("InvFetch: status=" + (res ? res.statusCode : "?"));
         if (res && res.statusCode === 429 && retries > 0) {
-          console.log("InvFetch: rate limited, retry za 30s (" + retries + " retries left)");
-          return setTimeout(() => attempt(retries - 1), 30000);
+          console.log("InvFetch: rate limited, retry za 60s (" + retries + " retries left)");
+          return setTimeout(() => attempt(retries - 1), 60000);
         }
         if (body && body.success) {
           console.log("InvFetch: assets=" + (body.assets ? Object.keys(body.assets).length : 0));
@@ -160,7 +160,7 @@ function getUserInventory(steamId) {
         resolve(body || { success: false });
       });
     }
-    attempt(3);
+    attempt(5);
   });
 }
 
@@ -290,10 +290,13 @@ async function poll() {
           console.log("InvRequest: " + username + " - " + result.length + " items (accepted: " + accepted.length + ", inventory: " + Object.keys(userInv.assets).length + ")");
           gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result))).catch(()=>{});
           console.log("InvRequest: " + username + " - " + result.length + " items");
+          await new Promise(r => setTimeout(r, 15000));
         } catch (e) { console.error("InvRequest error:", e.message); }
       }
     }
   } catch (e) { console.error("InvRequest polling error:", e.message); }
+
+  await new Promise(r => setTimeout(r, 10000));
 
   try {
     const botInv = await getInventory();
