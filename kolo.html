@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="cs" translate="no">
+<head>
+<meta name="google" content="notranslate">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: linear-gradient(135deg, #7b4fa2 0%, #6a4c93 30%, #5a3f8a 50%, #4a3580 70%, #3d2d6e 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  overflow: hidden;
+}
+
+body::before {
+  content: "TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE TECH RARE";
+  position: fixed;
+  top: -50px; left: -50px; right: -50px; bottom: -50px;
+  font-family: 'Georgia', serif;
+  font-size: 65px; font-style: italic; font-weight: bold;
+  color: rgba(255,255,255,0.08);
+  word-spacing: 40px; line-height: 110px; letter-spacing: 15px;
+  transform: rotate(-20deg);
+  pointer-events: none; white-space: normal; overflow: hidden;
+}
+
+.backBtn {
+  position: fixed; top: 20px; left: 20px;
+  background: rgba(255,255,255,0.15); border: 2px solid #00ff96;
+  color: #00ff96; padding: 10px 20px; border-radius: 25px;
+  text-decoration: none; font-size: 16px; font-weight: bold;
+  z-index: 1000; transition: transform 0.2s;
+}
+.backBtn:hover { transform: scale(1.05); }
+
+#topBar {
+  position: fixed; top: 20px; right: 80px;
+  display: flex; align-items: center; gap: 10px; z-index: 1000;
+}
+#pointsDisplay {
+  background: rgba(0,255,150,0.15); border: 2px solid #00ff96;
+  border-radius: 25px; padding: 8px 20px; color: #fff;
+  font-size: 16px; font-weight: bold; cursor: pointer;
+}
+#profilePic {
+  position: fixed; top: 20px; right: 20px;
+  width: 45px; height: 45px; border-radius: 50%;
+  background: #111; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: bold;
+  border: 2px solid #00ff96; cursor: pointer; z-index: 1002;
+  overflow: hidden;
+}
+
+.title {
+  font-size: 36px; font-weight: bold; margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+
+.subtitle {
+  font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 30px;
+}
+
+.wheelContainer {
+  position: relative;
+  width: 350px; height: 350px;
+  margin-bottom: 30px;
+}
+
+.wheel {
+  width: 350px; height: 350px;
+  border-radius: 50%;
+  border: 5px solid #ffd700;
+  position: relative;
+  transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+  box-shadow: 0 0 30px rgba(255,215,0,0.4), 0 0 60px rgba(255,215,0,0.2);
+  overflow: hidden;
+}
+
+.segment {
+  position: absolute;
+  width: 50%; height: 50%;
+  top: 0; right: 0;
+  transform-origin: bottom left;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(0 100%, 100% 0, 100% 100%);
+}
+
+.seg0 { transform: rotate(0deg); background: #ff6b6b; }
+.seg1 { transform: rotate(45deg); background: #4ecdc4; }
+.seg2 { transform: rotate(90deg); background: #45b7d1; }
+.seg3 { transform: rotate(135deg); background: #f9ca24; }
+.seg4 { transform: rotate(180deg); background: #a29bfe; }
+.seg5 { transform: rotate(225deg); background: #fd79a8; }
+.seg6 { transform: rotate(270deg); background: #00b894; }
+.seg7 { transform: rotate(315deg); background: #e17055; }
+
+.segLabel {
+  position: absolute;
+  font-size: 13px; font-weight: bold; color: #fff;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  transform: rotate(22.5deg);
+  width: 100px; text-align: center;
+  margin-top: -60px; margin-left: 10px;
+}
+
+.seg0 .segLabel { transform: rotate(22.5deg); }
+.seg1 .segLabel { transform: rotate(67.5deg); }
+.seg2 .segLabel { transform: rotate(112.5deg); }
+.seg3 .segLabel { transform: rotate(157.5deg); }
+.seg4 .segLabel { transform: rotate(202.5deg); }
+.seg5 .segLabel { transform: rotate(247.5deg); }
+.seg6 .segLabel { transform: rotate(292.5deg); }
+.seg7 .segLabel { transform: rotate(337.5deg); }
+
+.pointer {
+  position: absolute;
+  top: -15px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 30px solid #ffd700;
+  filter: drop-shadow(0 0 5px rgba(255,215,0,0.5));
+  z-index: 10;
+}
+
+.centerCircle {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: #ffd700;
+  border: 3px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: bold; color: #333;
+  box-shadow: 0 0 20px rgba(255,215,0,0.5);
+  z-index: 5;
+}
+
+.spinBtn {
+  padding: 15px 50px;
+  font-size: 20px; font-weight: bold;
+  border: none; border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.spinBtn.ready {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #333;
+  box-shadow: 0 0 20px rgba(255,215,0,0.4);
+}
+
+.spinBtn.ready:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(255,215,0,0.6);
+}
+
+.spinBtn.disabled {
+  background: #555; color: #999;
+  cursor: not-allowed;
+}
+
+.spinBtn.spinning {
+  background: #555; color: #999;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-top: 20px; font-size: 18px; text-align: center;
+  min-height: 30px;
+}
+
+.prizePopup {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 9999;
+  align-items: center; justify-content: center;
+  flex-direction: column;
+}
+
+.prizePopup.show { display: flex; }
+
+.prizeBox {
+  background: linear-gradient(135deg, #2d1b69, #1a1040);
+  border: 3px solid #ffd700;
+  border-radius: 20px;
+  padding: 40px 60px;
+  text-align: center;
+  animation: prizeAppear 0.5s ease;
+}
+
+@keyframes prizeAppear {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.prizeBox h2 { font-size: 28px; color: #ffd700; margin-bottom: 15px; }
+.prizeBox p { font-size: 20px; margin-bottom: 25px; }
+.prizeBox .amount { font-size: 48px; font-weight: bold; color: #00ff96; }
+
+.prizeBox button {
+  padding: 12px 40px; font-size: 16px; font-weight: bold;
+  background: #00ff96; color: #111; border: none;
+  border-radius: 25px; cursor: pointer; transition: transform 0.2s;
+}
+.prizeBox button:hover { transform: scale(1.05); }
+
+.picRequirement {
+  margin-bottom: 20px;
+  padding: 15px 30px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 15px;
+  display: flex; align-items: center; gap: 15px;
+}
+
+.picRequirement img {
+  width: 50px; height: 50px; border-radius: 50%;
+  border: 2px solid #ffd700;
+}
+
+.picRequirement span { font-size: 16px; }
+
+.picOk { border: 2px solid #00ff96; }
+.picBad { border: 2px solid #ff4444; }
+</style>
+</head>
+<body>
+
+<a href="hlav.html" class="backBtn">← Zpět</a>
+<div id="topBar"><div id="pointsDisplay"></div></div>
+<div id="profilePic">P</div>
+
+<h1 class="title">Kolo štěstí</h1>
+<p class="subtitle">Nastav si profilovku na Steamu a zatoč!</p>
+
+<div class="picRequirement" id="picReq">
+  <img id="requiredPic" src="" alt="">
+  <span id="picStatus">Načítání...</span>
+</div>
+
+<div class="wheelContainer">
+  <div class="pointer"></div>
+  <div class="wheel" id="wheel">
+    <div class="segment seg0"><span class="segLabel" id="seg0"></span></div>
+    <div class="segment seg1"><span class="segLabel" id="seg1"></span></div>
+    <div class="segment seg2"><span class="segLabel" id="seg2"></span></div>
+    <div class="segment seg3"><span class="segLabel" id="seg3"></span></div>
+    <div class="segment seg4"><span class="segLabel" id="seg4"></span></div>
+    <div class="segment seg5"><span class="segLabel" id="seg5"></span></div>
+    <div class="segment seg6"><span class="segLabel" id="seg6"></span></div>
+    <div class="segment seg7"><span class="segLabel" id="seg7"></span></div>
+  </div>
+  <div class="centerCircle">?</div>
+</div>
+
+<button class="spinBtn disabled" id="spinBtn" onclick="spin()">ZATOČIT</button>
+<div class="status" id="status"></div>
+
+<div class="prizePopup" id="prizePopup">
+  <div class="prizeBox">
+    <h2>Vyhral/a jsi!</h2>
+    <p id="prizeText"></p>
+    <div class="amount" id="prizeAmount"></div>
+    <button onclick="closePrize()">Super!</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script src="user.js?ver=9"></script>
+<script>
+if (!getCurrentUser()) {
+  window.location.href = "index.html";
+} else {
+  createPointsDisplay();
+  loadProfilePic();
+  loadWheelConfig();
+}
+
+async function loadProfilePic() {
+  var res = await getProfile();
+  if (res === "NOT_FOUND") return;
+  var data = JSON.parse(res);
+  if (data.profilePic) {
+    var pic = document.getElementById("profilePic");
+    if (pic) { pic.style.background = "url('" + data.profilePic + "') center/cover"; pic.textContent = ""; }
+  } else if (data.username) {
+    var pic = document.getElementById("profilePic");
+    if (pic) pic.textContent = data.username.charAt(0).toUpperCase();
+  }
+}
+
+var wheelPrizes = [];
+var spinning = false;
+
+async function loadWheelConfig() {
+  try {
+    var res = await callScript("getWheelConfig");
+    var cfg = JSON.parse(res);
+
+    wheelPrizes = cfg.prizes || [];
+    for (var i = 0; i < 8; i++) {
+      var el = document.getElementById("seg" + i);
+      if (el && wheelPrizes[i]) {
+        el.textContent = wheelPrizes[i].label;
+      }
+    }
+
+    var requiredPic = document.getElementById("requiredPic");
+    var picStatus = document.getElementById("picStatus");
+    var picReq = document.getElementById("picReq");
+
+    if (cfg.requiredPic) {
+      requiredPic.src = cfg.requiredPic;
+    }
+
+    var myProfile = await getProfile();
+    if (myProfile !== "NOT_FOUND") {
+      var me = JSON.parse(myProfile);
+      var myPic = me.profilePic || "";
+
+      if (cfg.requiredPic && myPic && myPic === cfg.requiredPic) {
+        picStatus.textContent = "Profilovka sedí! Můžeš točit.";
+        picReq.classList.add("picOk");
+        picReq.classList.remove("picBad");
+        document.getElementById("spinBtn").className = "spinBtn ready";
+      } else if (cfg.requiredPic) {
+        picStatus.textContent = "Nastav si tuto profilovku na Steamu!";
+        picReq.classList.add("picBad");
+        picReq.classList.remove("picOk");
+      } else {
+        picStatus.textContent = "Admin zatím nenastavil profilovku.";
+        picReq.classList.add("picBad");
+        picReq.classList.remove("picOk");
+      }
+    }
+  } catch(e) {
+    console.error("loadWheelConfig error:", e);
+  }
+}
+
+function spin() {
+  if (spinning) return;
+  var btn = document.getElementById("spinBtn");
+  if (btn.classList.contains("disabled")) return;
+
+  spinning = true;
+  btn.className = "spinBtn spinning";
+  btn.textContent = "TOČÍ SE...";
+  document.getElementById("status").textContent = "";
+
+  var segments = 8;
+  var anglePerSeg = 360 / segments;
+  var randomIndex = Math.floor(Math.random() * segments);
+  var targetAngle = 360 * 5 + (segments - randomIndex - 0.5) * anglePerSeg;
+
+  var wheel = document.getElementById("wheel");
+  wheel.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
+  wheel.style.transform = "rotate(" + targetAngle + "deg)";
+
+  setTimeout(async function() {
+    var wonPrize = wheelPrizes[randomIndex] || { label: "0 Kč", amount: 0 };
+
+    try {
+      var spinRes = await callScript("spinWheel", { username: getCurrentUser(), prizeIndex: randomIndex });
+      var spinData = JSON.parse(spinRes);
+
+      if (spinData.error) {
+        document.getElementById("status").textContent = spinData.error;
+        spinning = false;
+        btn.className = "spinBtn ready";
+        btn.textContent = "ZATOČIT";
+        return;
+      }
+
+      document.getElementById("prizeText").textContent = wonPrize.label;
+      document.getElementById("prizeAmount").textContent = "+" + (spinData.amount || wonPrize.amount || 0).toFixed(2) + " Kč";
+      document.getElementById("prizePopup").classList.add("show");
+
+      updatePoints();
+    } catch(e) {
+      document.getElementById("status").textContent = "Chyba: " + e.message;
+    }
+
+    spinning = false;
+    btn.className = "spinBtn disabled";
+    btn.textContent = "DNES UŽ TOČIT NELZE";
+
+    setTimeout(function() {
+      wheel.style.transition = "none";
+      wheel.style.transform = "rotate(0deg)";
+    }, 500);
+  }, 4200);
+}
+
+function closePrize() {
+  document.getElementById("prizePopup").classList.remove("show");
+}
+</script>
+</body>
+</html>

@@ -262,6 +262,21 @@
       }
       result = "OK";
       break;
+    case "getWheelConfig":
+      var propsW = PropertiesService.getScriptProperties();
+      var wPrizes = propsW.getProperty("wheelPrizes") || "[]";
+      var wPic = propsW.getProperty("wheelRequiredPic") || "";
+      result = JSON.stringify({ requiredPic: wPic, prizes: JSON.parse(wPrizes) });
+      break;
+    case "setWheelConfig":
+      var propsW2 = PropertiesService.getScriptProperties();
+      if (params.pic !== undefined) propsW2.setProperty("wheelRequiredPic", params.pic);
+      if (params.prizes) propsW2.setProperty("wheelPrizes", params.prizes);
+      result = "OK";
+      break;
+    case "spinWheel":
+      result = spinWheel(ss, params.username, parseInt(params.prizeIndex) || 0);
+      break;
   }
     
     return ContentService.createTextOutput(result);
@@ -1439,4 +1454,37 @@
     } catch (e) {
       return JSON.stringify({ error: "EXCEPTION", message: e.message, steamId: steamId });
     }
+  }
+
+  function spinWheel(ss, username, prizeIndex) {
+    if (!username) return JSON.stringify({ error: "MISSING" });
+
+    var props = PropertiesService.getScriptProperties();
+    var todayKey = Utilities.formatDate(new Date(), "Europe/Prague", "yyyyMMdd");
+    var lastSpin = props.getProperty("wheelSpin_" + username) || "";
+    if (lastSpin === todayKey) return JSON.stringify({ error: "Už jsi dnes točil! Zkus zítra." });
+
+    var prizesRaw = props.getProperty("wheelPrizes") || "[]";
+    var prizes = JSON.parse(prizesRaw);
+    if (!prizes.length) return JSON.stringify({ error: "Kolo není nastaveno" });
+
+    var idx = prizeIndex % prizes.length;
+    var prize = prizes[idx];
+    var amount = Number(prize.amount) || 0;
+
+    if (amount > 0) {
+      var usersSheet = getSheet(ss, "Users");
+      var data = usersSheet.getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+          var pts = Number(data[i][2]) || 0;
+          usersSheet.getRange(i + 1, 3).setValue(pts + amount);
+          break;
+        }
+      }
+    }
+
+    props.setProperty("wheelSpin_" + username, todayKey);
+
+    return JSON.stringify({ ok: true, amount: amount, label: prize.label || "" });
   }

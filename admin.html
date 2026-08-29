@@ -118,8 +118,25 @@ async function loadAll() {
       html += "<p style='color:#f80;'>Chyba parsování: " + e.message + "</p>";
     }
   }
+
+  html += "<h2>Kolo štěstí - nastavení</h2>";
+  html += '<div class="req-item">';
+  html += '<p style="color:#fff;font-weight:bold;">Požadovaná profilovka (URL z Steamu)</p>';
+  html += '<input id="wheelPic" type="text" placeholder="https://..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
+  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Odměny (8 segmentů, JSON)</p>';
+  html += '<textarea id="wheelPrizes" rows="6" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;font-size:13px;font-family:monospace;">[{"label":"0.50 Kč","amount":0.5},{"label":"1 Kč","amount":1},{"label":"0.20 Kč","amount":0.2},{"label":"5 Kč","amount":5},{"label":"0.10 Kč","amount":0.1},{"label":"2 Kč","amount":2},{"label":"0.50 Kč","amount":0.5},{"label":"10 Kč","amount":10}]</textarea>';
+  html += '<br><button class="btn-app" onclick="saveWheel()" style="margin-top:10px;">Uložit kolo</button>';
+  html += ' <span id="wheelMsg" style="color:#00ff96;font-size:13px;"></span>';
+  html += '</div>';
   
   div.innerHTML = html;
+
+  var wCfg = await callScript("getWheelConfig");
+  try {
+    var cfg = JSON.parse(wCfg);
+    if (cfg.requiredPic) document.getElementById("wheelPic").value = cfg.requiredPic;
+    if (cfg.prizes && cfg.prizes.length) document.getElementById("wheelPrizes").value = JSON.stringify(cfg.prizes, null, 2);
+  } catch(e) {}
 }
 
 async function approve(row) {
@@ -130,6 +147,26 @@ async function approve(row) {
 async function approveRef(row) {
   await callScript("approveRefCode", { row: row });
   loadAll();
+}
+
+async function saveWheel() {
+  var pic = document.getElementById("wheelPic").value.trim();
+  var prizesText = document.getElementById("wheelPrizes").value.trim();
+  var msg = document.getElementById("wheelMsg");
+  try {
+    var prizes = JSON.parse(prizesText);
+    if (!Array.isArray(prizes) || prizes.length !== 8) {
+      msg.textContent = "Musí být přesně 8 odměn!";
+      msg.style.color = "#f80";
+      return;
+    }
+    await callScript("setWheelConfig", { pic: pic, prizes: JSON.stringify(prizes) });
+    msg.textContent = "Uloženo!";
+    msg.style.color = "#00ff96";
+  } catch(e) {
+    msg.textContent = "Chyba: " + e.message;
+    msg.style.color = "#f80";
+  }
 }
 </script>
 </html>
