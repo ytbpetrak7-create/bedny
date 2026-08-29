@@ -110,6 +110,11 @@ async function loadInventory() {
   var items;
   try { items = JSON.parse(res); } catch(e) { items = []; }
 
+  if (items && items.error) {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + items.error + (items.steamId ? ' (steamId: ' + items.steamId + ')' : '') + (items.message ? ' - ' + items.message : '') + '</p>';
+    return;
+  }
+
   if (!items || items.length === 0) {
     document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo je soukromý. Nastav inventář jako veřejný v nastavení Soukromí na Steamu.</p>';
     return;

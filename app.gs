@@ -1388,7 +1388,7 @@
   }
 
   function getSteamInventoryAll(ss, username) {
-    if (!username) return "[]";
+    if (!username) return JSON.stringify({ error: "MISSING_USERNAME" });
     var usersSheet = getSheet(ss, "Users");
     var data = usersSheet.getDataRange().getValues();
     var steamId = null;
@@ -1398,7 +1398,7 @@
         break;
       }
     }
-    if (!steamId) return "[]";
+    if (!steamId) return JSON.stringify({ error: "NO_STEAM_ID" });
 
     var depSheet = getSheet(ss, "DepositSkins");
     var depData = depSheet.getDataRange().getValues();
@@ -1413,7 +1413,8 @@
       var url = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
       var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { "User-Agent": "Mozilla/5.0" } });
       var json = JSON.parse(response.getContentText());
-      if (!json.success || !json.assets) return "[]";
+      if (!json.success) return JSON.stringify({ error: "STEAM_FAIL", steamId: steamId });
+      if (!json.assets) return JSON.stringify({ error: "NO_ASSETS", steamId: steamId, keys: Object.keys(json).join(",") });
 
       var result = [];
       for (var id in json.assets) {
@@ -1431,6 +1432,6 @@
       }
       return JSON.stringify(result);
     } catch (e) {
-      return "[]";
+      return JSON.stringify({ error: "EXCEPTION", message: e.message, steamId: steamId });
     }
   }
