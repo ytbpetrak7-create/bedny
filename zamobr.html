@@ -95,39 +95,33 @@ async function loadTradeLink() {
 }
 
 async function loadInventory() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře... Počkej pár sekund.</p>';
   selectedItems = [];
 
-  var steamIdRes = await callScript("getSteamId", { username: getCurrentUser() });
-  var steamId = (steamIdRes || "").trim();
+  await callScript("requestInventory", { username: getCurrentUser() });
 
-  if (!steamId) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš přiřazen Steam ID. Přihlas se přes Steam (odhlas se a znovu klikni na Přihlásit se přes Steam).</p>';
-    return;
-  }
+  var attempts = 0;
+  var pollInv = setInterval(async function() {
+    attempts++;
+    var result = await callScript("getInventoryResult", { username: getCurrentUser() });
+    if (result && result !== "PENDING" && result !== "") {
+      clearInterval(pollInv);
+      var items;
+      try { items = JSON.parse(result); } catch(e) { items = []; }
+      if (!items || items.length === 0) {
+        document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
+        return;
+      }
+      items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
+      renderDepositItems(items);
+    } else if (attempts >= 30) {
+      clearInterval(pollInv);
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Timeout - bot nestihl stáhnout inventář. Zkus znovu.</p>';
+    }
+  }, 2000);
+}
 
-  var res = await getSteamInventoryAll(getCurrentUser());
-  var items;
-  try { items = JSON.parse(res); } catch(e) { items = []; }
-
-  if (items && items.error) {
-    var debug = 'Chyba: ' + items.error;
-    if (items.steamId) debug += ' (steamId: ' + items.steamId + ')';
-    if (items.code) debug += ' HTTP:' + items.code;
-    if (items.textLen !== undefined) debug += ' len:' + items.textLen;
-    if (items.message) debug += ' - ' + items.message;
-    if (items.preview) debug += ' [' + items.preview + ']';
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;font-size:12px;">' + debug + '</p>';
-    return;
-  }
-
-  if (!items || items.length === 0) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo je soukromý. Nastav inventář jako veřejný v nastavení Soukromí na Steamu.</p>';
-    return;
-  }
-
-  items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
-
+function renderDepositItems(items) {
   var html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-bottom:80px;">';
   for (var i = 0; i < items.length; i++) {
     var it = items[i];
