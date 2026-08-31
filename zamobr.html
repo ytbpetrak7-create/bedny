@@ -95,8 +95,33 @@ async function loadTradeLink() {
 }
 
 async function loadInventory() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře... Počkej pár sekund.</p>';
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
   selectedItems = [];
+
+  try {
+    var directRes = await callScript("getSteamInventoryDirect", { username: getCurrentUser() });
+    if (directRes && directRes !== "PENDING" && directRes !== "") {
+      var items;
+      try { items = JSON.parse(directRes); } catch(e) { items = []; }
+      if (items.error) {
+        loadInventoryViaBot();
+        return;
+      }
+      if (items.length === 0) {
+        document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
+        return;
+      }
+      items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
+      renderDepositItems(items);
+      return;
+    }
+  } catch(e) {}
+
+  loadInventoryViaBot();
+}
+
+async function loadInventoryViaBot() {
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání přes bota... Počkej.</p>';
 
   await callScript("requestInventory", { username: getCurrentUser() });
 
@@ -114,7 +139,7 @@ async function loadInventory() {
       }
       items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
       renderDepositItems(items);
-    } else if (attempts >= 60) {
+    } else if (attempts >= 90) {
       clearInterval(pollInv);
       document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Timeout - bot nestihl stáhnout inventář. Zkus znovu.</p>';
     }
