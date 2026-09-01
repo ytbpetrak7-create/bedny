@@ -96,7 +96,36 @@ async function loadTradeLink() {
 async function loadInventory() {
   document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
   selectedItems = [];
-  loadInventoryViaBot();
+
+  try {
+    var profileRes = await callScript("getProfile", { username: getCurrentUser() });
+    var profile = JSON.parse(profileRes);
+    var steamId = profile.steamId;
+    if (!steamId) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš propojený Steam účet.</p>';
+      return;
+    }
+
+    var directRes = await callScript("getSteamInventoryDirect", { username: getCurrentUser() });
+    var items;
+    try { items = JSON.parse(directRes); } catch(e) { items = []; }
+
+    if (items && items.error) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + items.error + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
+      return;
+    }
+
+    if (!items || items.length === 0) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
+      return;
+    }
+
+    items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
+    renderDepositItems(items);
+
+  } catch(e) {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
+  }
 }
 
 async function loadInventoryViaBot() {

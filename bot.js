@@ -181,6 +181,58 @@ async function poll() {
   pollCount++;
   console.log("Poll #" + pollCount + ": začátek");
 
+  try {
+    const invRequests = await gasGet(GAS_URL + "?action=getPendingInvRequests");
+    const reqs = typeof invRequests === "string" ? JSON.parse(invRequests) : invRequests;
+    if (reqs && reqs.length) {
+      const req = reqs[0];
+      try {
+        const username = req.username;
+        console.log("InvRequest: processing " + username);
+        await wait(3000);
+        const steamId = await gasGet(GAS_URL + "?action=getSteamId&username=" + encodeURIComponent(username));
+        if (!steamId || steamId === "") {
+          console.log("InvRequest: no steamId for " + username);
+          gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify([]))).catch(()=>{});
+        } else {
+          const userInv = await getUserInventory(steamId);
+          if (userInv && userInv.rateLimited) {
+            console.log("InvRequest: rate limited for " + username + " - will retry next poll");
+          } else if (!userInv || !userInv.success || !userInv.assets) {
+            console.log("InvRequest: inventory fetch failed for " + username);
+            gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]")).catch(()=>{});
+          } else {
+            const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
+            const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
+            const result = [];
+            for (const id in userInv.assets) {
+              const asset = userInv.assets[id];
+              const classId = asset.classid + "_" + asset.instanceid;
+              const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
+              if (!desc) continue;
+              const name = desc.market_hash_name || "";
+              const wearMatch = name.match(/\(([^)]+)\)\s*$/);
+              const steamWear = wearMatch ? wearMatch[1] : "";
+              const baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+              for (const a of accepted) {
+                if (a.name && a.name.toLowerCase() === baseName && a.price > 0) {
+                  if (!a.wear || a.wear.toLowerCase() === steamWear.toLowerCase()) {
+                    result.push({ name: name, price: a.price, depositable: true, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
+                    break;
+                  }
+                }
+              }
+            }
+            console.log("InvRequest: " + username + " - " + result.length + " depositable items");
+            gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result))).catch(()=>{});
+          }
+        }
+      } catch (e) { console.error("InvRequest error:", e.message); }
+    }
+  } catch (e) { console.error("InvRequest polling error:", e.message); }
+
+  await wait(5000);
+
   var botInv = null;
   try {
     botInv = await getInventory();
@@ -225,96 +277,6 @@ async function poll() {
       }
     }
   } catch (e) { console.error("Withdrawal error:", e.message); }
-
-  try {
-    const pendingDeposits = await gasGet(GAS_URL + "?action=getPendingDeposits");
-    const deps = typeof pendingDeposits === "string" ? JSON.parse(pendingDeposits) : pendingDeposits;
-    if (deps && deps.length) {
-      for (const dep of deps) {
-        if (failedOffers["d_" + dep.username]) continue;
-        var lastDepTry = lastDepositAttempt[dep.username] || 0;
-        if (Date.now() - lastDepTry < 600000) continue;
-        try {
-          const tradeLink = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(dep.username));
-          if (!tradeLink || tradeLink === "NOT_SET" || tradeLink === "MISSING") continue;
-          const t = parseTradeLink(tradeLink);
-          if (!t) continue;
-          lastDepositAttempt[dep.username] = Date.now();
-          await wait(5000);
-          const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
-          for (const item of dep.items) {
-            if (item.assetId) {
-              offer.addTheirItem({ appid: 730, contextid: String(item.contextid || "2"), assetid: String(item.assetId), amount: Number(item.amount) || 1 });
-            }
-          }
-          const totalValue = dep.items.reduce((s, i) => s + (i.price || 0), 0);
-          offer.setMessage("Deposit " + totalValue.toFixed(2) + " Kč");
-          await new Promise((resolve) => {
-            offer.send((err, status) => {
-              if (err) {
-                console.log("Deposit offer error " + dep.username + ": " + err.message);
-                failedOffers["d_" + dep.username] = true;
-              } else {
-                console.log(`Deposit offer sent to ${dep.username}: ${status}`);
-                gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2)).catch(()=>{});
-              }
-              resolve();
-            });
-          });
-        } catch (e) { console.error("Deposit processing error:", e.message); }
-      }
-    }
-  } catch (e) { console.error("Deposit polling error:", e.message); }
-
-  try {
-    const invRequests = await gasGet(GAS_URL + "?action=getPendingInvRequests");
-    const reqs = typeof invRequests === "string" ? JSON.parse(invRequests) : invRequests;
-    if (reqs && reqs.length) {
-      const req = reqs[0];
-      try {
-        const username = req.username;
-        console.log("InvRequest: processing " + username);
-        await wait(15000);
-        const steamId = await gasGet(GAS_URL + "?action=getSteamId&username=" + encodeURIComponent(username));
-        if (!steamId || steamId === "") {
-          console.log("InvRequest: no steamId for " + username);
-          gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify([]))).catch(()=>{});
-        } else {
-          const userInv = await getUserInventory(steamId);
-          if (userInv && userInv.rateLimited) {
-            console.log("InvRequest: rate limited for " + username + " - will retry next poll");
-          } else if (!userInv || !userInv.success || !userInv.assets) {
-            console.log("InvRequest: inventory fetch failed for " + username);
-            gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]")).catch(()=>{});
-          } else {
-            const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
-            const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
-            const result = [];
-            for (const id in userInv.assets) {
-              const asset = userInv.assets[id];
-              const classId = asset.classid + "_" + asset.instanceid;
-              const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
-              if (!desc) continue;
-              const name = desc.market_hash_name || "";
-              const wearMatch = name.match(/\(([^)]+)\)\s*$/);
-              const steamWear = wearMatch ? wearMatch[1] : "";
-              const baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
-              for (const a of accepted) {
-                if (a.name && a.name.toLowerCase() === baseName && a.price > 0) {
-                  if (!a.wear || a.wear.toLowerCase() === steamWear.toLowerCase()) {
-                    result.push({ name: name, price: a.price, depositable: true, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
-                    break;
-                  }
-                }
-              }
-            }
-            console.log("InvRequest: " + username + " - " + result.length + " depositable items");
-            gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify(result))).catch(()=>{});
-          }
-        }
-      } catch (e) { console.error("InvRequest error:", e.message); }
-    }
-  } catch (e) { console.error("InvRequest polling error:", e.message); }
 
   if (pollCount % 10 === 0 && botInv) {
     try {
