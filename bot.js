@@ -149,8 +149,12 @@ function getUserInventory(steamId) {
         if (err) { console.log("InvFetch error:", err.message); return reject(err); }
         console.log("InvFetch: status=" + (res ? res.statusCode : "?"));
         if (res && res.statusCode === 429 && retries > 0) {
-          console.log("InvFetch: rate limited, retry za 120s (" + retries + " retries left)");
-          return setTimeout(() => attempt(retries - 1), 120000);
+          console.log("InvFetch: rate limited, retry za 90s (" + retries + " retries left)");
+          return setTimeout(() => attempt(retries - 1), 90000);
+        }
+        if (res && res.statusCode === 429) {
+          console.log("InvFetch: rate limited, no retries left");
+          return resolve({ success: false, rateLimited: true });
         }
         if (body && body.success) {
           console.log("InvFetch: assets=" + (body.assets ? Object.keys(body.assets).length : 0));
@@ -160,7 +164,7 @@ function getUserInventory(steamId) {
         resolve(body || { success: false });
       });
     }
-    attempt(2);
+    attempt(3);
   });
 }
 
@@ -253,7 +257,9 @@ async function poll() {
           gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent(JSON.stringify([]))).catch(()=>{});
         } else {
           const userInv = await getUserInventory(steamId);
-          if (!userInv || !userInv.success || !userInv.assets) {
+          if (userInv && userInv.rateLimited) {
+            console.log("InvRequest: rate limited for " + username + " - will retry next poll");
+          } else if (!userInv || !userInv.success || !userInv.assets) {
             console.log("InvRequest: inventory fetch failed for " + username);
             gasGet(GAS_URL + "?action=setInventoryResult&username=" + encodeURIComponent(username) + "&items=" + encodeURIComponent("[]")).catch(()=>{});
           } else {
