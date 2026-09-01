@@ -106,12 +106,12 @@ async function loadInventory() {
       return;
     }
 
-    var directRes = await callScript("getSteamInventoryDirect", { username: getCurrentUser() });
+    var directRes = await callScript("getMySteamInventory", { username: getCurrentUser() });
     var items;
     try { items = JSON.parse(directRes); } catch(e) { items = []; }
 
-    if (items && items.error) {
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + items.error + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
+    if (typeof directRes === "string" && (directRes === "MISSING" || directRes === "NO_STEAM_ID" || directRes === "[]")) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
       return;
     }
 
@@ -120,7 +120,7 @@ async function loadInventory() {
       return;
     }
 
-    items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
+    items.sort(function(a, b) { return a.name.localeCompare(b.name); });
     renderDepositItems(items);
 
   } catch(e) {

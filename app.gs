@@ -1348,14 +1348,17 @@
         var desc = json.descriptions ? json.descriptions[classId] : null;
         if (!desc) continue;
         var name = desc.market_hash_name || "";
-        var nameLower = name.toLowerCase();
-        if (acceptedNames[nameLower] !== undefined) {
-          result.push({ name: name, price: acceptedNames[nameLower], assetId: asset.id });
-        }
+        if (!name) continue;
+        var baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+        var price = acceptedNames[baseName] || 0;
+        var depositable = price > 0;
+        var img = desc.icon_url_large || desc.icon_url || "";
+        if (img) img = "https://community.akamai.steamstatic.com/economy/image/" + img;
+        result.push({ name: name, price: price, depositable: depositable, assetId: asset.id, contextid: asset.contextid || "2", icon: img });
       }
       return JSON.stringify(result);
     } catch (e) {
-      return "[]";
+      return JSON.stringify({ error: e.message });
     }
   }
 
