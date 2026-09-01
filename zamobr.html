@@ -110,12 +110,13 @@ async function loadInventory() {
     var items;
     try { items = JSON.parse(directRes); } catch(e) { items = []; }
 
-    if (typeof directRes === "string" && (directRes === "MISSING" || directRes === "NO_STEAM_ID" || directRes === "[]")) {
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
+    if (!Array.isArray(items)) {
+      var errMsg = (items && items.error) ? items.error : "Neznámá chyba";
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + errMsg + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
       return;
     }
 
-    if (!items || items.length === 0) {
+    if (items.length === 0) {
       document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
       return;
     }
