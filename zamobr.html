@@ -95,55 +95,65 @@ async function loadTradeLink() {
 }
 
 async function loadInventory() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře ze Steamu...</p>';
   selectedItems = [];
 
   try {
-    var directRes = await callScript("getSteamInventoryDirect", { username: getCurrentUser() });
-    if (directRes && directRes !== "PENDING" && directRes !== "") {
-      var items;
-      try { items = JSON.parse(directRes); } catch(e) { items = []; }
-      if (items.error) {
-        loadInventoryViaBot();
-        return;
-      }
-      if (items.length === 0) {
-        document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
-        return;
-      }
-      items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
-      renderDepositItems(items);
+    var profileRes = await callScript("getProfile", { username: getCurrentUser() });
+    var profile = JSON.parse(profileRes);
+    var steamId = profile.steamId;
+    if (!steamId) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš propojený Steam účet.</p>';
       return;
     }
-  } catch(e) {}
 
-  loadInventoryViaBot();
-}
-
-async function loadInventoryViaBot() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání přes bota... Počkej.</p>';
-
-  await callScript("requestInventory", { username: getCurrentUser() });
-
-  var attempts = 0;
-  var pollInv = setInterval(async function() {
-    attempts++;
-    var result = await callScript("getInventoryResult", { username: getCurrentUser() });
-    if (result && result !== "PENDING" && result !== "") {
-      clearInterval(pollInv);
-      var items;
-      try { items = JSON.parse(result); } catch(e) { items = []; }
-      if (!items || items.length === 0) {
-        document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
-        return;
+    var depRes = await callScript("getDepositSkins");
+    var accepted = JSON.parse(depRes);
+    var priceMap = {};
+    for (var i = 0; i < accepted.length; i++) {
+      if (accepted[i].name && accepted[i].price > 0) {
+        priceMap[accepted[i].name.toLowerCase()] = accepted[i].price;
       }
-      items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
-      renderDepositItems(items);
-    } else if (attempts >= 90) {
-      clearInterval(pollInv);
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Timeout - bot nestihl stáhnout inventář. Zkus znovu.</p>';
     }
-  }, 2000);
+
+    var invUrl = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=english&count=500";
+    var proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(invUrl);
+    var resp = await fetch(proxyUrl);
+    var data = await resp.json();
+
+    if (!data || !data.success || !data.assets) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nepodařilo se načíst inventář. Zkus znovu.</p><p style="color:#aaa;text-align:center;font-size:12px;margin-top:5px;">Chyba: ' + JSON.stringify(data).substring(0, 200) + '</p>';
+      return;
+    }
+
+    var result = [];
+    for (var id in data.assets) {
+      var asset = data.assets[id];
+      var classId = asset.classid + "_" + asset.instanceid;
+      var desc = data.descriptions ? data.descriptions[classId] : null;
+      if (!desc) continue;
+      var name = desc.market_hash_name || "";
+      if (!name) continue;
+      var baseName = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+      var price = 0;
+      for (var k in priceMap) {
+        if (k === baseName) { price = priceMap[k]; break; }
+      }
+      var icon = desc.icon_url_large || desc.icon_url || "";
+      if (icon) icon = "https://community.akamai.steamstatic.com/economy/image/" + icon;
+      result.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: icon });
+    }
+
+    if (result.length === 0) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
+      return;
+    }
+    result.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
+    renderDepositItems(result);
+
+  } catch(e) {
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
+  }
 }
 
 function renderDepositItems(items) {
