@@ -117,7 +117,7 @@ async function loadInventory() {
     }
 
     var invUrl = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=english&count=500";
-    var proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(invUrl);
+    var proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(invUrl);
     var resp = await fetch(proxyUrl);
     var data = await resp.json();
 
