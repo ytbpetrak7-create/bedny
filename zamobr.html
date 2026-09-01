@@ -116,23 +116,14 @@ async function loadInventory() {
       }
     }
 
+    var WORKER_URL = "https://bedny.pet7bot1.workers.dev";
     var invUrl = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=english&count=500";
-    var proxies = [
-      "https://api.allorigins.win/raw?url=" + encodeURIComponent(invUrl),
-      "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(invUrl)
-    ];
+    var proxyUrl = WORKER_URL + "?url=" + encodeURIComponent(invUrl);
 
-    var data = null;
-    for (var p = 0; p < proxies.length; p++) {
-      try {
-        var resp = await fetch(proxies[p], { signal: AbortSignal.timeout(8000) });
-        if (!resp.ok) continue;
-        var json = await resp.json();
-        if (json && json.success && json.assets) { data = json; break; }
-      } catch(e) { continue; }
-    }
+    var resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+    var data = await resp.json();
 
-    if (data) {
+    if (data && data.success && data.assets) {
       var result = [];
       for (var id in data.assets) {
         var asset = data.assets[id];
