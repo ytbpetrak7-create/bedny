@@ -171,6 +171,11 @@ function getUserInventory(steamId) {
 var pollCount = 0;
 
 var lastWithdrawalAttempt = {};
+var lastDepositAttempt = {};
+var failedOffers = {};
+var lastSteamCall = 0;
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function poll() {
   pollCount++;
@@ -188,9 +193,10 @@ async function poll() {
       for (const w of items) {
         if (w.status !== "approved") continue;
         if (!w.tradeLink) continue;
+        if (failedOffers["w_" + w.row]) continue;
 
         var lastTry = lastWithdrawalAttempt[w.row] || 0;
-        if (Date.now() - lastTry < 300000) continue;
+        if (Date.now() - lastTry < 600000) continue;
 
         const t = parseTradeLink(w.tradeLink);
         if (!t) continue;
@@ -200,16 +206,21 @@ async function poll() {
           continue;
         }
         lastWithdrawalAttempt[w.row] = Date.now();
+        await wait(5000);
         const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
         offer.addMyItem(found);
         offer.setMessage(w.item);
-        offer.send((err, status) => {
-          if (err) {
-            console.log("Chyba offer #" + w.row + ": " + err.message);
-            return;
-          }
-          console.log(`Offer sent: ${status}`);
-          gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
+        await new Promise((resolve) => {
+          offer.send((err, status) => {
+            if (err) {
+              console.log("Chyba offer #" + w.row + ": " + err.message);
+              failedOffers["w_" + w.row] = true;
+            } else {
+              console.log(`Offer sent: ${status}`);
+              gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
+            }
+            resolve();
+          });
         });
       }
     }
@@ -220,11 +231,16 @@ async function poll() {
     const deps = typeof pendingDeposits === "string" ? JSON.parse(pendingDeposits) : pendingDeposits;
     if (deps && deps.length) {
       for (const dep of deps) {
+        if (failedOffers["d_" + dep.username]) continue;
+        var lastDepTry = lastDepositAttempt[dep.username] || 0;
+        if (Date.now() - lastDepTry < 600000) continue;
         try {
           const tradeLink = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(dep.username));
           if (!tradeLink || tradeLink === "NOT_SET" || tradeLink === "MISSING") continue;
           const t = parseTradeLink(tradeLink);
           if (!t) continue;
+          lastDepositAttempt[dep.username] = Date.now();
+          await wait(5000);
           const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
           for (const item of dep.items) {
             if (item.assetId) {
@@ -233,10 +249,17 @@ async function poll() {
           }
           const totalValue = dep.items.reduce((s, i) => s + (i.price || 0), 0);
           offer.setMessage("Deposit " + totalValue.toFixed(2) + " Kč");
-          offer.send((err, status) => {
-            if (err) { gasGet(GAS_URL + "?action=removePendingDeposit&username=" + encodeURIComponent(dep.username)).catch(()=>{}); return; }
-            console.log(`Deposit offer sent to ${dep.username}: ${status}`);
-            gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2)).catch(()=>{});
+          await new Promise((resolve) => {
+            offer.send((err, status) => {
+              if (err) {
+                console.log("Deposit offer error " + dep.username + ": " + err.message);
+                failedOffers["d_" + dep.username] = true;
+              } else {
+                console.log(`Deposit offer sent to ${dep.username}: ${status}`);
+                gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2)).catch(()=>{});
+              }
+              resolve();
+            });
           });
         } catch (e) { console.error("Deposit processing error:", e.message); }
       }
@@ -251,6 +274,7 @@ async function poll() {
       try {
         const username = req.username;
         console.log("InvRequest: processing " + username);
+        await wait(15000);
         const steamId = await gasGet(GAS_URL + "?action=getSteamId&username=" + encodeURIComponent(username));
         if (!steamId || steamId === "") {
           console.log("InvRequest: no steamId for " + username);
@@ -292,7 +316,7 @@ async function poll() {
     }
   } catch (e) { console.error("InvRequest polling error:", e.message); }
 
-  if (pollCount % 5 === 0 && botInv) {
+  if (pollCount % 10 === 0 && botInv) {
     try {
       const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
       const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
@@ -311,7 +335,7 @@ async function poll() {
     } catch(e) { console.error("Bot inventory save error:", e.message); }
   }
 
-  setTimeout(poll, 30000);
+  setTimeout(poll, 60000);
 }
 
 console.log("Bot spuštěn");
