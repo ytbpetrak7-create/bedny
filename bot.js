@@ -166,6 +166,8 @@ function getUserInventory(steamId) {
 
 var pollCount = 0;
 
+var lastWithdrawalAttempt = {};
+
 async function poll() {
   pollCount++;
   console.log("Poll #" + pollCount + ": začátek");
@@ -182,6 +184,10 @@ async function poll() {
       for (const w of items) {
         if (w.status !== "approved") continue;
         if (!w.tradeLink) continue;
+
+        var lastTry = lastWithdrawalAttempt[w.row] || 0;
+        if (Date.now() - lastTry < 300000) continue;
+
         const t = parseTradeLink(w.tradeLink);
         if (!t) continue;
         const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
@@ -189,11 +195,15 @@ async function poll() {
           gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
           continue;
         }
+        lastWithdrawalAttempt[w.row] = Date.now();
         const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
         offer.addMyItem(found);
         offer.setMessage(w.item);
         offer.send((err, status) => {
-          if (err) return console.log("Chyba:", err);
+          if (err) {
+            console.log("Chyba offer #" + w.row + ": " + err.message);
+            return;
+          }
           console.log(`Offer sent: ${status}`);
           gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
         });
