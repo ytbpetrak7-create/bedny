@@ -1314,7 +1314,7 @@
   }
 
   function getMySteamInventory(ss, username) {
-    if (!username) return "MISSING";
+    if (!username) return JSON.stringify([]);
     var usersSheet = getSheet(ss, "Users");
     var data = usersSheet.getDataRange().getValues();
     var steamId = null;
@@ -1324,7 +1324,7 @@
         break;
       }
     }
-    if (!steamId) return "NO_STEAM_ID";
+    if (!steamId) return JSON.stringify({ error: "NO_STEAM_ID" });
 
     var acceptedSheet = getSheet(ss, "DepositSkins");
     var acceptedData = acceptedSheet.getDataRange().getValues();
@@ -1337,9 +1337,15 @@
 
   try {
     var url = "https://steamcommunity.com/inventory/" + steamId + "/730/2?l=czech&count=500";
-    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { "User-Agent": "Mozilla/5.0" } });
-      var json = JSON.parse(response.getContentText());
-      if (!json.success || !json.assets) return JSON.stringify([]);
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true, headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" } });
+    var code = response.getResponseCode();
+    var text = response.getContentText();
+    if (code !== 200) return JSON.stringify({ error: "Steam HTTP " + code });
+    if (!text || text.charAt(0) !== "{") return JSON.stringify({ error: "Steam nevrátil JSON" });
+    var json;
+    try { json = JSON.parse(text); } catch(pe) { return JSON.stringify({ error: "Špatná odpověď ze Steamu" }); }
+    if (!json || !json.success) return JSON.stringify({ error: "Steam: neúspěch" });
+    if (!json.assets) return JSON.stringify({ error: "Steam: žádné předměty" });
 
       var result = [];
       for (var id in json.assets) {
@@ -1358,7 +1364,7 @@
       }
       return JSON.stringify(result);
     } catch (e) {
-      return JSON.stringify({ error: e.message });
+      return JSON.stringify({ error: e.message || "Neočekávaná chyba" });
     }
   }
 
