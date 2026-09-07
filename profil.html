@@ -25,9 +25,9 @@ function getLevel(xp) {
 function getLevelBounds(lvl) {
   var min = 0;
   for (var i = 1; i < lvl; i++) {
-    min += Math.floor(100 * Math.pow(1.5, i - 1));
+    min += (i * 100);
   }
-  var max = min + Math.floor(100 * Math.pow(1.5, lvl - 1));
+  var max = min + (lvl * 100);
   return { min: min, max: max };
 }
 
