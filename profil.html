@@ -25,13 +25,13 @@ function getLevel(pts) {
   if (pts < 2500) return 6;
   if (pts < 5000) return 7;
   if (pts < 10000) return 8;
-  if (pts < 99999) return 9;
-  return 10;
+  if (pts >= 10000) return 9;
+  return 9;
 }
 
 function getLevelBounds(lvl) {
   var bounds = [0, 100, 300, 600, 1000, 1500, 2500, 5000, 10000, 99999];
-  if (lvl > 10) lvl = 10;
+  if (lvl >= 9) return { min: 10000, max: 99999 };
   return { min: bounds[lvl - 1], max: bounds[lvl] };
 }
 
