@@ -54,12 +54,12 @@ async function checkAdmin() {
     a.href = "admin.html";
     a.id = "adminLink";
     a.textContent = "Admin";
-    a.style.cssText = "position:fixed;bottom:20px;right:20px;color:#fff;background:#f80;padding:12px 28px;text-decoration:none;z-index:9999;font-size:16px;font-weight:bold;border-radius:8px;";
+    a.style.cssText = "position:fixed;bottom:15px;right:15px;color:#fff;background:#f80;padding:12px 30px;text-decoration:none;z-index:9999;font-size:16px;font-weight:bold;border-radius:8px;";
     document.body.appendChild(a);
   }
   var logout = document.createElement("button");
-  logout.textContent = "Odhlásit se";
-  logout.style.cssText = "position:fixed;bottom:20px;left:20px;color:#fff;background:rgba(100,100,100,0.7);border:none;padding:12px 24px;z-index:9999;font-size:14px;border-radius:8px;cursor:pointer;";
+  logout.textContent = "odhlásit se";
+  logout.style.cssText = "position:fixed;bottom:15px;left:15px;color:#fff;background:rgba(100,100,100,0.6);border:none;padding:10px 22px;z-index:9999;font-size:14px;border-radius:8px;cursor:pointer;";
   logout.onclick = function() { localStorage.removeItem("username"); window.location.href = "index.html"; };
   document.body.appendChild(logout);
 }

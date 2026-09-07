@@ -38,8 +38,8 @@ body::before {
 
 #topBar {
     position: fixed;
-    top: 20px;
-    right: 80px;
+    top: 25px;
+    right: 90px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -48,17 +48,17 @@ body::before {
 
 #profilePic {
     position: fixed;
-    top: 12px;
+    top: 15px;
     right: 15px;
-    width: 50px;
-    height: 50px;
+    width: 55px;
+    height: 55px;
     border-radius: 50%;
-    background: #111;
-    color: #00ff96;
+    background: #000;
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: bold;
     border: 2px solid #00ff96;
     cursor: pointer;
@@ -68,10 +68,10 @@ body::before {
 }
 
 #pointsDisplay {
-    background: rgba(0, 255, 150, 0.15);
+    background: rgba(0, 0, 0, 0.4);
     border: 2px solid #00ff96;
     border-radius: 25px;
-    padding: 8px 20px;
+    padding: 8px 22px;
     color: #fff;
     font-size: 16px;
     font-weight: bold;
@@ -79,12 +79,12 @@ body::before {
 
 #inventoryLink {
     position: fixed;
-    top: 70px;
+    top: 80px;
     right: 15px;
     background: transparent;
     border: 2px solid #00ff96;
     border-radius: 25px;
-    padding: 8px 20px;
+    padding: 8px 22px;
     color: #00ff96;
     text-decoration: none;
     font-size: 14px;
@@ -108,34 +108,37 @@ body::before {
 .box-link {
     display: block;
     text-decoration: none;
-    transition: transform 0.3s ease, filter 0.3s ease;
+    transition: transform 0.3s ease;
 }
 
 .box-link:hover {
     transform: scale(1.03);
-    filter: drop-shadow(0 0 20px rgba(180, 0, 255, 0.5));
 }
 
-.box-img {
+.box-link:first-child {
+    background: rgba(20, 10, 40, 0.85);
     border-radius: 20px;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
 }
 
 .box-link:first-child .box-img {
-    width: 500px;
-    height: 350px;
+    width: 320px;
+    height: 220px;
     object-fit: cover;
-    border: 3px solid rgba(180, 0, 255, 0.3);
+    display: block;
 }
 
 .box-link:last-child {
     background: linear-gradient(135deg, #c850ff, #a040e0);
     border-radius: 30px;
-    padding: 20px;
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .box-link:last-child .box-img {
-    width: 250px;
-    height: 250px;
+    width: 220px;
+    height: 180px;
     object-fit: contain;
 }
