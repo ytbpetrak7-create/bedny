@@ -109,63 +109,19 @@ body::before {
     transition: transform 0.3s ease, filter 0.3s ease;
 }
 
-.box-link:hover .box-card {
+.box-link:hover {
     transform: scale(1.05);
     filter: drop-shadow(0 0 20px rgba(180, 0, 255, 0.5));
 }
 
-.box-card {
-    width: 300px;
-    height: 250px;
-    border-radius: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    transition: transform 0.3s ease, filter 0.3s ease;
-}
-
-.box-card.box1 {
-    background: rgba(30, 20, 50, 0.8);
+.box-img {
+    width: 350px;
+    border-radius: 20px;
     border: 3px solid rgba(180, 0, 255, 0.3);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.box-card.box2 {
-    background: linear-gradient(135deg, #c850ff, #a040e0);
-    border: none;
-}
-
-.box-card .box-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border: none;
-}
-
-.box-card.box2 .box-img {
-    width: 75%;
-    height: 75%;
-    object-fit: contain;
-}
-
-#wheelLink {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: linear-gradient(135deg, #ffd700, #ffaa00);
-    color: #111;
-    padding: 12px 30px;
-    border-radius: 25px;
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: bold;
-    z-index: 999;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 0 15px rgba(255,215,0,0.3);
-}
-
-#wheelLink:hover {
-    transform: translateX(-50%) scale(1.05);
-    box-shadow: 0 0 25px rgba(255,215,0,0.5);
+.box-link:hover .box-img {
+    border-color: #b400ff;
+    box-shadow: 0 0 30px rgba(180, 0, 255, 0.4);
 }
