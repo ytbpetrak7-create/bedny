@@ -309,6 +309,14 @@ h1{font-size:24px;margin-bottom:10px;}
 <p id="itemname"></p>
 <div id="resultCard"><img id="resultImg" src=""></div>
 
+<div id="afterSlot" style="display:none;display:flex;justify-content:center;align-items:center;gap:20px;margin:15px 0;flex-wrap:wrap;">
+  <button onclick="openAgain()" style="padding:12px 28px;background:linear-gradient(135deg,#c850ff,#a040e0);border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">( další loot )</button>
+  <button onclick="openAgain()" style="padding:12px 28px;background:linear-gradient(135deg,#c850ff,#a040e0);border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;text-align:center;line-height:1.3;">ten nějaky<br>normální loot</button>
+  <div id="resultCardSide" style="display:none;width:160px;height:140px;background:linear-gradient(135deg,#c850ff,#a040e0);border-radius:20px;padding:15px;text-align:center;">
+    <img id="resultImgSide" src="" style="width:120px;height:100px;object-fit:contain;">
+  </div>
+</div>
+
 <div id="resultsContainer"></div>
 <div id="sellSelectedWrap" style="display:none;text-align:center;margin:10px 0;">
   <button id="sellSelectedBtn" onclick="sellSelectedItems()" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;"></button>
@@ -685,7 +693,8 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
     document.getElementById("itemActions").style.display = "none";
     document.getElementById("itemname").innerText = "";
     document.getElementById("itemname").style.color = "#ffd700";
-    document.getElementById("resultCard").style.display = "none";
+    document.getElementById("afterSlot").style.display = "none";
+    document.getElementById("resultCardSide").style.display = "none";
     document.getElementById("slotStrip").innerHTML = "";
     document.getElementById("multiSlotContainer").innerHTML = "";
     document.getElementById("slotWrap").style.display = "";
@@ -724,14 +733,17 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       document.getElementById("itemname").style.color = "#ffd700";
       lastItemPrice = itemPrice;
 
-      var rc = document.getElementById("resultCard");
-      var ri = document.getElementById("resultImg");
+      var afterSlot = document.getElementById("afterSlot");
+      afterSlot.style.display = "flex";
+
+      var rcs = document.getElementById("resultCardSide");
+      var ris = document.getElementById("resultImgSide");
       if (itemImg) {
         var imgSrc = fixImg(itemImg.startsWith("http") ? itemImg : "https://ytbpetrak7-create.github.io/bedny/" + itemImg);
-        ri.src = imgSrc;
-        rc.style.display = "block";
+        ris.src = imgSrc;
+        rcs.style.display = "block";
       } else {
-        rc.style.display = "none";
+        rcs.style.display = "none";
       }
       
       var inv = JSON.parse(await getInventory());
@@ -840,7 +852,8 @@ function openAgain() {
   document.getElementById("resultsContainer").innerHTML = "";
   document.getElementById("itemActions").style.display = "none";
   document.getElementById("itemname").innerText = "";
-  document.getElementById("resultCard").style.display = "none";
+  document.getElementById("afterSlot").style.display = "none";
+  document.getElementById("resultCardSide").style.display = "none";
   document.getElementById("slotStrip").innerHTML = "";
   document.getElementById("multiSlotContainer").innerHTML = "";
   document.getElementById("slotWrap").style.display = "";
