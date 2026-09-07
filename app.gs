@@ -150,6 +150,12 @@
       case "claimDailyReward":
         result = claimDailyReward(ss, params.username);
         break;
+      case "getClaimedLevels":
+        result = getClaimedLevels(ss, params.username);
+        break;
+      case "claimLevelReward":
+        result = claimLevelReward(ss, params.username, params.level);
+        break;
       case "getDailyStatus":
         result = getDailyStatus(ss, params.username);
         break;
@@ -1254,6 +1260,58 @@
     var nextReward = DAILY_REWARDS[nextDay] || 0.10;
 
     return JSON.stringify({ claimed: claimed, streak: streak, nextDay: nextDay, nextReward: nextReward });
+  }
+
+  function getClaimedLevels(ss, username) {
+    if (!username) return "[]";
+    var props = PropertiesService.getScriptProperties();
+    var raw = props.getProperty("claimedLevels_" + username) || "[]";
+    return raw;
+  }
+
+  function claimLevelReward(ss, username, level) {
+    if (!username || !level) return "MISSING";
+    level = Number(level);
+    var rewardsMap = { 2: 1, 5: 5, 10: 15, 15: 25, 20: 50, 25: 75, 30: 100, 40: 200, 50: 500, 75: 1000, 100: 5000 };
+    var reward = rewardsMap[level];
+    if (!reward) return "NO_REWARD";
+
+    var props = PropertiesService.getScriptProperties();
+    var claimedRaw = props.getProperty("claimedLevels_" + username) || "[]";
+    var claimed = [];
+    try { claimed = JSON.parse(claimedRaw); } catch(e) {}
+    if (claimed.indexOf(level) >= 0) return "ALREADY_CLAIMED";
+
+    var usersSheet = getSheet(ss, "Users");
+    var data = usersSheet.getDataRange().getValues();
+    var userRow = -1;
+    var xp = 0;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+        userRow = i + 1;
+        xp = Number(data[i][9]) || 0;
+        break;
+      }
+    }
+    if (userRow === -1) return "USER_NOT_FOUND";
+
+    var lvl = 1;
+    var minCheck = 0;
+    while (lvl < 100) {
+      var maxCheck = minCheck + (lvl * 250);
+      if (xp < maxCheck) break;
+      minCheck = maxCheck;
+      lvl++;
+    }
+    if (lvl < level) return "LEVEL_NOT_REACHED";
+
+    var pts = Number(data[userRow - 1][2]) || 0;
+    usersSheet.getRange(userRow, 3).setValue(pts + reward);
+
+    claimed.push(level);
+    props.setProperty("claimedLevels_" + username, JSON.stringify(claimed));
+
+    return "OK";
   }
 
   function getUsernameBySteamId(ss, steamId) {

@@ -64,6 +64,8 @@ async function loadProfile() {
   html += '<div style="width:' + progress + '%;background:#00ff96;height:20px;border-radius:10px;"></div>';
   html += '</div>';
   html += '<p style="font-size:14px;color:#aaa;">' + xp + ' / ' + bounds.max + ' XP na další level</p>';
+  html += '<button onclick="showLevelRewards(' + lvl + ')" style="padding:8px 20px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:13px;font-weight:bold;cursor:pointer;margin-bottom:10px;">Odměny za levely</button>';
+  html += '<div id="levelRewards" style="display:none;"></div>';
   html += '<hr style="border-color:#444;margin:20px 0;">';
   html += '<p style="font-size:16px;color:#aaa;">Steam Trade Link</p>';
   html += '<p style="font-size:12px;color:#666;">Najdeš ho na <a href="https://steamcommunity.com/profiles/76561198785128182/tradeoffers/privacy" target="_blank" style="color:#00ff96;">této stránce</a> (dole)</p>';
@@ -221,6 +223,65 @@ async function claimDaily() {
   } catch(e) {
     alert("Chyba: " + res);
     loadDailyStatus();
+  }
+}
+
+var levelRewardsDef = [
+  { level: 2, reward: 1 },
+  { level: 5, reward: 5 },
+  { level: 10, reward: 15 },
+  { level: 15, reward: 25 },
+  { level: 20, reward: 50 },
+  { level: 25, reward: 75 },
+  { level: 30, reward: 100 },
+  { level: 40, reward: 200 },
+  { level: 50, reward: 500 },
+  { level: 75, reward: 1000 },
+  { level: 100, reward: 5000 }
+];
+
+async function showLevelRewards(currentLvl) {
+  var el = document.getElementById("levelRewards");
+  if (!el) return;
+  if (el.style.display === "none") {
+    var claimedRes = await callScript("getClaimedLevels", { username: getCurrentUser() });
+    var claimed = [];
+    try { claimed = JSON.parse(claimedRes); } catch(e) {}
+    var html = '<div style="margin:10px 0;padding:10px;border:1px solid #444;border-radius:10px;max-height:300px;overflow-y:auto;">';
+    html += '<p style="font-size:14px;color:#ffd700;font-weight:bold;margin-bottom:10px;">Odměny za levely:</p>';
+    for (var i = 0; i < levelRewardsDef.length; i++) {
+      var r = levelRewardsDef[i];
+      var unlocked = currentLvl >= r.level;
+      var isClaimed = claimed.indexOf(r.level) >= 0;
+      var bg = isClaimed ? "#00ff96" : unlocked ? "#ffa500" : "#333";
+      var col = isClaimed ? "#1a1a2e" : unlocked ? "#1a1a2e" : "#666";
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin:4px 0;background:' + bg + ';border-radius:8px;color:' + col + ';">';
+      html += '<span>Level ' + r.level + '</span>';
+      if (isClaimed) {
+        html += '<span style="font-weight:bold;">Vyzvednuto ✓</span>';
+      } else if (unlocked) {
+        html += '<button onclick="claimLevelReward(' + r.level + ')" style="padding:4px 12px;background:#1a1a2e;color:#ffd700;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">' + r.reward + ' Kč</button>';
+      } else {
+        html += '<span>' + r.reward + ' Kč</span>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
+
+async function claimLevelReward(level) {
+  var res = await callScript("claimLevelReward", { username: getCurrentUser(), level: level });
+  if (res === "OK") {
+    alert("Odměna za level " + level + " vyzvednuta!");
+    createPointsDisplay();
+    loadProfile();
+  } else {
+    alert("Chyba: " + res);
   }
 }
 </script>
