@@ -39,10 +39,7 @@ body::before {
 #topBar {
     position: fixed;
     top: 25px;
-    right: 90px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    right: 85px;
     z-index: 1000;
 }
 
@@ -99,7 +96,7 @@ body::before {
 
 .boxes {
     display: flex;
-    gap: 40px;
+    gap: 30px;
     z-index: 1;
     align-items: center;
     justify-content: center;
@@ -116,29 +113,48 @@ body::before {
 }
 
 .box-link:first-child {
-    background: rgba(20, 10, 40, 0.85);
-    border-radius: 20px;
+    border-radius: 15px;
     overflow: hidden;
 }
 
 .box-link:first-child .box-img {
-    width: 320px;
-    height: 220px;
-    object-fit: cover;
+    width: 300px;
     display: block;
 }
 
 .box-link:last-child {
-    background: linear-gradient(135deg, #c850ff, #a040e0);
-    border-radius: 30px;
-    padding: 25px;
+    background: linear-gradient(135deg, #d060ff, #b840f0);
+    border-radius: 35px;
+    padding: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .box-link:last-child .box-img {
-    width: 220px;
-    height: 180px;
+    width: 200px;
+    height: 160px;
     object-fit: contain;
+}
+
+#wheelLink {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    color: #111;
+    padding: 12px 30px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 999;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 15px rgba(255,215,0,0.3);
+}
+
+#wheelLink:hover {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 0 25px rgba(255,215,0,0.5);
 }
