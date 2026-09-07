@@ -38,10 +38,7 @@ async function loadProfilePic() {
   var pic = document.getElementById("profilePic");
   if (!pic) return;
 
-  if (data.profilePic) {
-    pic.style.background = "url('" + data.profilePic + "') center/cover";
-    pic.textContent = "";
-  } else if (data.steamId) {
+  if (data.steamId) {
     try {
       var avatarRes = await callScript("getSteamAvatar", { username: getCurrentUser() });
       var avatarData = JSON.parse(avatarRes);
@@ -51,7 +48,11 @@ async function loadProfilePic() {
         return;
       }
     } catch(e) {}
-    pic.textContent = data.username.charAt(0).toUpperCase();
+  }
+
+  if (data.profilePic) {
+    pic.style.background = "url('" + data.profilePic + "') center/cover";
+    pic.textContent = "";
   } else if (data.username) {
     pic.textContent = data.username.charAt(0).toUpperCase();
   }
