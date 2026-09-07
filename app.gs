@@ -84,6 +84,9 @@
       case "getProfile":
         result = getProfile(ss, params.username);
         break;
+      case "getSteamAvatar":
+        result = getSteamAvatar(ss, params.username);
+        break;
       case "saveProfilePic":
         result = saveProfilePic(ss, params.username, params.url);
         break;
@@ -629,6 +632,30 @@
     }
     
     return "NOT_FOUND";
+  }
+
+  function getSteamAvatar(ss, username) {
+    if (!username) return JSON.stringify({ avatar: "" });
+    var usersSheet = getSheet(ss, "Users");
+    var data = usersSheet.getDataRange().getValues();
+    var steamId = null;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+        steamId = data[i][5] ? data[i][5].toString().trim() : null;
+        break;
+      }
+    }
+    if (!steamId) return JSON.stringify({ avatar: "" });
+    try {
+      var url = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + STEAM_API_KEY + "&steamids=" + steamId;
+      var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      var json = JSON.parse(response.getContentText());
+      if (json && json.response && json.response.players && json.response.players.length > 0) {
+        var avatar = json.response.players[0].avatarfull || json.response.players[0].avatarmedium || "";
+        return JSON.stringify({ avatar: avatar });
+      }
+    } catch (e) {}
+    return JSON.stringify({ avatar: "" });
   }
 
   function saveProfilePic(ss, username, url) {

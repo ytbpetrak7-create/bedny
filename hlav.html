@@ -35,15 +35,25 @@ async function loadProfilePic() {
   var res = await getProfile();
   if (res === "NOT_FOUND") return;
   var data = JSON.parse(res);
+  var pic = document.getElementById("profilePic");
+  if (!pic) return;
+
   if (data.profilePic) {
-    var pic = document.getElementById("profilePic");
-    if (pic) {
-      pic.style.background = "url('" + data.profilePic + "') center/cover";
-      pic.textContent = "";
-    }
+    pic.style.background = "url('" + data.profilePic + "') center/cover";
+    pic.textContent = "";
+  } else if (data.steamId) {
+    try {
+      var avatarRes = await callScript("getSteamAvatar", { username: getCurrentUser() });
+      var avatarData = JSON.parse(avatarRes);
+      if (avatarData.avatar) {
+        pic.style.background = "url('" + avatarData.avatar + "') center/cover";
+        pic.textContent = "";
+        return;
+      }
+    } catch(e) {}
+    pic.textContent = data.username.charAt(0).toUpperCase();
   } else if (data.username) {
-    var pic = document.getElementById("profilePic");
-    if (pic) pic.textContent = data.username.charAt(0).toUpperCase();
+    pic.textContent = data.username.charAt(0).toUpperCase();
   }
 }
 
