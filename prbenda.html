@@ -7,12 +7,13 @@ body{padding:40px;padding-top:20px;}
 h1{font-size:24px;margin-bottom:10px;}
 .slot-wrap {
   position:relative;
-  width:700px;
-  height:150px;
+  width:90%;
+  max-width:900px;
+  height:180px;
   margin:20px auto;
   overflow:hidden;
-  border-radius:12px;
-  background:rgba(0,0,0,0.5);
+  border-radius:16px;
+  background:rgba(0,0,0,0.8);
   border:2px solid rgba(255,255,255,0.08);
   box-shadow:inset 0 0 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,0,0,0.4);
 }
@@ -152,8 +153,12 @@ h1{font-size:24px;margin-bottom:10px;}
   display:flex;
   gap:8px;
   overflow-x:auto;
-  padding:10px 0;
-  margin:10px 0;
+  padding:15px 10px;
+  margin:20px auto;
+  max-width:90%;
+  background:rgba(0,0,0,0.3);
+  border-radius:16px;
+  border:2px solid rgba(255,255,255,0.08);
 }
 .skin-strip::-webkit-scrollbar { height:6px; }
 .skin-strip::-webkit-scrollbar-track { background:rgba(255,255,255,0.05); border-radius:3px; }
@@ -196,6 +201,20 @@ h1{font-size:24px;margin-bottom:10px;}
   text-align:center;
   margin:10px 0;
   min-height:30px;
+}
+#resultCard {
+  display:none;
+  width:200px;
+  margin:10px auto;
+  background:linear-gradient(135deg,#c850ff,#a040e0);
+  border-radius:20px;
+  padding:20px;
+  text-align:center;
+}
+#resultCard img {
+  width:140px;
+  height:120px;
+  object-fit:contain;
 }
 #boxCounter {
   color:#aaa;
@@ -272,13 +291,12 @@ h1{font-size:24px;margin-bottom:10px;}
     <option value="4">4</option>
     <option value="5">5</option>
   </select>
-</div>
-<div class="open-btn-wrap">
-  <button type="button" id="openBoxButton">Otevřít</button>
+  <button type="button" id="openBoxButton" style="margin-left:10px;padding:10px 30px;font-size:16px;font-weight:bold;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:12px;color:#1a1a2e;cursor:pointer;">Otevřít</button>
 </div>
 
 <div id="progressBar"><div id="progressFill"></div></div>
 <p id="boxCounter"></p>
+
 <div id="multiSlotContainer"></div>
 <div class="slot-wrap" id="slotWrap">
   <div class="slot-strip" id="slotStrip"></div>
@@ -286,6 +304,7 @@ h1{font-size:24px;margin-bottom:10px;}
   <div class="slot-flash" id="slotFlash"></div>
 </div>
 <p id="itemname"></p>
+<div id="resultCard"><img id="resultImg" src=""></div>
 
 <div id="resultsContainer"></div>
 <div id="sellSelectedWrap" style="display:none;text-align:center;margin:10px 0;">
@@ -663,6 +682,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
     document.getElementById("itemActions").style.display = "none";
     document.getElementById("itemname").innerText = "";
     document.getElementById("itemname").style.color = "#ffd700";
+    document.getElementById("resultCard").style.display = "none";
     document.getElementById("slotStrip").innerHTML = "";
     document.getElementById("multiSlotContainer").innerHTML = "";
     document.getElementById("slotWrap").style.display = "";
@@ -700,6 +720,16 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       document.getElementById("itemname").innerText = itemName;
       document.getElementById("itemname").style.color = "#ffd700";
       lastItemPrice = itemPrice;
+
+      var rc = document.getElementById("resultCard");
+      var ri = document.getElementById("resultImg");
+      if (itemImg) {
+        var imgSrc = fixImg(itemImg.startsWith("http") ? itemImg : "https://ytbpetrak7-create.github.io/bedny/" + itemImg);
+        ri.src = imgSrc;
+        rc.style.display = "block";
+      } else {
+        rc.style.display = "none";
+      }
       
       var inv = JSON.parse(await getInventory());
       var found = inv.filter(function(x) { return x.name === itemName; });
@@ -807,6 +837,7 @@ function openAgain() {
   document.getElementById("resultsContainer").innerHTML = "";
   document.getElementById("itemActions").style.display = "none";
   document.getElementById("itemname").innerText = "";
+  document.getElementById("resultCard").style.display = "none";
   document.getElementById("slotStrip").innerHTML = "";
   document.getElementById("multiSlotContainer").innerHTML = "";
   document.getElementById("slotWrap").style.display = "";
