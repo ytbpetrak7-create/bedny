@@ -16,23 +16,19 @@ if (!getCurrentUser()) {
   loadProfile();
 }
 
-function getLevel(pts) {
-  if (pts < 100) return 1;
-  if (pts < 300) return 2;
-  if (pts < 600) return 3;
-  if (pts < 1000) return 4;
-  if (pts < 1500) return 5;
-  if (pts < 2500) return 6;
-  if (pts < 5000) return 7;
-  if (pts < 10000) return 8;
-  if (pts >= 10000) return 9;
-  return 9;
+function getLevel(xp) {
+  var lvl = 1;
+  while (lvl < 100 && xp >= getLevelBounds(lvl + 1).min) { lvl++; }
+  return lvl;
 }
 
 function getLevelBounds(lvl) {
-  var bounds = [0, 100, 300, 600, 1000, 1500, 2500, 5000, 10000, 99999];
-  if (lvl >= 9) return { min: 10000, max: 99999 };
-  return { min: bounds[lvl - 1], max: bounds[lvl] };
+  var min = 0;
+  for (var i = 1; i < lvl; i++) {
+    min += Math.floor(100 * Math.pow(1.5, i - 1));
+  }
+  var max = min + Math.floor(100 * Math.pow(1.5, lvl - 1));
+  return { min: min, max: max };
 }
 
 async function changePic() {
