@@ -309,9 +309,11 @@ h1{font-size:24px;margin-bottom:10px;}
 <p id="itemname"></p>
 <div id="resultCard"><img id="resultImg" src=""></div>
 
-<div id="afterSlot" style="display:none;display:flex;justify-content:center;align-items:center;gap:20px;margin:15px 0;flex-wrap:wrap;">
-  <button onclick="openAgain()" style="padding:12px 28px;background:linear-gradient(135deg,#c850ff,#a040e0);border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">( další loot )</button>
-  <button onclick="openAgain()" style="padding:12px 28px;background:linear-gradient(135deg,#c850ff,#a040e0);border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;text-align:center;line-height:1.3;">ten nějaky<br>normální loot</button>
+<div id="afterSlot" style="display:none;justify-content:center;align-items:center;gap:20px;margin:15px 0;flex-wrap:wrap;">
+  <div style="display:flex;align-items:center;gap:15px;">
+    <button onclick="openAgain()" style="padding:12px 28px;background:linear-gradient(135deg,#c850ff,#a040e0);border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">( další loot )</button>
+    <button onclick="openAgain()" style="padding:12px 28px;background:linear-gradient(135deg,#c850ff,#a040e0);border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;text-align:center;line-height:1.3;">ten nějaky<br>normální loot</button>
+  </div>
   <div id="resultCardSide" style="display:none;width:160px;height:140px;background:linear-gradient(135deg,#c850ff,#a040e0);border-radius:20px;padding:15px;text-align:center;">
     <img id="resultImgSide" src="" style="width:120px;height:100px;object-fit:contain;">
   </div>
