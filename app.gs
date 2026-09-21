@@ -3,6 +3,7 @@
   const ADMIN_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=1724748264&token=DhhVwMmS";
   const BOT_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=724294414&token=GYHge3_G";
   const PRICEEMPIRE_API = "https://api.pricempire.com/v4/paid/items/prices";
+  const CSFLOAT_API = "https://csfloat.com/api/v1/listings";
 
   function doGet(e) {
     return doPost(e);
@@ -295,6 +296,7 @@
       if (params.apiKey) propsPE.setProperty("priceEmpireApiKey", params.apiKey);
       if (params.source) propsPE.setProperty("priceEmpireSource", params.source);
       if (params.currency) propsPE.setProperty("priceEmpireCurrency", params.currency);
+      if (params.csfloatKey) propsPE.setProperty("csfloatApiKey", params.csfloatKey);
       result = "OK";
       break;
     case "getPriceEmpireConfig":
@@ -302,7 +304,8 @@
       result = JSON.stringify({
         apiKey: propsPE2.getProperty("priceEmpireApiKey") || "",
         source: propsPE2.getProperty("priceEmpireSource") || "buff163",
-        currency: propsPE2.getProperty("priceEmpireCurrency") || "CZK"
+        currency: propsPE2.getProperty("priceEmpireCurrency") || "CZK",
+        csfloatKey: propsPE2.getProperty("csfloatApiKey") || ""
       });
       break;
     case "updatePricesFromPriceEmpire":
@@ -1665,9 +1668,6 @@
 
   function updatePricesFromPriceEmpire(ss, source, currency) {
     var props = PropertiesService.getScriptProperties();
-    var apiKey = props.getProperty("priceEmpireApiKey");
-    if (!apiKey) return JSON.stringify({ error: "API klíč není nastaven" });
-
     source = source || props.getProperty("priceEmpireSource") || "buff163";
     currency = currency || props.getProperty("priceEmpireCurrency") || "CZK";
 
@@ -1694,67 +1694,106 @@
     var names = Object.keys(allNames);
     if (names.length === 0) return JSON.stringify({ error: "Žádné skiny v tabulkách" });
 
+    if (source === "csfloat") {
+      return updatePricesFromCSFloat(ss, names, allNames, currency);
+    }
+
+    var apiKey = props.getProperty("priceEmpireApiKey");
+    if (!apiKey) return JSON.stringify({ error: "API klíč není nastaven" });
+
     var updated = 0;
     var errors = 0;
     var notFound = [];
-    var batchSize = 100;
 
-    for (var b = 0; b < names.length; b += batchSize) {
-      var batch = names.slice(b, b + batchSize);
-      var url = PRICEEMPIRE_API + "?app_id=730&sources=" + source + "&currency=" + currency + "&type=skin";
+    var url = PRICEEMPIRE_API + "?app_id=730&sources=" + source + "&currency=" + currency + "&type=skin";
 
-      try {
-        var response = UrlFetchApp.fetch(url, {
-          muteHttpExceptions: true,
-          headers: { "Authorization": "Bearer " + apiKey }
-        });
-        var code = response.getResponseCode();
-        if (code !== 200) {
-          errors++;
-          continue;
-        }
+    try {
+      var response = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true,
+        headers: { "Authorization": "Bearer " + apiKey }
+      });
+      var code = response.getResponseCode();
+      if (code !== 200) return JSON.stringify({ error: "API chyba: HTTP " + code });
 
-        var items = JSON.parse(response.getContentText());
-        if (!Array.isArray(items)) continue;
+      var items = JSON.parse(response.getContentText());
+      if (!Array.isArray(items)) return JSON.stringify({ error: "Neočekávaná odpověď" });
 
-        var priceMap = {};
-        for (var j = 0; j < items.length; j++) {
-          var item = items[j];
-          var mName = item.market_hash_name;
-          if (!mName) continue;
-
-          var prices = item.prices || [];
-          for (var p = 0; p < prices.length; p++) {
-            if (prices[p].provider_key === source && prices[p].price !== null && prices[p].price > 0) {
-              priceMap[mName.toLowerCase()] = Math.round(prices[p].price);
-              break;
-            }
+      var priceMap = {};
+      for (var j = 0; j < items.length; j++) {
+        var item = items[j];
+        var mName = item.market_hash_name;
+        if (!mName) continue;
+        var prices = item.prices || [];
+        for (var p = 0; p < prices.length; p++) {
+          if (prices[p].provider_key === source && prices[p].price !== null && prices[p].price > 0) {
+            priceMap[mName.toLowerCase()] = Math.round(prices[p].price);
+            break;
           }
         }
+      }
 
-        for (var n = 0; n < batch.length; n++) {
-          var skinName = batch[n];
-          var price = priceMap[skinName.toLowerCase()];
-          var info = allNames[skinName];
-
-          if (price !== undefined && price > 0) {
-            var sheet = ss.getSheetByName(info.sheet);
-            if (sheet) {
-              sheet.getRange(info.row, info.col).setValue(price);
-              updated++;
-            }
-          } else {
-            notFound.push(skinName);
-          }
+      for (var n = 0; n < names.length; n++) {
+        var skinName = names[n];
+        var price = priceMap[skinName.toLowerCase()];
+        var info = allNames[skinName];
+        if (price !== undefined && price > 0) {
+          var sheet = ss.getSheetByName(info.sheet);
+          if (sheet) { sheet.getRange(info.row, info.col).setValue(price); updated++; }
+        } else {
+          notFound.push(skinName);
         }
-      } catch (e) {
-        errors++;
       }
-
-      if (b + batchSize < names.length) {
-        Utilities.sleep(1000);
-      }
+    } catch (e) {
+      return JSON.stringify({ error: e.message });
     }
 
     return JSON.stringify({ updated: updated, errors: errors, notFound: notFound, total: names.length, source: source, currency: currency });
+  }
+
+  function updatePricesFromCSFloat(ss, names, allNames, currency) {
+    var props = PropertiesService.getScriptProperties();
+    var csfloatKey = props.getProperty("csfloatApiKey");
+    if (!csfloatKey) return JSON.stringify({ error: "CSFloat API klíč není nastaven" });
+
+    var updated = 0;
+    var errors = 0;
+    var notFound = [];
+    var rates = { "CZK": 23.5, "EUR": 0.92, "USD": 1 };
+
+    for (var n = 0; n < names.length; n++) {
+      var skinName = names[n];
+      var info = allNames[skinName];
+      try {
+        var encoded = encodeURIComponent(skinName);
+        var url = CSFLOAT_API + "?market_hash_name=" + encoded + "&sort_by=lowest_price&limit=1";
+        var response = UrlFetchApp.fetch(url, {
+          muteHttpExceptions: true,
+          headers: { "Authorization": csfloatKey }
+        });
+        var code = response.getResponseCode();
+        if (code === 429) {
+          Utilities.sleep(3000);
+          n--;
+          continue;
+        }
+        if (code !== 200) { errors++; continue; }
+
+        var data = JSON.parse(response.getContentText());
+        if (!data || !data.length || !data[0].price) { notFound.push(skinName); continue; }
+
+        var priceCents = data[0].price;
+        var priceUSD = priceCents / 100;
+        var rate = rates[currency] || 23.5;
+        var finalPrice = Math.round(priceUSD * rate);
+
+        var sheet = ss.getSheetByName(info.sheet);
+        if (sheet) { sheet.getRange(info.row, info.col).setValue(finalPrice); updated++; }
+
+        Utilities.sleep(500);
+      } catch (e) {
+        errors++;
+      }
+    }
+
+    return JSON.stringify({ updated: updated, errors: errors, notFound: notFound, total: names.length, source: "csfloat", currency: currency });
   }

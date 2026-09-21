@@ -142,7 +142,10 @@ async function loadAll() {
   html += '<option value="csmoney">CS.MONEY</option>';
   html += '<option value="dmarket">DMarket</option>';
   html += '<option value="youpin">YouPin898</option>';
+  html += '<option value="csfloat">CSFloat (vlastní API)</option>';
   html += '</select>';
+  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">CSFloat API klíč (pokud vybereš CSFloat)</p>';
+  html += '<input id="peCsfloatKey" type="password" placeholder="CSFloat API key..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
   html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Měna</p>';
   html += '<select id="peCurrency" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
   html += '<option value="CZK">CZK (Kč)</option>';
@@ -202,6 +205,7 @@ async function loadPriceEmpireConfig() {
   if (cfg.apiKey) document.getElementById("peApiKey").value = cfg.apiKey;
   if (cfg.source) document.getElementById("peSource").value = cfg.source;
   if (cfg.currency) document.getElementById("peCurrency").value = cfg.currency;
+  if (cfg.csfloatKey) document.getElementById("peCsfloatKey").value = cfg.csfloatKey;
 }
 
 async function savePriceEmpire() {
@@ -209,8 +213,10 @@ async function savePriceEmpire() {
   var apiKey = document.getElementById("peApiKey").value.trim();
   var source = document.getElementById("peSource").value;
   var currency = document.getElementById("peCurrency").value;
-  if (!apiKey) { msg.textContent = "Zadej API klíč!"; msg.style.color = "#f80"; return; }
-  await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency });
+  var csfloatKey = document.getElementById("peCsfloatKey").value.trim();
+  if (source !== "csfloat" && !apiKey) { msg.textContent = "Zadej API klíč!"; msg.style.color = "#f80"; return; }
+  if (source === "csfloat" && !csfloatKey) { msg.textContent = "Zadej CSFloat API klíč!"; msg.style.color = "#f80"; return; }
+  await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency, csfloatKey: csfloatKey });
   msg.textContent = "Uloženo!"; msg.style.color = "#00ff96";
 }
 
