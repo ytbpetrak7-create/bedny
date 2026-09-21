@@ -128,6 +128,32 @@ async function loadAll() {
   html += '<br><button class="btn-app" onclick="saveWheel()" style="margin-top:10px;">Uložit kolo</button>';
   html += ' <span id="wheelMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '</div>';
+
+  html += "<h2>PriceEmpire - nastavení cen</h2>";
+  html += '<div class="req-item">';
+  html += '<p style="color:#fff;font-weight:bold;">API klíč (z pricempire.com/api)</p>';
+  html += '<input id="peApiKey" type="password" placeholder="Bearer token..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
+  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Zdroj cen</p>';
+  html += '<select id="peSource" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
+  html += '<option value="buff163">Buff163 (CNY)</option>';
+  html += '<option value="steam">Steam Market</option>';
+  html += '<option value="csfloat">CSFloat</option>';
+  html += '<option value="skinport">Skinport</option>';
+  html += '<option value="csmoney">CS.MONEY</option>';
+  html += '<option value="dmarket">DMarket</option>';
+  html += '<option value="youpin">YouPin898</option>';
+  html += '</select>';
+  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Měna</p>';
+  html += '<select id="peCurrency" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
+  html += '<option value="CZK">CZK (Kč)</option>';
+  html += '<option value="USD">USD ($)</option>';
+  html += '<option value="EUR">EUR (€)</option>';
+  html += '</select>';
+  html += '<br><button class="btn-app" onclick="savePriceEmpire()" style="margin-top:10px;">Uložit nastavení</button>';
+  html += ' <span id="peMsg" style="color:#00ff96;font-size:13px;"></span>';
+  html += '<br><br><button class="btn-app" onclick="updatePrices()" style="background:#ffd700;color:#1a1a2e;">Aktualizovat ceny ze všech tabulek</button>';
+  html += ' <span id="peUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
+  html += '</div>';
   
   div.innerHTML = html;
 
@@ -137,6 +163,8 @@ async function loadAll() {
     if (cfg.requiredPic) document.getElementById("wheelPic").value = cfg.requiredPic;
     if (cfg.prizes && cfg.prizes.length) document.getElementById("wheelPrizes").value = JSON.stringify(cfg.prizes, null, 2);
   } catch(e) {}
+
+  await loadPriceEmpireConfig();
 }
 
 async function approve(row) {
@@ -166,6 +194,38 @@ async function saveWheel() {
   } catch(e) {
     msg.textContent = "Chyba: " + e.message;
     msg.style.color = "#f80";
+  }
+}
+
+async function loadPriceEmpireConfig() {
+  var cfg = JSON.parse(await callScript("getPriceEmpireConfig"));
+  if (cfg.apiKey) document.getElementById("peApiKey").value = cfg.apiKey;
+  if (cfg.source) document.getElementById("peSource").value = cfg.source;
+  if (cfg.currency) document.getElementById("peCurrency").value = cfg.currency;
+}
+
+async function savePriceEmpire() {
+  var msg = document.getElementById("peMsg");
+  var apiKey = document.getElementById("peApiKey").value.trim();
+  var source = document.getElementById("peSource").value;
+  var currency = document.getElementById("peCurrency").value;
+  if (!apiKey) { msg.textContent = "Zadej API klíč!"; msg.style.color = "#f80"; return; }
+  await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency });
+  msg.textContent = "Uloženo!"; msg.style.color = "#00ff96";
+}
+
+async function updatePrices() {
+  var msg = document.getElementById("peUpdateMsg");
+  msg.textContent = "Stahuji ceny..."; msg.style.color = "#ffd700";
+  var source = document.getElementById("peSource").value;
+  var currency = document.getElementById("peCurrency").value;
+  var res = JSON.parse(await callScript("updatePricesFromPriceEmpire", { source: source, currency: currency }));
+  if (res.error) {
+    msg.textContent = "Chyba: " + res.error;
+    msg.style.color = "#f80";
+  } else {
+    msg.textContent = "Hotovo! Aktualizováno: " + res.updated + "/" + res.total + " | Chyb: " + res.errors + " | Nenalezeno: " + res.notFound.length;
+    msg.style.color = res.updated > 0 ? "#00ff96" : "#f80";
   }
 }
 </script>

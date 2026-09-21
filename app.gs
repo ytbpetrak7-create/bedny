@@ -2,6 +2,7 @@
   const STEAM_API_KEY = "9BF03DB2AF38585766A60108DE4F66A1";
   const ADMIN_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=1724748264&token=DhhVwMmS";
   const BOT_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=724294414&token=GYHge3_G";
+  const PRICEEMPIRE_API = "https://api.pricempire.com/v4/paid/items/prices";
 
   function doGet(e) {
     return doPost(e);
@@ -288,6 +289,24 @@
       break;
     case "spinWheel":
       result = spinWheel(ss, params.username, parseInt(params.prizeIndex) || 0);
+      break;
+    case "setPriceEmpireConfig":
+      var propsPE = PropertiesService.getScriptProperties();
+      if (params.apiKey) propsPE.setProperty("priceEmpireApiKey", params.apiKey);
+      if (params.source) propsPE.setProperty("priceEmpireSource", params.source);
+      if (params.currency) propsPE.setProperty("priceEmpireCurrency", params.currency);
+      result = "OK";
+      break;
+    case "getPriceEmpireConfig":
+      var propsPE2 = PropertiesService.getScriptProperties();
+      result = JSON.stringify({
+        apiKey: propsPE2.getProperty("priceEmpireApiKey") || "",
+        source: propsPE2.getProperty("priceEmpireSource") || "buff163",
+        currency: propsPE2.getProperty("priceEmpireCurrency") || "CZK"
+      });
+      break;
+    case "updatePricesFromPriceEmpire":
+      result = updatePricesFromPriceEmpire(ss, params.source, params.currency);
       break;
   }
     
@@ -1642,4 +1661,100 @@
     props.setProperty("wheelSpin_" + username, todayKey);
 
     return JSON.stringify({ ok: true, amount: amount, label: prize.label || "" });
+  }
+
+  function updatePricesFromPriceEmpire(ss, source, currency) {
+    var props = PropertiesService.getScriptProperties();
+    var apiKey = props.getProperty("priceEmpireApiKey");
+    if (!apiKey) return JSON.stringify({ error: "API klíč není nastaven" });
+
+    source = source || props.getProperty("priceEmpireSource") || "buff163";
+    currency = currency || props.getProperty("priceEmpireCurrency") || "CZK";
+
+    var allNames = {};
+
+    var boxes1 = getSheet(ss, "Boxes1");
+    var b1Data = boxes1.getDataRange().getValues();
+    for (var i = 1; i < b1Data.length; i++) {
+      if (b1Data[i][2]) allNames[b1Data[i][2].toString().trim()] = { sheet: "Boxes1", row: i + 1, col: 4 };
+    }
+
+    var boxes2 = getSheet(ss, "Boxes2");
+    var b2Data = boxes2.getDataRange().getValues();
+    for (var i = 1; i < b2Data.length; i++) {
+      if (b2Data[i][2]) allNames[b2Data[i][2].toString().trim()] = { sheet: "Boxes2", row: i + 1, col: 4 };
+    }
+
+    var depSheet = getSheet(ss, "DepositSkins");
+    var depData = depSheet.getDataRange().getValues();
+    for (var i = 1; i < depData.length; i++) {
+      if (depData[i][0]) allNames[depData[i][0].toString().trim()] = { sheet: "DepositSkins", row: i + 1, col: 2 };
+    }
+
+    var names = Object.keys(allNames);
+    if (names.length === 0) return JSON.stringify({ error: "Žádné skiny v tabulkách" });
+
+    var updated = 0;
+    var errors = 0;
+    var notFound = [];
+    var batchSize = 100;
+
+    for (var b = 0; b < names.length; b += batchSize) {
+      var batch = names.slice(b, b + batchSize);
+      var url = PRICEEMPIRE_API + "?app_id=730&sources=" + source + "&currency=" + currency + "&type=skin";
+
+      try {
+        var response = UrlFetchApp.fetch(url, {
+          muteHttpExceptions: true,
+          headers: { "Authorization": "Bearer " + apiKey }
+        });
+        var code = response.getResponseCode();
+        if (code !== 200) {
+          errors++;
+          continue;
+        }
+
+        var items = JSON.parse(response.getContentText());
+        if (!Array.isArray(items)) continue;
+
+        var priceMap = {};
+        for (var j = 0; j < items.length; j++) {
+          var item = items[j];
+          var mName = item.market_hash_name;
+          if (!mName) continue;
+
+          var prices = item.prices || [];
+          for (var p = 0; p < prices.length; p++) {
+            if (prices[p].provider_key === source && prices[p].price !== null && prices[p].price > 0) {
+              priceMap[mName.toLowerCase()] = Math.round(prices[p].price);
+              break;
+            }
+          }
+        }
+
+        for (var n = 0; n < batch.length; n++) {
+          var skinName = batch[n];
+          var price = priceMap[skinName.toLowerCase()];
+          var info = allNames[skinName];
+
+          if (price !== undefined && price > 0) {
+            var sheet = ss.getSheetByName(info.sheet);
+            if (sheet) {
+              sheet.getRange(info.row, info.col).setValue(price);
+              updated++;
+            }
+          } else {
+            notFound.push(skinName);
+          }
+        }
+      } catch (e) {
+        errors++;
+      }
+
+      if (b + batchSize < names.length) {
+        Utilities.sleep(1000);
+      }
+    }
+
+    return JSON.stringify({ updated: updated, errors: errors, notFound: notFound, total: names.length, source: source, currency: currency });
   }
