@@ -4,6 +4,7 @@
   const BOT_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=724294414&token=GYHge3_G";
   const PRICEEMPIRE_API = "https://api.pricempire.com/v4/paid/items/prices";
   const CSFLOAT_API = "https://csfloat.com/api/v1/listings";
+  const DEFAULT_PROFIT_MULTIPLIER = 1.0;
 
   function doGet(e) {
     return doPost(e);
@@ -297,6 +298,7 @@
       if (params.source) propsPE.setProperty("priceEmpireSource", params.source);
       if (params.currency) propsPE.setProperty("priceEmpireCurrency", params.currency);
       if (params.csfloatKey) propsPE.setProperty("csfloatApiKey", params.csfloatKey);
+      if (params.profitMultiplier) propsPE.setProperty("priceEmpireProfitMultiplier", params.profitMultiplier);
       result = "OK";
       break;
     case "getPriceEmpireConfig":
@@ -305,7 +307,8 @@
         apiKey: propsPE2.getProperty("priceEmpireApiKey") || "",
         source: propsPE2.getProperty("priceEmpireSource") || "buff163",
         currency: propsPE2.getProperty("priceEmpireCurrency") || "CZK",
-        csfloatKey: propsPE2.getProperty("csfloatApiKey") || ""
+        csfloatKey: propsPE2.getProperty("csfloatApiKey") || "",
+        profitMultiplier: propsPE2.getProperty("priceEmpireProfitMultiplier") || "1.0"
       });
       break;
     case "updatePricesFromPriceEmpire":
@@ -1670,6 +1673,7 @@
     var props = PropertiesService.getScriptProperties();
     source = source || props.getProperty("priceEmpireSource") || "buff163";
     currency = currency || props.getProperty("priceEmpireCurrency") || "CZK";
+    var profitMultiplier = parseFloat(props.getProperty("priceEmpireProfitMultiplier") || "1.0");
 
     var allNames = {};
 
@@ -1738,7 +1742,7 @@
         var info = allNames[skinName];
         if (price !== undefined && price > 0) {
           var sheet = ss.getSheetByName(info.sheet);
-          if (sheet) { sheet.getRange(info.row, info.col).setValue(price); updated++; }
+          if (sheet) { sheet.getRange(info.row, info.col).setValue(Math.round(price * profitMultiplier)); updated++; }
         } else {
           notFound.push(skinName);
         }
@@ -1754,6 +1758,7 @@
     var props = PropertiesService.getScriptProperties();
     var csfloatKey = props.getProperty("csfloatApiKey");
     if (!csfloatKey) return JSON.stringify({ error: "CSFloat API klíč není nastaven" });
+    var profitMultiplier = parseFloat(props.getProperty("priceEmpireProfitMultiplier") || "1.0");
 
     var updated = 0;
     var errors = 0;
@@ -1784,7 +1789,7 @@
         var priceCents = data[0].price;
         var priceUSD = priceCents / 100;
         var rate = rates[currency] || 23.5;
-        var finalPrice = Math.round(priceUSD * rate);
+        var finalPrice = Math.round(priceUSD * rate * profitMultiplier);
 
         var sheet = ss.getSheetByName(info.sheet);
         if (sheet) { sheet.getRange(info.row, info.col).setValue(finalPrice); updated++; }
