@@ -1,3 +1,4 @@
+  // auto-deploy via GitHub Actions (clasp)
   const SHEET_ID = "1K5T_SGfE-krTwfAluVsXv8VqPRl5GaPT1S2vf8f3ezw";
   const STEAM_API_KEY = "9BF03DB2AF38585766A60108DE4F66A1";
   const ADMIN_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=1724748264&token=DhhVwMmS";
