@@ -1724,22 +1724,34 @@
       if (!Array.isArray(items)) return JSON.stringify({ error: "Neočekávaná odpověď" });
 
       var priceMap = {};
+      var basePriceMap = {};
       for (var j = 0; j < items.length; j++) {
         var item = items[j];
         var mName = item.market_hash_name;
         if (!mName) continue;
         var prices = item.prices || [];
+        var pVal = null;
         for (var p = 0; p < prices.length; p++) {
           if (prices[p].provider_key === source && prices[p].price !== null && prices[p].price > 0) {
-            priceMap[mName.toLowerCase()] = Math.round(prices[p].price);
+            pVal = Math.round(prices[p].price);
             break;
           }
         }
+        if (pVal === null) continue;
+        var low = mName.toLowerCase();
+        priceMap[low] = pVal;
+        var base = low.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (basePriceMap[base] === undefined || pVal < basePriceMap[base]) basePriceMap[base] = pVal;
       }
 
       for (var n = 0; n < names.length; n++) {
         var skinName = names[n];
-        var price = priceMap[skinName.toLowerCase()];
+        var lowName = skinName.toLowerCase().trim();
+        var price = priceMap[lowName];
+        if (price === undefined) {
+          var baseName = lowName.replace(/\s*\(.*\)\s*$/, "").trim();
+          price = basePriceMap[baseName];
+        }
         var info = allNames[skinName];
         if (price !== undefined && price > 0) {
           var sheet = ss.getSheetByName(info.sheet);
@@ -1766,39 +1778,42 @@
     var notFound = [];
     var rates = { "CZK": 23.5, "EUR": 0.92, "USD": 1 };
 
+    var wears = [" (Factory New)", " (Minimal Wear)", " (Field-Tested)", " (Well-Worn)", " (Battle-Scarred)"];
     for (var n = 0; n < names.length; n++) {
       var skinName = names[n];
       var info = allNames[skinName];
-      try {
-        var encoded = encodeURIComponent(skinName);
-        var url = CSFLOAT_API + "?market_hash_name=" + encoded + "&sort_by=lowest_price&limit=1";
-        var response = UrlFetchApp.fetch(url, {
-          muteHttpExceptions: true,
-          headers: { "Authorization": csfloatKey }
-        });
-        var code = response.getResponseCode();
-        if (code === 429) {
-          Utilities.sleep(3000);
-          n--;
-          continue;
-        }
-        if (code !== 200) { errors++; continue; }
-
-        var data = JSON.parse(response.getContentText());
-        if (!data || !data.length || !data[0].price) { notFound.push(skinName); continue; }
-
-        var priceCents = data[0].price;
-        var priceUSD = priceCents / 100;
-        var rate = rates[currency] || 23.5;
-        var finalPrice = Math.round(priceUSD * rate * profitMultiplier);
-
-        var sheet = ss.getSheetByName(info.sheet);
-        if (sheet) { sheet.getRange(info.row, info.col).setValue(finalPrice); updated++; }
-
-        Utilities.sleep(500);
-      } catch (e) {
-        errors++;
+      var hasWear = /\(.*\)\s*$/.test(skinName);
+      var tries = hasWear ? [skinName] : (function(){ var a=[skinName]; for(var wi=0;wi<wears.length;wi++) a.push(skinName+wears[wi]); return a; })();
+      var found = false;
+      for (var ti = 0; ti < tries.length && !found; ti++) {
+        try {
+          var encoded = encodeURIComponent(tries[ti]);
+          var url = CSFLOAT_API + "?market_hash_name=" + encoded + "&sort_by=lowest_price&limit=1";
+          var response = UrlFetchApp.fetch(url, {
+            muteHttpExceptions: true,
+            headers: { "Authorization": csfloatKey }
+          });
+          var code = response.getResponseCode();
+          if (code === 429) {
+            Utilities.sleep(3000);
+            ti--;
+            continue;
+          }
+          if (code !== 200) { continue; }
+          var data = JSON.parse(response.getContentText());
+          if (!data || !data.length || !data[0].price) { continue; }
+          var priceCents = data[0].price;
+          var priceUSD = priceCents / 100;
+          var rate = rates[currency] || 23.5;
+          var finalPrice = Math.round(priceUSD * rate * profitMultiplier);
+          var sheet = ss.getSheetByName(info.sheet);
+          if (sheet) { sheet.getRange(info.row, info.col).setValue(finalPrice); updated++; }
+          found = true;
+          Utilities.sleep(400);
+        } catch (e) { }
       }
+      if (!found) { notFound.push(skinName); errors++; }
+      else Utilities.sleep(100);
     }
 
     return JSON.stringify({ updated: updated, errors: errors, notFound: notFound, total: names.length, source: "csfloat", currency: currency });
