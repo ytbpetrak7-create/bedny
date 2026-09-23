@@ -1,0 +1,22 @@
+name: Update prices (every 2 days)
+
+on:
+  schedule:
+    - cron: '0 3 */2 * *'  # every 2 days at 03:00 UTC
+  workflow_dispatch:  # manual run button
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger price update via GAS
+        run: |
+          URL="https://script.google.com/macros/s/AKfycbz89Ud1exW-1dpUuyuO1q23upXGWEf7C5ydVBEOz3M8yDB-ZlU3GGMP8bWPqUGveq3c5Q/exec"
+          echo "Calling $URL?action=updatePricesFromPriceEmpire"
+          RESP=$(curl -s -L -X POST "$URL" -H "Content-Type: application/json" -d '{"action":"updatePricesFromPriceEmpire"}' --max-time 300)
+          echo "Response: $RESP"
+          if echo "$RESP" | grep -qi '"error"'; then
+            echo "::error::Price update failed: $RESP"
+            exit 1
+          fi
+          echo "Done."
