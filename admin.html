@@ -226,17 +226,26 @@ async function savePriceEmpire() {
 
 async function updatePrices() {
   var msg = document.getElementById("peUpdateMsg");
-  msg.textContent = "Stahuji ceny..."; msg.style.color = "#ffd700";
+  var btn = document.querySelector('button[onclick="updatePrices()"]');
+  if(btn) btn.disabled = true;
+  msg.textContent = "Stahuji ceny, může trvat ~20s..."; msg.style.color = "#ffd700";
   var source = document.getElementById("peSource").value;
   var currency = document.getElementById("peCurrency").value;
-  var res = JSON.parse(await callScript("updatePricesFromPriceEmpire", { source: source, currency: currency }));
-  if (res.error) {
-    msg.textContent = "Chyba: " + res.error;
-    msg.style.color = "#f80";
-  } else {
-    msg.textContent = "Hotovo! Aktualizováno: " + res.updated + "/" + res.total + " | Chyb: " + res.errors + " | Nenalezeno: " + res.notFound.length;
-    msg.style.color = res.updated > 0 ? "#00ff96" : "#f80";
+  try {
+    var raw = await callScript("updatePricesFromPriceEmpire", { source: source, currency: currency });
+    var res = JSON.parse(raw);
+    if (res.error) {
+      msg.textContent = "Chyba: " + res.error;
+      msg.style.color = "#f80";
+    } else {
+      msg.textContent = "Hotovo! Aktualizováno: " + res.updated + "/" + res.total + " | Chyb: " + res.errors + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,3).join(", ") + ")" : "");
+      msg.style.color = res.updated > 0 ? "#00ff96" : "#f80";
+    }
+  } catch(e) {
+    msg.textContent = "Požadavek běží na serveru (CORS/timeout). Zkontroluj za 30s v tabulce, nebo spusť přes Actions → Update prices → Run workflow.";
+    msg.style.color = "#ffd700";
   }
+  if(btn) btn.disabled = false;
 }
 </script>
 </html>

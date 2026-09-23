@@ -317,9 +317,9 @@
       break;
   }
     
-    return ContentService.createTextOutput(result);
+    return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.JSON);
     } catch(err) {
-      return ContentService.createTextOutput("ERROR: " + err.message);
+      return ContentService.createTextOutput("ERROR: " + err.message).setMimeType(ContentService.MimeType.TEXT);
     }
   }
 
@@ -1778,7 +1778,7 @@
     var notFound = [];
     var rates = { "CZK": 23.5, "EUR": 0.92, "USD": 1 };
 
-    var wears = [" (Factory New)", " (Minimal Wear)", " (Field-Tested)", " (Well-Worn)", " (Battle-Scarred)"];
+    var wears = [" (Field-Tested)", " (Minimal Wear)", " (Factory New)"];
     for (var n = 0; n < names.length; n++) {
       var skinName = names[n];
       var info = allNames[skinName];
@@ -1795,7 +1795,7 @@
           });
           var code = response.getResponseCode();
           if (code === 429) {
-            Utilities.sleep(3000);
+            Utilities.sleep(2000);
             ti--;
             continue;
           }
@@ -1809,11 +1809,11 @@
           var sheet = ss.getSheetByName(info.sheet);
           if (sheet) { sheet.getRange(info.row, info.col).setValue(finalPrice); updated++; }
           found = true;
-          Utilities.sleep(400);
+          if (ti > 0) Utilities.sleep(150);
         } catch (e) { }
       }
       if (!found) { notFound.push(skinName); errors++; }
-      else Utilities.sleep(100);
+      else if (n < names.length - 1) Utilities.sleep(150);
     }
 
     return JSON.stringify({ updated: updated, errors: errors, notFound: notFound, total: names.length, source: "csfloat", currency: currency });
