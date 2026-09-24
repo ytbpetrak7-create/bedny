@@ -68,8 +68,9 @@ async function loadData() {
     getAdminTradeLink(),
     getProfile()
   ]);
-  JSON.parse(results[0]).forEach(function(x) { var img = x.image || ""; if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img; itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img }; });
-  JSON.parse(results[1]).forEach(function(x) { var img = x.image || ""; if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img; if (!itemMap[x.name.trim()]) itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img }; });
+  function wc(w){var m={"Factory New":"#4b9aff","Minimal Wear":"#6ecf68","Field-Tested":"#ffd54d","Well-Worn":"#ff8c42","Battle-Scarred":"#d64545"};return m[w]||"#888";}
+  JSON.parse(results[0]).forEach(function(x) { var img = x.image || ""; if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img; itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img, wear: x.wear||"" }; });
+  JSON.parse(results[1]).forEach(function(x) { var img = x.image || ""; if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img; if (!itemMap[x.name.trim()]) itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img, wear: x.wear||"" }; });
   adminTradeLink = results[2];
   var pd = JSON.parse(results[3]);
   userTradeLink = pd.tradeLink || "";
@@ -109,7 +110,9 @@ async function loadInventory() {
     }
     actions += '</div>';
     
-    div.innerHTML = imgHtml + '<div class="info"><div class="name">' + item.name + '</div><div class="date">' + new Date(item.date).toLocaleDateString() + '</div></div>' + actions;
+    var w = data.wear || (function(){var m=item.name.match(/\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)/);return m?m[1]:"";})();
+    var wearHtml = w ? '<span style="background:'+wc(w)+';color:#000;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:6px;margin-left:6px;">'+w+'</span>' : '';
+    div.innerHTML = imgHtml + '<div class="info"><div class="name">' + item.name + wearHtml + '</div><div class="date">' + new Date(item.date).toLocaleDateString() + '</div></div>' + actions;
     container.appendChild(div);
   });
 }

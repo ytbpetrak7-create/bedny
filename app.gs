@@ -420,8 +420,14 @@
     const boxItems = [];
     
     for (let i = 1; i < data.length; i++) {
+      if (!data[i][2]) continue;
+      var base = data[i][2].toString().trim();
+      var wear = data[i][5] ? data[i][5].toString().trim() : "";
+      var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
       boxItems.push({
-        name: data[i][2],
+        name: full,
+        base: base,
+        wear: wear,
         image: (data[i][0] || "").toString().trim(),
         chance: Number(data[i][1]),
         sellPrice: Number(data[i][3]) || 0
@@ -493,8 +499,14 @@
     const boxItems = [];
     
     for (let i = 1; i < data.length; i++) {
+      if (!data[i][2]) continue;
+      var base = data[i][2].toString().trim();
+      var wear = data[i][5] ? data[i][5].toString().trim() : "";
+      var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
       boxItems.push({
-        name: data[i][2],
+        name: full,
+        base: base,
+        wear: wear,
         image: (data[i][0] || "").toString().trim(),
         chance: Number(data[i][1]),
         sellPrice: Number(data[i][3]) || 0
@@ -613,7 +625,10 @@
     
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] && data[i][1] && data[i][2]) {
-        items.push({ name: data[i][2], image: (data[i][0] || "").toString().trim(), chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0, rare: Number(data[i][4]) || 0 });
+        var base = data[i][2].toString().trim();
+        var wear = data[i][5] ? data[i][5].toString().trim() : "";
+        var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
+        items.push({ name: full, base: base, wear: wear, image: (data[i][0] || "").toString().trim(), chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0, rare: Number(data[i][4]) || 0 });
       }
     }
     
@@ -1681,13 +1696,23 @@
     var boxes1 = getSheet(ss, "Boxes1");
     var b1Data = boxes1.getDataRange().getValues();
     for (var i = 1; i < b1Data.length; i++) {
-      if (b1Data[i][2]) allNames[b1Data[i][2].toString().trim()] = { sheet: "Boxes1", row: i + 1, col: 4 };
+      if (b1Data[i][2]) {
+        var b = b1Data[i][2].toString().trim();
+        var w = b1Data[i][5] ? b1Data[i][5].toString().trim() : "";
+        var full = (w && b.indexOf("(") === -1) ? b + " (" + w + ")" : b;
+        allNames[full] = { sheet: "Boxes1", row: i + 1, col: 4 };
+      }
     }
 
     var boxes2 = getSheet(ss, "Boxes2");
     var b2Data = boxes2.getDataRange().getValues();
     for (var i = 1; i < b2Data.length; i++) {
-      if (b2Data[i][2]) allNames[b2Data[i][2].toString().trim()] = { sheet: "Boxes2", row: i + 1, col: 4 };
+      if (b2Data[i][2]) {
+        var b = b2Data[i][2].toString().trim();
+        var w = b2Data[i][5] ? b2Data[i][5].toString().trim() : "";
+        var full = (w && b.indexOf("(") === -1) ? b + " (" + w + ")" : b;
+        allNames[full] = { sheet: "Boxes2", row: i + 1, col: 4 };
+      }
     }
 
     var depSheet = getSheet(ss, "DepositSkins");
