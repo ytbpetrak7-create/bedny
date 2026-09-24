@@ -750,8 +750,10 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         var wStr = wMatch ? wMatch[1] : (winnerItem && winnerItem.wear ? winnerItem.wear : "");
         var cardImg = itemImg || (winnerItem && winnerItem.image) || "";
         if(cardImg && !cardImg.startsWith("http")) cardImg="https://ytbpetrak7-create.github.io/bedny/"+cardImg;
-        nextDiv.innerHTML = '<div onclick="openAgain()" style="width:130px;background:linear-gradient(135deg,#c850ff,#a040e0);border-radius:16px;padding:10px;text-align:center;cursor:pointer;"><img src="'+fixImg(cardImg)+'" style="width:90px;height:70px;object-fit:contain;display:block;margin:0 auto 4px;" onerror="this.style.display=\'none\'"><div style="color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+itemName+'</div>'+(wStr?wearBadge(wStr):"")+'<div style="color:#fff;font-size:11px;margin-top:2px;">'+Number(itemPrice).toFixed(2)+' Kč</div></div>';
+        var displayName = itemName.replace(/\s*\(.*\)\s*$/, "");
+        nextDiv.innerHTML = '<div onclick="openAgain()" style="width:140px;background:linear-gradient(135deg,#c850ff,#a040e0);border-radius:16px;padding:10px;text-align:center;cursor:pointer;"><img src="'+fixImg(cardImg)+'" style="width:100px;height:80px;object-fit:contain;display:block;margin:0 auto 4px;background:#fff;border-radius:8px;" onerror="this.style.display=\'none\'"><div style="color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+displayName+'</div><div style="display:inline-block;background:#ffd54d;color:#000;font-size:10px;font-weight:bold;padding:2px 8px;border-radius:8px;margin:3px 0;">'+wStr+'</div><div style="color:#fff;font-size:11px;">'+Number(itemPrice).toFixed(2)+' Kč</div></div>';
         document.getElementById("afterSlot").style.display = "flex";
+        document.getElementById("skinStrip").style.display = "none";
       }
       
       var inv = JSON.parse(await getInventory());
@@ -819,10 +821,12 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         slotData.forEach(function(sd){
           var wM = sd.name.match(/\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)/);
           var wS = wM ? wM[1] : "";
+          var dName = sd.name.replace(/\s*\(.*\)\s*$/, "");
           var cImg = sd.img || ""; if(cImg && !cImg.startsWith("http")) cImg="https://ytbpetrak7-create.github.io/bedny/"+cImg;
-          nextDiv2.innerHTML += '<div onclick="openAgain()" style="width:130px;background:linear-gradient(135deg,#c850ff,#a040e0);border-radius:16px;padding:10px;text-align:center;cursor:pointer;"><img src="'+fixImg(cImg)+'" style="width:90px;height:70px;object-fit:contain;display:block;margin:0 auto 4px;" onerror="this.style.display=\'none\'"><div style="color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+sd.name+'</div>'+(wS?wearBadge(wS):"")+'<div style="color:#fff;font-size:11px;margin-top:2px;">'+Number(sd.price).toFixed(2)+' Kč</div></div>';
+          nextDiv2.innerHTML += '<div onclick="openAgain()" style="width:140px;background:linear-gradient(135deg,#c850ff,#a040e0);border-radius:16px;padding:10px;text-align:center;cursor:pointer;"><img src="'+fixImg(cImg)+'" style="width:100px;height:80px;object-fit:contain;display:block;margin:0 auto 4px;background:#fff;border-radius:8px;" onerror="this.style.display=\'none\'"><div style="color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+dName+'</div><div style="display:inline-block;background:#ffd54d;color:#000;font-size:10px;font-weight:bold;padding:2px 8px;border-radius:8px;margin:3px 0;">'+wS+'</div><div style="color:#fff;font-size:11px;">'+Number(sd.price).toFixed(2)+' Kč</div></div>';
         });
         afterSlot2.style.display = "flex";
+        document.getElementById("skinStrip").style.display = "none";
       }
       
       document.getElementById("sellAllBtn").addEventListener("click", async function() {
@@ -880,6 +884,7 @@ function openAgain() {
   document.getElementById("slotStrip").innerHTML = "";
   document.getElementById("multiSlotContainer").innerHTML = "";
   document.getElementById("slotWrap").style.display = "";
+  document.getElementById("skinStrip").style.display = "";
   document.getElementById("boxCounter").innerText = "";
   selectedResults = [];
   document.getElementById("sellSelectedWrap").style.display = "none";
