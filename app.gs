@@ -1879,24 +1879,32 @@
     }
     var nb = normStr(base);
     var seen = {};
+    var cands = [];
     for (var qi = 0; qi < queries.length; qi++) {
       var s = takeskinSearch(queries[qi]);
       Utilities.sleep(800);
       if (!s || !s.data) continue;
       for (var i = 0; i < s.data.length; i++) {
         var d = s.data[i];
-        if (!d || !d.slug || seen[d.slug]) continue;
-        if (d.hasStatTrak || d.hasSouvenir || !d.weapon || !d.name) continue;
+        if (!d || !d.slug || seen[d.slug] || !d.weapon || !d.name) continue;
+        seen[d.slug] = 1;
         var w = normStr(d.weapon.name);
         var nm = normStr(d.name);
         if (!w || nb.indexOf(w) === -1) continue;
         if (!nm || nb.indexOf(nm) === -1) continue;
-        seen[d.slug] = 1;
-        var mhn = d.weapon.name + " | " + d.name + (wear ? " (" + wear + ")" : "");
-        var p = takeskinPrice(mhn);
-        Utilities.sleep(800);
-        if (p !== null) return { mhn: mhn, price: p };
+        cands.push(d);
       }
+    }
+    cands.sort(function(a, b) {
+      var sa = (a.hasStatTrak || a.hasSouvenir) ? 1 : 0;
+      var sb = (b.hasStatTrak || b.hasSouvenir) ? 1 : 0;
+      return sa - sb;
+    });
+    for (var ci = 0; ci < cands.length; ci++) {
+      var mhn = cands[ci].weapon.name + " | " + cands[ci].name + (wear ? " (" + wear + ")" : "");
+      var p = takeskinPrice(mhn);
+      Utilities.sleep(800);
+      if (p !== null) return { mhn: mhn, price: p };
     }
     return null;
   }
