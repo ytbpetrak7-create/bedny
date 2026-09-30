@@ -5,6 +5,8 @@
   const BOT_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=724294414&token=GYHge3_G";
   const PRICEEMPIRE_API = "https://api.pricempire.com/v4/paid/items/prices";
   const CSFLOAT_API = "https://csfloat.com/api/v1/listings";
+  const TAKESKIN_API = "https://take.skin/api/public/v1/skins";
+  const USD_CZK = 23.5;
   const DEFAULT_PROFIT_MULTIPLIER = 1.0;
 
   function doGet(e) {
@@ -1731,6 +1733,10 @@
       return updatePricesFromCSFloat(ss, names, allNames, currency);
     }
 
+    if (source === "takeskin") {
+      return updatePricesFromTakeSkin(ss, currency);
+    }
+
     var apiKey = props.getProperty("priceEmpireApiKey");
     if (!apiKey) return JSON.stringify({ error: "API klíč není nastaven" });
 
@@ -1799,6 +1805,10 @@
     var props = PropertiesService.getScriptProperties();
     var csfloatKey = props.getProperty("csfloatApiKey");
     if (!csfloatKey) return JSON.stringify({ error: "CSFloat API klíč není nastaven" });
+    try {
+      var chk = UrlFetchApp.fetch(CSFLOAT_API + "?market_hash_name=" + encodeURIComponent("AK-47 | Redline (Field-Tested)") + "&sort_by=lowest_price&limit=1", { muteHttpExceptions: true, headers: { "Authorization": csfloatKey } });
+      if (chk.getResponseCode() === 401 || chk.getResponseCode() === 403) return JSON.stringify({ error: "CSFloat API klíč neplatný (HTTP " + chk.getResponseCode() + ")" });
+    } catch (e) { return JSON.stringify({ error: "CSFloat nedostupný: " + e.message }); }
     var updated = 0;
     var skipped = 0;
     var notFound = [];
@@ -1814,8 +1824,10 @@
         var base = data[i][2].toString().trim();
         var wear = data[i][5] ? data[i][5].toString().trim() : "";
         var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
+        var r = resolveMarketName(base, wear);
+        var lookup = (r && r.mhn) ? r.mhn : full;
         try {
-          var url = CSFLOAT_API + "?market_hash_name=" + encodeURIComponent(full) + "&sort_by=lowest_price&limit=1";
+          var url = CSFLOAT_API + "?market_hash_name=" + encodeURIComponent(lookup) + "&sort_by=lowest_price&limit=1";
           var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { "Authorization": csfloatKey } });
           if (resp.getResponseCode() === 429) { Utilities.sleep(2000); i--; continue; }
           if (resp.getResponseCode() !== 200) { notFound.push(full); continue; }
@@ -1829,6 +1841,111 @@
       }
     }
     return JSON.stringify({ updated: updated, skipped: skipped, notFound: notFound });
+  }
+
+  function takeskinPrice(mhn) {
+    try {
+      var resp = UrlFetchApp.fetch(TAKESKIN_API + "/" + encodeURIComponent(mhn) + "/price-history", { muteHttpExceptions: true });
+      if (resp.getResponseCode() !== 200) return null;
+      var j = JSON.parse(resp.getContentText());
+      if (!j || !j.data || !j.data.length) return null;
+      return j.data[j.data.length - 1].price;
+    } catch (e) { return null; }
+  }
+
+  function takeskinSearch(query) {
+    try {
+      var resp = UrlFetchApp.fetch(TAKESKIN_API + "?search=" + encodeURIComponent(query) + "&limit=20", { muteHttpExceptions: true });
+      if (resp.getResponseCode() !== 200) return null;
+      return JSON.parse(resp.getContentText());
+    } catch (e) { return null; }
+  }
+
+  function normStr(s) { return (s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+
+  function resolveMarketName(base, wear) {
+    wear = wear || "";
+    if (base.indexOf("|") !== -1) {
+      var direct = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
+      var p0 = takeskinPrice(direct);
+      if (p0 !== null) return { mhn: direct, price: p0 };
+    }
+    var q = base.replace(/\|/g, " ").replace(/\s+/g, " ").trim();
+    var s = takeskinSearch(q);
+    if (!s || !s.data) return null;
+    var nb = normStr(base);
+    for (var i = 0; i < s.data.length; i++) {
+      var d = s.data[i];
+      if (!d || d.hasStatTrak || d.hasSouvenir || !d.weapon || !d.name) continue;
+      var w = normStr(d.weapon.name);
+      var nm = normStr(d.name);
+      if (!w || nb.indexOf(w) === -1) continue;
+      if (!nm || nb.indexOf(nm) === -1) continue;
+      var mhn = d.weapon.name + " | " + d.name + (wear ? " (" + wear + ")" : "");
+      var p = takeskinPrice(mhn);
+      Utilities.sleep(1200);
+      if (p !== null) return { mhn: mhn, price: p };
+    }
+    return null;
+  }
+
+  function collectPriceNames(ss) {
+    var allNames = {};
+    var boxes1 = getSheet(ss, "Boxes1");
+    var b1Data = boxes1.getDataRange().getValues();
+    for (var i = 1; i < b1Data.length; i++) {
+      if (b1Data[i][2]) {
+        var b = b1Data[i][2].toString().trim();
+        var w = b1Data[i][5] ? b1Data[i][5].toString().trim() : "";
+        allNames[b + "||" + w] = { base: b, wear: w, sheet: "Boxes1", row: i + 1, col: 4 };
+      }
+    }
+    var boxes2 = getSheet(ss, "Boxes2");
+    var b2Data = boxes2.getDataRange().getValues();
+    for (var i = 1; i < b2Data.length; i++) {
+      if (b2Data[i][2]) {
+        var b = b2Data[i][2].toString().trim();
+        var w = b2Data[i][5] ? b2Data[i][5].toString().trim() : "";
+        allNames[b + "||" + w] = { base: b, wear: w, sheet: "Boxes2", row: i + 1, col: 4 };
+      }
+    }
+    var depSheet = getSheet(ss, "DepositSkins");
+    var depData = depSheet.getDataRange().getValues();
+    for (var i = 1; i < depData.length; i++) {
+      if (depData[i][0]) {
+        var b = depData[i][0].toString().trim();
+        var w = depData[i][2] ? depData[i][2].toString().trim() : "";
+        allNames[b + "||" + w] = { base: b, wear: w, sheet: "DepositSkins", row: i + 1, col: 2 };
+      }
+    }
+    return allNames;
+  }
+
+  function updatePricesFromTakeSkin(ss, currency) {
+    var props = PropertiesService.getScriptProperties();
+    var profitMultiplier = parseFloat(props.getProperty("priceEmpireProfitMultiplier") || "1.0");
+    var rates = { "CZK": USD_CZK, "EUR": 0.92, "USD": 1 };
+    var rate = rates[currency] || USD_CZK;
+    var allNames = collectPriceNames(ss);
+    var keys = Object.keys(allNames);
+    if (!keys.length) return JSON.stringify({ error: "Žádné skiny v tabulkách" });
+    var updated = 0;
+    var notFound = [];
+    for (var n = 0; n < keys.length; n++) {
+      var info = allNames[keys[n]];
+      var label = info.base + (info.wear ? " (" + info.wear + ")" : "");
+      try {
+        var r = resolveMarketName(info.base, info.wear);
+        if (r && r.price > 0) {
+          var sheet = ss.getSheetByName(info.sheet);
+          if (sheet) { sheet.getRange(info.row, info.col).setValue(Math.max(1, Math.round(r.price * rate * profitMultiplier))); updated++; }
+        } else {
+          notFound.push(label);
+        }
+      } catch (e) { notFound.push(label); }
+      if (n < keys.length - 1) Utilities.sleep(1200);
+    }
+    return JSON.stringify({ updated: updated, errors: 0, notFound: notFound, total: keys.length, source: "takeskin", currency: currency });
   }
 
   function updatePricesFromCSFloat(ss, names, allNames, currency) {
