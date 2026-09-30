@@ -158,6 +158,8 @@ async function loadAll() {
   html += ' <span id="peMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '<br><br><button class="btn-app" onclick="updatePrices()" style="background:#ffd700;color:#1a1a2e;">Aktualizovat ceny ze všech tabulek</button>';
   html += ' <span id="peUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
+  html += '<br><br><button class="btn-app" onclick="updateImages()" style="background:#4b9aff;color:#fff;">Aktualizovat obrázky (průhledné ze Steamu)</button>';
+  html += ' <span id="imgUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '</div>';
   
   div.innerHTML = html;
@@ -222,6 +224,16 @@ async function savePriceEmpire() {
   if (source === "csfloat" && !csfloatKey) { msg.textContent = "Zadej CSFloat API klíč!"; msg.style.color = "#f80"; return; }
   await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency, csfloatKey: csfloatKey, profitMultiplier: profitMult });
   msg.textContent = "Uloženo!"; msg.style.color = "#00ff96";
+}
+
+async function updateImages() {
+  var msg = document.getElementById("imgUpdateMsg");
+  msg.textContent = "Stahuji obrázky..."; msg.style.color = "#ffd700";
+  try {
+    var res = JSON.parse(await callScript("updateSkinImages"));
+    if (res.error) { msg.textContent = "Chyba: " + res.error; msg.style.color = "#f80"; }
+    else { msg.textContent = "Hotovo! Aktualizováno: " + res.updated + " | Přeskočeno (už URL): " + res.skipped + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,5).join(", ") + ")" : ""); msg.style.color = res.updated > 0 ? "#00ff96" : "#f80"; }
+  } catch(e) { msg.textContent = "Běží na serveru, zkontroluj tabulku za chvíli."; msg.style.color = "#ffd700"; }
 }
 
 async function updatePrices() {

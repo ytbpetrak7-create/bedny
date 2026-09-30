@@ -315,6 +315,9 @@
     case "updatePricesFromPriceEmpire":
       result = updatePricesFromPriceEmpire(ss, params.source, params.currency);
       break;
+    case "updateSkinImages":
+      result = updateSkinImages(ss);
+      break;
   }
     
     return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.JSON);
@@ -1790,6 +1793,42 @@
     }
 
     return JSON.stringify({ updated: updated, errors: errors, notFound: notFound, total: names.length, source: source, currency: currency });
+  }
+
+  function updateSkinImages(ss) {
+    var props = PropertiesService.getScriptProperties();
+    var csfloatKey = props.getProperty("csfloatApiKey");
+    if (!csfloatKey) return JSON.stringify({ error: "CSFloat API klíč není nastaven" });
+    var updated = 0;
+    var skipped = 0;
+    var notFound = [];
+    var sheets = ["Boxes1", "Boxes2"];
+    for (var s = 0; s < sheets.length; s++) {
+      var sheet = ss.getSheetByName(sheets[s]);
+      if (!sheet) continue;
+      var data = sheet.getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        if (!data[i][2]) continue;
+        var img = data[i][0] ? data[i][0].toString().trim() : "";
+        if (img && img.indexOf("http") === 0) { skipped++; continue; }
+        var base = data[i][2].toString().trim();
+        var wear = data[i][5] ? data[i][5].toString().trim() : "";
+        var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
+        try {
+          var url = CSFLOAT_API + "?market_hash_name=" + encodeURIComponent(full) + "&sort_by=lowest_price&limit=1";
+          var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { "Authorization": csfloatKey } });
+          if (resp.getResponseCode() === 429) { Utilities.sleep(2000); i--; continue; }
+          if (resp.getResponseCode() !== 200) { notFound.push(full); continue; }
+          var arr = JSON.parse(resp.getContentText());
+          if (!arr || !arr.length || !arr[0].item || !arr[0].item.icon_url) { notFound.push(full); continue; }
+          var iconUrl = "https://community.akamai.steamstatic.com/economy/image/" + arr[0].item.icon_url;
+          sheet.getRange(i + 1, 1).setValue(iconUrl);
+          updated++;
+          Utilities.sleep(400);
+        } catch (e) { notFound.push(full); }
+      }
+    }
+    return JSON.stringify({ updated: updated, skipped: skipped, notFound: notFound });
   }
 
   function updatePricesFromCSFloat(ss, names, allNames, currency) {
