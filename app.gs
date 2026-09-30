@@ -1870,21 +1870,33 @@
       var p0 = takeskinPrice(direct);
       if (p0 !== null) return { mhn: direct, price: p0 };
     }
-    var q = base.replace(/\|/g, " ").replace(/\s+/g, " ").trim();
-    var s = takeskinSearch(q);
-    if (!s || !s.data) return null;
+    var full_q = base.replace(/\|/g, " ").replace(/\s+/g, " ").trim();
+    var words = full_q.split(" ").filter(function(w) { return w.length >= 3; });
+    words.sort(function(a, b) { return b.length - a.length; });
+    var queries = [full_q];
+    for (var wi = 0; wi < words.length; wi++) {
+      if (queries.indexOf(words[wi]) === -1) queries.push(words[wi]);
+    }
     var nb = normStr(base);
-    for (var i = 0; i < s.data.length; i++) {
-      var d = s.data[i];
-      if (!d || d.hasStatTrak || d.hasSouvenir || !d.weapon || !d.name) continue;
-      var w = normStr(d.weapon.name);
-      var nm = normStr(d.name);
-      if (!w || nb.indexOf(w) === -1) continue;
-      if (!nm || nb.indexOf(nm) === -1) continue;
-      var mhn = d.weapon.name + " | " + d.name + (wear ? " (" + wear + ")" : "");
-      var p = takeskinPrice(mhn);
-      Utilities.sleep(1200);
-      if (p !== null) return { mhn: mhn, price: p };
+    var seen = {};
+    for (var qi = 0; qi < queries.length; qi++) {
+      var s = takeskinSearch(queries[qi]);
+      Utilities.sleep(800);
+      if (!s || !s.data) continue;
+      for (var i = 0; i < s.data.length; i++) {
+        var d = s.data[i];
+        if (!d || !d.slug || seen[d.slug]) continue;
+        if (d.hasStatTrak || d.hasSouvenir || !d.weapon || !d.name) continue;
+        var w = normStr(d.weapon.name);
+        var nm = normStr(d.name);
+        if (!w || nb.indexOf(w) === -1) continue;
+        if (!nm || nb.indexOf(nm) === -1) continue;
+        seen[d.slug] = 1;
+        var mhn = d.weapon.name + " | " + d.name + (wear ? " (" + wear + ")" : "");
+        var p = takeskinPrice(mhn);
+        Utilities.sleep(800);
+        if (p !== null) return { mhn: mhn, price: p };
+      }
     }
     return null;
   }
