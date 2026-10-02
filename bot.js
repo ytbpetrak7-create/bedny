@@ -70,6 +70,13 @@ client.on("error", (err) => { console.log("❌ Chyba:", err.message); if (err.er
 
 manager.on("ready", () => { 
   console.log("✅ Trade manager ready"); 
+  manager.getOffers({ "get_sent_offers": 1, "active_only": 1 }, (err, sent) => {
+    if (err) { console.log("Pending sent check error:", err.message); }
+    else {
+      console.log(`⏳ Visících odeslaných nabídek: ${(sent || []).length}`);
+      if ((sent || []).length >= 5) console.log("⚠️ Máš hodně visících nabídek - Steam kvůli tomu hází error 15! Zruš staré na: https://steamcommunity.com/my/tradeoffers/sent/");
+    }
+  });
   poll();
   autoConfirm();
 });
@@ -276,7 +283,8 @@ async function poll() {
       for (const w of items) {
         if (w.status !== "approved") continue;
         if (!w.tradeLink) continue;
-        if (failedOffers["w_" + w.row] && Date.now() - failedOffers["w_" + w.row] < 3600000) continue;
+        var f = failedOffers["w_" + w.row];
+        if (f && Date.now() - f.at < f.retryAfter) continue;
 
         var lastTry = lastWithdrawalAttempt[w.row] || 0;
         if (Date.now() - lastTry < 600000) continue;
@@ -296,9 +304,10 @@ async function poll() {
         await new Promise((resolve) => {
           offer.send((err, status) => {
             if (err) {
-              console.log("Chyba offer #" + w.row + ": " + err.message + (err.eresult ? " (eresult=" + err.eresult + ")" : ""));
-              if (err.message && err.message.indexOf("rate limit") > -1) { lastWithdrawalAttempt[w.row] = Date.now(); }
-              else { failedOffers["w_" + w.row] = Date.now(); }
+              var emsg = err.message || "";
+              var isRate = (err.eresult === 15) || emsg.indexOf("try again later") > -1;
+              console.log("Chyba offer #" + w.row + ": " + emsg + (err.eresult ? " (eresult=" + err.eresult + ")" : "") + (isRate ? " -> retry za 15 min" : " -> retry za 1h"));
+              failedOffers["w_" + w.row] = { at: Date.now(), retryAfter: isRate ? 900000 : 3600000 };
             } else {
               console.log(`Offer sent: ${status}`);
               confirmOffer(offer.id, w.row);
