@@ -1,0 +1,4 @@
+{
+  "sharedSecret": "SEMK_VLOZ_SHARED_SECRET",
+  "identitySecret": "SEMK_VLOZ_IDENTITY_SECRET"
+}

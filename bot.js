@@ -1,6 +1,7 @@
 const SteamUser = require("steam-user");
 const TradeOfferManager = require("steam-tradeoffer-manager");
 const SteamCommunity = require("steamcommunity");
+const SteamTotp = require("steam-totp");
 const https = require("https");
 const fs = require("fs");
 const readline = require("readline");
@@ -9,12 +10,20 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbz89Ud1exW-1dpUuyuO1q23
 
 const client = new SteamUser();
 const community = new SteamCommunity();
-const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 30000, cancelTime: 120000 });
+const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 30000, cancelTime: 43200000 });
 
 const BOT = {
   accountName: "pet7bot1",
-  password: "Petronel7"
+  password: "Petronel7",
+  sharedSecret: "",
+  identitySecret: ""
 };
+try {
+  const cfg = JSON.parse(fs.readFileSync("bot-config.json", "utf8"));
+  if (cfg.sharedSecret) BOT.sharedSecret = cfg.sharedSecret;
+  if (cfg.identitySecret) BOT.identitySecret = cfg.identitySecret;
+  console.log("bot-config.json nacten");
+} catch(e) { console.log("bot-config.json nenalezen - vytvor ho podle navodu (sharedSecret + identitySecret)"); }
 
 client.on("steamGuard", (domain, callback, isEmail) => {
   const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -84,7 +93,12 @@ function autoConfirm() {
 
 var sentry = fs.existsSync("sentry") ? fs.readFileSync("sentry") : null;
 
-if (sentry) {
+if (BOT.sharedSecret) {
+  const logOnOpts = { accountName: BOT.accountName, password: BOT.password, machineName: "bot", twoFactorCode: SteamTotp.generateAuthCode(BOT.sharedSecret) };
+  if (sentry) logOnOpts.sentry = sentry;
+  client.logOn(logOnOpts);
+  console.log("Login s 2FA kodem z sharedSecret");
+} else if (sentry) {
   client.logOn({ accountName: BOT.accountName, password: BOT.password, machineName: "bot", sentry: sentry });
 } else if (process.argv.includes("--2fa")) {
   var rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -168,6 +182,23 @@ function getUserInventory(steamId) {
   });
 }
 
+function confirmOffer(offerId, row) {
+  if (!BOT.identitySecret) {
+    console.log("Offer #" + offerId + " odeslan, ale NENI identitySecret - potvrd rucne v mobilni app!");
+    gasGet(GAS_URL + "?action=completeWithdrawal&row=" + row).catch(()=>{});
+    return;
+  }
+  community.acceptConfirmationForObject(BOT.identitySecret, offerId, (err) => {
+    if (err) {
+      console.log("Confirm error #" + offerId + ": " + err.message + " - zkusim znovu za 30s");
+      setTimeout(() => confirmOffer(offerId, row), 30000);
+    } else {
+      console.log(`Offer #${offerId} potvrzen v mobilni app`);
+      gasGet(GAS_URL + "?action=completeWithdrawal&row=" + row).catch(()=>{});
+    }
+  });
+}
+
 var pollCount = 0;
 
 var lastWithdrawalAttempt = {};
@@ -245,7 +276,7 @@ async function poll() {
       for (const w of items) {
         if (w.status !== "approved") continue;
         if (!w.tradeLink) continue;
-        if (failedOffers["w_" + w.row]) continue;
+        if (failedOffers["w_" + w.row] && Date.now() - failedOffers["w_" + w.row] < 3600000) continue;
 
         var lastTry = lastWithdrawalAttempt[w.row] || 0;
         if (Date.now() - lastTry < 600000) continue;
@@ -265,11 +296,12 @@ async function poll() {
         await new Promise((resolve) => {
           offer.send((err, status) => {
             if (err) {
-              console.log("Chyba offer #" + w.row + ": " + err.message);
-              failedOffers["w_" + w.row] = true;
+              console.log("Chyba offer #" + w.row + ": " + err.message + (err.eresult ? " (eresult=" + err.eresult + ")" : ""));
+              if (err.message && err.message.indexOf("rate limit") > -1) { lastWithdrawalAttempt[w.row] = Date.now(); }
+              else { failedOffers["w_" + w.row] = Date.now(); }
             } else {
               console.log(`Offer sent: ${status}`);
-              gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
+              confirmOffer(offer.id, w.row);
             }
             resolve();
           });
