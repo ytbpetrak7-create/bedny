@@ -1,6 +1,7 @@
 ﻿<!DOCTYPE html>
 <html lang="cs" translate="no">
-<head>`n<meta name="google" content="notranslate"><style>
+<head>`n<meta name="google" content="notranslate"><meta name="robots" content="noindex,nofollow"><style>
+body{display:none;}
 body{padding:40px;padding-top:20px;}
 h1{font-size:24px;margin-bottom:10px;}
 h2{color:#fff;font-size:18px;margin:20px 0 10px;}
@@ -24,6 +25,7 @@ if (!getCurrentUser()) {
     if (res !== "YES") {
       window.location.href = "hlav.html";
     } else {
+      document.body.style.display = "block";
       createPointsDisplay();
       loadAll();
     }
