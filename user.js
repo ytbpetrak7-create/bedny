@@ -200,3 +200,25 @@ async function checkDailyReward() {
 
 requestNotificationPermission();
 checkDailyReward();
+
+async function siteGate() {
+  try {
+    if (sessionStorage.getItem("siteUnlocked") === "1") return;
+    var st = (await callScript("sitePasswordStatus")).trim();
+    if (st !== "SET") return;
+    var ov = document.createElement("div");
+    ov.id = "siteGateOv";
+    ov.style.cssText = "position:fixed;inset:0;background:#1a1a2e;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;";
+    ov.innerHTML = '<h2 style="color:#fff;margin:0;">Vstup na web je zamčený 🔒</h2><input id="siteGatePw" type="password" placeholder="Heslo" autocomplete="off" style="padding:10px 14px;border-radius:8px;border:1px solid #555;background:#0d0d1a;color:#fff;font-size:15px;"><button id="siteGateBtn" style="padding:10px 24px;border-radius:8px;border:none;background:#00ff96;color:#1a1a2e;font-weight:bold;cursor:pointer;font-size:15px;">Odemknout</button><p id="siteGateMsg" style="color:#f80;font-size:13px;min-height:18px;margin:0;"></p>';
+    document.body.appendChild(ov);
+    document.getElementById("siteGateBtn").onclick = async function() {
+      var pw = document.getElementById("siteGatePw").value;
+      var r = (await callScript("checkSitePassword", { password: pw })).trim();
+      if (r === "OK") { sessionStorage.setItem("siteUnlocked", "1"); ov.remove(); }
+      else { document.getElementById("siteGateMsg").textContent = "Špatné heslo"; }
+    };
+    document.getElementById("siteGatePw").addEventListener("keydown", function(e) { if (e.key === "Enter") document.getElementById("siteGateBtn").click(); });
+    setTimeout(function() { var i = document.getElementById("siteGatePw"); if (i) i.focus(); }, 300);
+  } catch(e) {}
+}
+siteGate();

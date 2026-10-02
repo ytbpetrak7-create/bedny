@@ -320,12 +320,35 @@
     case "updateSkinImages":
       result = updateSkinImages(ss);
       break;
+    case "setSitePassword":
+      if (params.password) {
+        PropertiesService.getScriptProperties().setProperty("sitePasswordHash", siteHash(params.password));
+        result = "OK";
+      } else result = "MISSING";
+      break;
+    case "clearSitePassword":
+      PropertiesService.getScriptProperties().deleteProperty("sitePasswordHash");
+      result = "OK";
+      break;
+    case "sitePasswordStatus":
+      result = PropertiesService.getScriptProperties().getProperty("sitePasswordHash") ? "SET" : "UNSET";
+      break;
+    case "checkSitePassword":
+      var stored = PropertiesService.getScriptProperties().getProperty("sitePasswordHash");
+      if (!stored) result = "OK";
+      else result = (siteHash(params.password || "") === stored) ? "OK" : "FAIL";
+      break;
   }
     
     return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.JSON);
     } catch(err) {
       return ContentService.createTextOutput("ERROR: " + err.message).setMimeType(ContentService.MimeType.TEXT);
     }
+  }
+
+  function siteHash(pw) {
+    var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pw, Utilities.Charset.UTF_8);
+    return bytes.map(function(b) { var v = b < 0 ? b + 256 : b; var s = v.toString(16); return s.length === 1 ? "0" + s : s; }).join("");
   }
 
   function getSheet(ss, name) {

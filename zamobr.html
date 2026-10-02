@@ -1,46 +1,46 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="cs" translate="no">
 <body>
-<a href="hlav.html" class="back-link">â† ZpÄ›t</a>
-<h1>ZamoÅ™it body</h1>
+<a href="hlav.html" class="back-link">‹ Zpìt</a>
+<h1>Zamoøit body</h1>
 
 <div style="text-align:center;margin-bottom:20px;">
-  <button onclick="showTab('code')" id="tabCode" style="padding:10px 30px;background:#00ff96;border:none;border-radius:10px 0 0 10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">KÃ³d</button>
+  <button onclick="showTab('code')" id="tabCode" style="padding:10px 30px;background:#00ff96;border:none;border-radius:10px 0 0 10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Kód</button>
   <button onclick="showTab('skin')" id="tabSkin" style="padding:10px 30px;background:#444;border:none;border-radius:0;color:#fff;font-size:16px;cursor:pointer;">Skin</button>
   <button onclick="showTab('ref')" id="tabRef" style="padding:10px 30px;background:#444;border:none;border-radius:0 10px 10px 0;color:#fff;font-size:16px;cursor:pointer;">Referral</button>
 </div>
 
 <div id="codeTab">
-  <p>Zadej kÃ³d nÃ­Å¾e</p>
+  <p>Zadej kód níe</p>
   <input class="intex" type="text" id="kod">
   <input class="inok" type="button" value="ok" id="ok-button" onclick="overitkod()">
 </div>
 
 <div id="skinTab" style="display:none;">
   <div style="text-align:center;margin-bottom:15px;">
-    <p style="color:#aaa;font-size:14px;">PÅ™ijatÃ© skiny pro vloÅ¾enÃ­</p>
+    <p style="color:#aaa;font-size:14px;">Pøijaté skiny pro vloení</p>
     <div id="tradeInfo"></div>
   </div>
   <div id="invItems" style="max-height:50vh;overflow-y:auto;padding:5px;"></div>
   <div id="depositSummary" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:15px 20px;background:#0a0a1a;border-top:2px solid #00ff96;z-index:100;">
     <div style="display:flex;justify-content:space-between;align-items:center;max-width:800px;margin:0 auto;">
       <div>
-        <span style="color:#aaa;font-size:14px;">VybrÃ¡no: <span id="selectedCount" style="color:#fff;font-weight:bold;">0</span> skinÅ¯</span>
+        <span style="color:#aaa;font-size:14px;">Vybráno: <span id="selectedCount" style="color:#fff;font-weight:bold;">0</span> skinù</span>
         <span style="color:#444;margin:0 10px;">|</span>
-        <span style="color:#ffd700;font-size:18px;font-weight:bold;"><span id="selectedTotal">0.00</span> KÄ</span>
+        <span style="color:#ffd700;font-size:18px;font-weight:bold;"><span id="selectedTotal">0.00</span> Kè</span>
       </div>
-      <button onclick="sendDeposit()" id="sendDepositBtn" style="padding:12px 35px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">VLOÅ½IT</button>
+      <button onclick="sendDeposit()" id="sendDepositBtn" style="padding:12px 35px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">VLOIT</button>
     </div>
   </div>
   <div id="depositResult" style="margin-top:10px;"></div>
 </div>
 
 <div id="refTab" style="display:none;">
-  <p>Zadej referral kÃ³d kamarÃ¡da</p>
+  <p>Zadej referral kód kamaráda</p>
   <input class="intex" type="text" id="refCodeInput" maxlength="4" placeholder="4 znaky" style="text-transform:uppercase;letter-spacing:3px;text-align:center;">
   <br><br>
-  <button onclick="applyRefCode()" style="padding:10px 30px;background:#00ff96;border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">PouÅ¾Ã­t kÃ³d</button>
-  <p style="font-size:13px;color:#aaa;margin-top:15px;">ZÃ­skej <b>6 KÄ</b> zdarma + <b>10%</b> bonus pÅ™i depositu</p>
+  <button onclick="applyRefCode()" style="padding:10px 30px;background:#00ff96;border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Pouít kód</button>
+  <p style="font-size:13px;color:#aaa;margin-top:15px;">Získej <b>6 Kè</b> zdarma + <b>10%</b> bonus pøi depositu</p>
   <div id="refResult"></div>
 </div>
 
@@ -53,7 +53,7 @@
 .inv-item:active { transform: scale(0.95); }
 </style>
 <script src="script.js"></script>
-<script src="user.js?ver=10"></script>
+<script src="user.js?ver=11"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
@@ -87,14 +87,14 @@ async function loadTradeLink() {
   if (!info) return;
   var botLink = await callScript("getBotTradeLink");
   if (botLink && botLink !== "NOT_SET") {
-    info.innerHTML = '<p style="color:#aaa;font-size:14px;">Bot: <a href="' + botLink + '" target="_blank" style="color:#00ff96;">otevÅ™Ã­t profil bota</a></p>';
+    info.innerHTML = '<p style="color:#aaa;font-size:14px;">Bot: <a href="' + botLink + '" target="_blank" style="color:#00ff96;">otevøít profil bota</a></p>';
   } else {
-    info.innerHTML = '<p style="color:#f80;font-size:14px;">Bot trade link nenÃ­ nastaven, kontaktuj admina</p>';
+    info.innerHTML = '<p style="color:#f80;font-size:14px;">Bot trade link není nastaven, kontaktuj admina</p>';
   }
 }
 
 async function loadInventory() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">NaÄÃ­tÃ¡nÃ­ inventÃ¡Å™e...</p>';
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Naèítání inventáøe...</p>';
   selectedItems = [];
 
   try {
@@ -102,7 +102,7 @@ async function loadInventory() {
     var profile = JSON.parse(profileRes);
     var steamId = profile.steamId;
     if (!steamId) {
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">NemÃ¡Å¡ propojenÃ½ Steam ÃºÄet.</p>';
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Nemáš propojenı Steam úèet.</p>';
       return;
     }
 
@@ -111,13 +111,13 @@ async function loadInventory() {
     try { items = JSON.parse(directRes); } catch(e) { items = []; }
 
     if (!Array.isArray(items)) {
-      var errMsg = (items && items.error) ? items.error : "NeznÃ¡mÃ¡ chyba";
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + errMsg + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit pÅ™es bota</button></p>';
+      var errMsg = (items && items.error) ? items.error : "Neznámá chyba";
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + errMsg + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit pøes bota</button></p>';
       return;
     }
 
     if (items.length === 0) {
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">InventÃ¡Å™ je prÃ¡zdnÃ½ nebo Å¾Ã¡dnÃ½ skin nenÃ­ v seznamu pÅ™ijatÃ½ch.</p>';
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventáø je prázdnı nebo ádnı skin není v seznamu pøijatıch.</p>';
       return;
     }
 
@@ -125,12 +125,12 @@ async function loadInventory() {
     renderDepositItems(items);
 
   } catch(e) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit pÅ™es bota</button></p>';
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit pøes bota</button></p>';
   }
 }
 
 async function loadInventoryViaBot() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">NaÄÃ­tÃ¡nÃ­ pÅ™es bota... MÅ¯Å¾e to trvat 1-2 minuty.</p>';
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Naèítání pøes bota... Mùe to trvat 1-2 minuty.</p>';
 
   await callScript("requestInventory", { username: getCurrentUser() });
 
@@ -144,7 +144,7 @@ async function loadInventoryViaBot() {
         var items;
         try { items = JSON.parse(result); } catch(e) { items = []; }
         if (!items || items.length === 0) {
-          document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">InventÃ¡Å™ je prÃ¡zdnÃ½ nebo Å¾Ã¡dnÃ½ skin nenÃ­ v seznamu pÅ™ijatÃ½ch.</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
+          document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventáø je prázdnı nebo ádnı skin není v seznamu pøijatıch.</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
           return;
         }
         items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
@@ -152,12 +152,12 @@ async function loadInventoryViaBot() {
         return;
       }
       if (attempts % 15 === 0) {
-        document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">StÃ¡le naÄÃ­tÃ¡m... (' + (attempts * 3) + 's)</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#f80;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">ZruÅ¡it</button></p>';
+        document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Stále naèítám... (' + (attempts * 3) + 's)</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#f80;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zrušit</button></p>';
       }
     } catch(e) {}
     if (attempts >= 120) {
       clearInterval(pollInv);
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Timeout (6 min). Bot nestihl stÃ¡hnout inventÃ¡Å™.</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Timeout (6 min). Bot nestihl stáhnout inventáø.</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
     }
   }, 3000);
 }
@@ -178,9 +178,9 @@ function renderDepositItems(items) {
     html += '<div style="padding:6px 4px;">';
     html += '<p style="color:#ddd;font-size:10px;margin:0;line-height:1.3;height:28px;overflow:hidden;">' + it.name + '</p>';
     if (it.depositable) {
-      html += '<p style="color:#00ff96;font-size:12px;font-weight:bold;margin:3px 0 0;">' + it.price.toFixed(2) + ' KÄ</p>';
+      html += '<p style="color:#00ff96;font-size:12px;font-weight:bold;margin:3px 0 0;">' + it.price.toFixed(2) + ' Kè</p>';
     } else {
-      html += '<p style="color:#555;font-size:10px;margin:3px 0 0;"> nelze vloÅ¾it</p>';
+      html += '<p style="color:#555;font-size:10px;margin:3px 0 0;"> nelze vloit</p>';
     }
     html += '</div></div>';
   }
@@ -222,14 +222,14 @@ async function sendDeposit() {
   if (!selectedItems.length) return;
   var btn = document.getElementById("sendDepositBtn");
   btn.disabled = true;
-  btn.textContent = "ODESÃLÃM...";
+  btn.textContent = "ODESÍLÁM...";
   var itemsJson = JSON.stringify(selectedItems.map(function(i) { return { name: i.name, assetId: i.assetId, amount: i.amount || "1", contextid: i.contextid || "2", price: i.price }; }));
   var res = await callScript("requestDeposit", { username: getCurrentUser(), items: itemsJson });
   if (res === "OK") {
     document.getElementById("depositResult").innerHTML = '<div style="padding:15px;border:1px solid #00ff96;border-radius:10px;background:#0d2b1a;text-align:center;">' +
-      '<p style="color:#00ff96;font-size:16px;font-weight:bold;">PoÅ¾adavek odeslÃ¡n!</p>' +
-      '<p style="color:#aaa;font-size:13px;margin-top:5px;">Bot zkontroluje tvÅ¯j inventÃ¡Å™ a poÅ¡le trade offer</p>' +
-      '<p style="color:#aaa;font-size:13px;">Po pÅ™ijetÃ­ se ti automaticky pÅ™ipÃ­Å¡Ã­ KÄ</p></div>';
+      '<p style="color:#00ff96;font-size:16px;font-weight:bold;">Poadavek odeslán!</p>' +
+      '<p style="color:#aaa;font-size:13px;margin-top:5px;">Bot zkontroluje tvùj inventáø a pošle trade offer</p>' +
+      '<p style="color:#aaa;font-size:13px;">Po pøijetí se ti automaticky pøipíší Kè</p></div>';
     selectedItems = [];
     updateDepositSummary();
     document.getElementById("invItems").innerHTML = "";
@@ -237,20 +237,20 @@ async function sendDeposit() {
     document.getElementById("depositResult").innerHTML = '<p style="color:#f44;text-align:center;">Chyba: ' + res + '</p>';
   }
   btn.disabled = false;
-  btn.textContent = "VLOÅ½IT";
+  btn.textContent = "VLOIT";
 }
 
 async function applyRefCode() {
   var code = document.getElementById("refCodeInput").value.trim();
-  if (!code) { alert("Zadej kÃ³d"); return; }
+  if (!code) { alert("Zadej kód"); return; }
   var res = await callScript("applyReferral", { username: getCurrentUser(), code: code });
   var el = document.getElementById("refResult");
   if (res === "OK") {
-    el.innerHTML = '<p style="color:#00ff96;margin-top:15px;">KÃ³d pouÅ¾it! ZÃ­skal jsi 6 KÄ + 10% deposit bonus.</p>';
+    el.innerHTML = '<p style="color:#00ff96;margin-top:15px;">Kód pouit! Získal jsi 6 Kè + 10% deposit bonus.</p>';
     document.getElementById("refCodeInput").value = "";
     createPointsDisplay();
   } else if (res === "ALREADY_REFERRED") {
-    el.innerHTML = '<p style="color:#ffa500;margin-top:15px;">UÅ¾ mÃ¡Å¡ pÅ™iÅ™azenÃ½ referral kÃ³d.</p>';
+    el.innerHTML = '<p style="color:#ffa500;margin-top:15px;">U máš pøiøazenı referral kód.</p>';
   } else {
     el.innerHTML = '<p style="color:#f44;margin-top:15px;">Chyba: ' + res + '</p>';
   }
@@ -260,7 +260,7 @@ async function checkReferralStatus() {
   var res = await callScript("hasReferral", { username: getCurrentUser() });
   var el = document.getElementById("refTab");
   if (res === "YES") {
-    el.innerHTML = '<p style="color:#ffa500;font-size:14px;">UÅ¾ mÃ¡Å¡ pÅ™iÅ™azenÃ½ referral kÃ³d.</p>';
+    el.innerHTML = '<p style="color:#ffa500;font-size:14px;">U máš pøiøazenı referral kód.</p>';
   }
 }
 </script>
