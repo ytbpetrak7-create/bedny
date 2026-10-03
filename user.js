@@ -222,3 +222,14 @@ async function siteGate() {
   } catch(e) {}
 }
 siteGate();
+
+// AI chat widget na vsech strankach
+(function() {
+  function loadAI() {
+    var s = document.createElement("script");
+    s.src = "ai-chat.js?ver=1";
+    (document.body || document.documentElement).appendChild(s);
+  }
+  if (document.body) loadAI();
+  else document.addEventListener("DOMContentLoaded", loadAI);
+})();
