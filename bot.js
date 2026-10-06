@@ -305,13 +305,30 @@ async function poll() {
         const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
         offer.addMyItem(found);
         offer.setMessage(w.item);
+        const userDetails = await new Promise((resolve) => {
+          offer.getUserDetails((err, me, them) => {
+            if (err) { console.log("Offer #" + w.row + ": partner overeni selhalo: " + err.message + " (spatny/expirovany trade link?)"); resolve(null); }
+            else {
+              console.log("Offer #" + w.row + ": partner=" + (them.personaName || "?") + " escrowDnu=" + (them.escrowDays !== undefined ? them.escrowDays : "?"));
+              resolve(them);
+            }
+          });
+        });
+        if (!userDetails) {
+          failedOffers["w_" + w.row] = { at: Date.now(), retryAfter: 3600000, count: ((failedOffers["w_" + w.row] || {}).count || 0) + 1 };
+          continue;
+        }
         await new Promise((resolve) => {
           offer.send((err, status) => {
             if (err) {
               var emsg = err.message || "";
               var isRate = (err.eresult === 15) || emsg.indexOf("try again later") > -1;
+              var prevCount = ((failedOffers["w_" + w.row] || {}).count || 0) + 1;
               console.log("Chyba offer #" + w.row + ": " + emsg + (err.eresult ? " (eresult=" + err.eresult + ")" : "") + (isRate ? " -> retry za 15 min" : " -> retry za 1h"));
-              failedOffers["w_" + w.row] = { at: Date.now(), retryAfter: isRate ? 900000 : 3600000 };
+              failedOffers["w_" + w.row] = { at: Date.now(), retryAfter: isRate ? 900000 : 3600000, count: prevCount };
+              if (isRate && prevCount >= 3) {
+                console.log("!!! Offer #" + w.row + ": error 15 uz " + prevCount + "x po sobe. Zkontroluj: 1) visici nabidky (steamcommunity.com/my/tradeoffers/sent jako bot), 2) ucet neni Limited (store.steampowered.com/account), 3) trade link uzivatele je aktualni, 4) zadny ban/hold na uctu.");
+              }
             } else {
               console.log(`Offer sent: ${status}`);
               confirmOffer(offer.id, w.row);
