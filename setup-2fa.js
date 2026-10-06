@@ -23,7 +23,8 @@ function doLogin(details) {
     const password = await ask("Heslo: ");
 
     try {
-      await doLogin({ accountName, password });
+      const mobCode = await ask("Kod z MOBILNI app (Steam Guard v telefonu): ");
+      await doLogin({ accountName, password, twoFactorCode: mobCode });
     } catch (e) {
       if (e.message && e.message.indexOf("SteamGuard") !== -1) {
         const code = await ask("Kod z emailu (SteamGuard): ");
@@ -32,7 +33,13 @@ function doLogin(details) {
         throw e;
       }
     }
-    console.log("Prihlaseno. Pridavam autentikator...");
+    console.log("Prihlaseno. Mobilni token: " + (community.mobileAccessToken ? "OK" : "CHYBI"));
+    if (!community.mobileAccessToken) {
+      console.log("Login bez mobilniho tokenu - enableTwoFactor nepujde. Zkus to znovu s kodem z mobilni app.");
+      rl.close();
+      return;
+    }
+    console.log("Pridavam autentikator...");
 
     const res = await new Promise((resolve, reject) => {
       community.enableTwoFactor((err, r) => {

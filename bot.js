@@ -200,7 +200,11 @@ function communityLogin() {
   }, (err) => {
     if (err) { console.log("Community login error: " + err.message); return; }
     communityLoggedIn = true;
-    console.log("✅ Community login OK (mobilni potvrzeni aktivni)");
+    if (community.mobileAccessToken) {
+      console.log("✅ Community login OK (mobilni potvrzeni aktivni)");
+    } else {
+      console.log("⚠️ Community login BEZ mobilniho tokenu - automaticka potvrzeni NEBUDOU fungovat!");
+    }
   });
 }
 
