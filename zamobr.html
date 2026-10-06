@@ -154,10 +154,16 @@ async function loadInventoryViaWorker(steamId) {
     var depRes = await callScript("getDepositSkins");
     var accepted = JSON.parse(depRes);
     var result = [];
-    var descs = j.descriptions || {};
-    for (var id in j.assets) {
-      var asset = j.assets[id];
-      var desc = descs[asset.classid + "_" + asset.instanceid];
+    function toArr(x) { if (!x) return []; if (Array.isArray(x)) return x; var a = []; for (var k in x) a.push(x[k]); return a; }
+    var descMap = {};
+    var dArr = toArr(j.descriptions);
+    for (var di = 0; di < dArr.length; di++) {
+      descMap[dArr[di].classid + "_" + dArr[di].instanceid] = dArr[di];
+    }
+    var aArr = toArr(j.assets);
+    for (var ai = 0; ai < aArr.length; ai++) {
+      var asset = aArr[ai];
+      var desc = descMap[asset.classid + "_" + asset.instanceid];
       if (!desc || !desc.market_hash_name) continue;
       var name = desc.market_hash_name;
       var wm = name.match(/\(([^)]+)\)\s*$/);
@@ -168,7 +174,7 @@ async function loadInventoryViaWorker(steamId) {
           if (!accepted[a].wear || (accepted[a].wear || "").toLowerCase() === steamWear.toLowerCase()) {
             var ic = desc.icon_url_large || desc.icon_url || "";
             if (ic) ic = "https://community.akamai.steamstatic.com/economy/image/" + ic;
-            result.push({ name: name, price: accepted[a].price, depositable: true, assetId: asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: ic });
+            result.push({ name: name, price: accepted[a].price, depositable: true, assetId: asset.assetid || asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: ic });
             break;
           }
         }

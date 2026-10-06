@@ -358,6 +358,14 @@
     return parseFloat(props.getProperty("priceEmpireProfitMultiplier") || "1.0");
   }
 
+  function steamArr(x) {
+    if (!x) return [];
+    if (Object.prototype.toString.call(x) === "[object Array]") return x;
+    var a = [];
+    for (var k in x) a.push(x[k]);
+    return a;
+  }
+
   function getSheet(ss, name) {
     let sheet = ss.getSheetByName(name);
     if (!sheet) {
@@ -1508,11 +1516,16 @@
     if (!json || !json.success) return JSON.stringify({ error: "Steam: neúspěch" });
     if (!json.assets) return JSON.stringify({ error: "Steam: žádné předměty" });
 
+      var descMap = {};
+      var descArr = steamArr(json.descriptions);
+      for (var di = 0; di < descArr.length; di++) {
+        descMap[descArr[di].classid + "_" + descArr[di].instanceid] = descArr[di];
+      }
       var result = [];
-      for (var id in json.assets) {
-        var asset = json.assets[id];
-        var classId = asset.classid + "_" + asset.instanceid;
-        var desc = json.descriptions ? json.descriptions[classId] : null;
+      var assetArr = steamArr(json.assets);
+      for (var ai = 0; ai < assetArr.length; ai++) {
+        var asset = assetArr[ai];
+        var desc = descMap[asset.classid + "_" + asset.instanceid] || null;
         if (!desc) continue;
         var name = desc.market_hash_name || "";
         if (!name) continue;
@@ -1521,7 +1534,7 @@
         var depositable = price > 0;
         var img = desc.icon_url_large || desc.icon_url || "";
         if (img) img = "https://community.akamai.steamstatic.com/economy/image/" + img;
-        result.push({ name: name, price: price, depositable: depositable, assetId: asset.id, contextid: asset.contextid || "2", icon: img });
+        result.push({ name: name, price: price, depositable: depositable, assetId: asset.assetid || asset.id, contextid: asset.contextid || "2", icon: img });
       }
       return JSON.stringify(result);
     } catch (e) {
@@ -1609,11 +1622,16 @@
       if (!json.success) return JSON.stringify({ error: "STEAM_FAIL", steamId: steamId });
       if (!json.assets) return JSON.stringify({ error: "NO_ASSETS", steamId: steamId, keys: Object.keys(json).join(",") });
 
+      var descMap = {};
+      var descArr = steamArr(json.descriptions);
+      for (var di = 0; di < descArr.length; di++) {
+        descMap[descArr[di].classid + "_" + descArr[di].instanceid] = descArr[di];
+      }
       var result = [];
-      for (var id in json.assets) {
-        var asset = json.assets[id];
-        var classId = asset.classid + "_" + asset.instanceid;
-        var desc = json.descriptions ? json.descriptions[classId] : null;
+      var assetArr = steamArr(json.assets);
+      for (var ai = 0; ai < assetArr.length; ai++) {
+        var asset = assetArr[ai];
+        var desc = descMap[asset.classid + "_" + asset.instanceid] || null;
         if (!desc) continue;
         var name = desc.market_hash_name || "";
         if (!name) continue;
@@ -1621,7 +1639,7 @@
         var price = priceMap[baseName] || 0;
         var img = desc.icon_url_large || desc.icon_url || "";
         if (img) img = "https://community.akamai.steamstatic.com/economy/image/" + img;
-        result.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: img });
+        result.push({ name: name, price: price, depositable: price > 0, assetId: asset.assetid || asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: img });
       }
       return JSON.stringify(result);
     } catch (e) {
@@ -1667,11 +1685,16 @@
       var json = JSON.parse(response.getContentText());
       if (!json || !json.success || !json.assets) return JSON.stringify({ error: "STEAM_FAIL", steamId: steamId });
 
+      var descMap = {};
+      var descArr = steamArr(json.descriptions);
+      for (var di = 0; di < descArr.length; di++) {
+        descMap[descArr[di].classid + "_" + descArr[di].instanceid] = descArr[di];
+      }
       var result = [];
-      for (var id in json.assets) {
-        var asset = json.assets[id];
-        var classId = asset.classid + "_" + asset.instanceid;
-        var desc = json.descriptions ? json.descriptions[classId] : null;
+      var assetArr = steamArr(json.assets);
+      for (var ai = 0; ai < assetArr.length; ai++) {
+        var asset = assetArr[ai];
+        var desc = descMap[asset.classid + "_" + asset.instanceid] || null;
         if (!desc) continue;
         var name = desc.market_hash_name || "";
         if (!name) continue;
@@ -1679,7 +1702,7 @@
         var price = priceMap[baseName] || 0;
         var img = desc.icon_url_large || desc.icon_url || "";
         if (img) img = "https://community.akamai.steamstatic.com/economy/image/" + img;
-        result.push({ name: name, price: price, depositable: price > 0, assetId: asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: img });
+        result.push({ name: name, price: price, depositable: price > 0, assetId: asset.assetid || asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: img });
       }
       return JSON.stringify(result);
     } catch (e) {

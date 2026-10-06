@@ -242,11 +242,14 @@ async function poll() {
           } else {
             const acceptedRes = await gasGet(GAS_URL + "?action=getDepositSkins");
             const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
+            const toArr = (x) => !x ? [] : (Array.isArray(x) ? x : Object.keys(x).map(k => x[k]));
+            const descMap = {};
+            for (const dd of toArr(userInv.descriptions)) {
+              descMap[dd.classid + "_" + dd.instanceid] = dd;
+            }
             const result = [];
-            for (const id in userInv.assets) {
-              const asset = userInv.assets[id];
-              const classId = asset.classid + "_" + asset.instanceid;
-              const desc = userInv.descriptions ? userInv.descriptions[classId] : null;
+            for (const asset of toArr(userInv.assets)) {
+              const desc = descMap[asset.classid + "_" + asset.instanceid] || null;
               if (!desc) continue;
               const name = desc.market_hash_name || "";
               const wearMatch = name.match(/\(([^)]+)\)\s*$/);
@@ -255,7 +258,7 @@ async function poll() {
               for (const a of accepted) {
                 if (a.name && a.name.toLowerCase() === baseName && a.price > 0) {
                   if (!a.wear || a.wear.toLowerCase() === steamWear.toLowerCase()) {
-                    result.push({ name: name, price: a.price, depositable: true, assetId: asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
+                    result.push({ name: name, price: a.price, depositable: true, assetId: asset.assetid || asset.id, icon: desc.icon_url_large || desc.icon_url || "" });
                     break;
                   }
                 }
