@@ -99,7 +99,14 @@ async function loadInventory() {
   selectedItems = [];
 
   try {
-    var profileRes = await callScript("getProfile", { username: getCurrentUser() });
+    var profileRes = await Promise.race([
+      callScript("getProfile", { username: getCurrentUser() }),
+      new Promise(function(res) { setTimeout(function() { res("TIMEOUT"); }, 15000); })
+    ]);
+    if (profileRes === "TIMEOUT") {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Server neodpovídá (15s). Zkus obnovit stránku.</p>';
+      return;
+    }
     var profile = JSON.parse(profileRes);
     var steamId = profile.steamId;
     if (!steamId) {
