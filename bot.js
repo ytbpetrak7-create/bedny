@@ -232,14 +232,23 @@ async function poll() {
     if (items && items.length && botInv) {
       for (const w of items) {
         if (w.status !== "approved") continue;
-        if (!w.tradeLink) continue;
+        if (!w.tradeLink && !w.username) continue;
+        let tradeUrl = w.tradeLink || "";
+        try {
+          const fresh = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(w.username));
+          if (fresh && typeof fresh === "string" && fresh.indexOf("tradeoffer/new") > -1) {
+            if (fresh !== tradeUrl) console.log("Offer #" + w.row + ": pouzivam aktualni trade link z profilu");
+            tradeUrl = fresh;
+          }
+        } catch (e) {}
+        if (!tradeUrl) continue;
         var f = failedOffers["w_" + w.row];
         if (f && Date.now() - f.at < f.retryAfter) continue;
 
         var lastTry = lastWithdrawalAttempt[w.row] || 0;
         if (Date.now() - lastTry < 600000) continue;
 
-        const t = parseTradeLink(w.tradeLink);
+        const t = parseTradeLink(tradeUrl);
         if (!t) { console.log("Offer #" + w.row + ": spatny trade link, preskakuji"); continue; }
         const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
         if (!found) {
