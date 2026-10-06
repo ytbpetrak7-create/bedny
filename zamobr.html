@@ -161,24 +161,31 @@ async function loadInventory() {
     }
 
     if (!settled) {
-      document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Přímé cesty selhaly, zkouším přes terminálového bota...</p>';
-      loadInventoryViaBot();
+      var reason = window._workerReason || "Steam momentálně blokuje načtení";
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">' + reason + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
     }
 
   } catch(e) {
-    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
+    document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
   }
 }
 
 async function fetchWorkerItems(steamId) {
+  window._workerReason = "";
   var ctrl = new AbortController();
   var timer = setTimeout(function() { ctrl.abort(); }, 12000);
   try {
     var r = await fetch(WORKER_URL + "?steamid=" + encodeURIComponent(steamId), { signal: ctrl.signal });
     clearTimeout(timer);
-    if (!r.ok) return null;
+    if (!r.ok) {
+      window._workerReason = r.status === 403 ? "inventář je soukromý – nastav ho ve Steamu jako Veřejný" : "proxy HTTP " + r.status;
+      return null;
+    }
     var j = await r.json();
-    if (!j || !j.success || !j.assets) return null;
+    if (!j || !j.success || !j.assets) {
+      window._workerReason = "Steam nevrátil inventář – máš ho nastavený jako Veřejný?";
+      return null;
+    }
     var depRes = await callScript("getDepositSkins");
     var accepted = JSON.parse(depRes);
     var result = [];
@@ -208,45 +215,16 @@ async function fetchWorkerItems(steamId) {
         }
       }
     }
-    if (!result.length) return null;
+    if (!result.length) {
+      window._workerReason = "žádný skin neodpovídá seznamu přijatých";
+      return null;
+    }
     return result;
   } catch (e) {
     clearTimeout(timer);
+    window._workerReason = e.name === "AbortError" ? "proxy timeout" : "chyba proxy";
     return null;
   }
-}
-
-async function loadInventoryViaBot() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání přes bota... Může to trvat 1-2 minuty.</p>';
-
-  await callScript("requestInventory", { username: getCurrentUser() });
-
-  var attempts = 0;
-  var pollInv = setInterval(async function() {
-    attempts++;
-    try {
-      var result = await callScript("getInventoryResult", { username: getCurrentUser() });
-      if (result && result !== "PENDING" && result !== "") {
-        clearInterval(pollInv);
-        var items;
-        try { items = JSON.parse(result); } catch(e) { items = []; }
-        if (!items || items.length === 0) {
-          document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
-          return;
-        }
-        items.sort(function(a, b) { return b.depositable - a.depositable || a.name.localeCompare(b.name); });
-        renderDepositItems(items);
-        return;
-      }
-      if (attempts % 15 === 0) {
-        document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Stále načítám... (' + (attempts * 3) + 's)</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#f80;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zrušit</button></p>';
-      }
-    } catch(e) {}
-    if (attempts >= 120) {
-      clearInterval(pollInv);
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Timeout (6 min). Bot nestihl stáhnout inventář.</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventory()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit znovu</button></p>';
-    }
-  }, 3000);
 }
 
 function renderDepositItems(items) {
