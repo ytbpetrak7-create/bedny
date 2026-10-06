@@ -11,7 +11,7 @@ h2{color:#fff;font-size:18px;margin:20px 0 10px;}
 .btn-done{background:#555;color:#aaa;border:none;border-radius:6px;padding:8px 16px;}
 </style></head>
 <body>
-<a href="hlav.html" class="back-link">� Zp�t</a>
+<a href="hlav.html" class="back-link">← Zpět</a>
 <h1>Admin</h1>
 <div id="adminContent"></div>
 <link rel="stylesheet" href="inventory.css">
@@ -34,9 +34,9 @@ if (!getCurrentUser()) {
 
 async function loadAll() {
   var div = document.getElementById("adminContent");
-  div.innerHTML = "<p style='color:#aaa;'>Na��t�m...</p>";
+  div.innerHTML = "<p style='color:#aaa;'>Načítám...</p>";
   
-  var html = "<h2>��dosti o v�b�r</h2>";
+  var html = "<h2>Žádosti o výběr</h2>";
   var results = await Promise.all([
     callScript("getWithdrawals"),
     getTradeOffers(),
@@ -48,19 +48,19 @@ async function loadAll() {
   try {
     var wItems = JSON.parse(wRes);
     if (wItems.length === 0) {
-      html += "<p style='color:#aaa;'>��dn� pending ��dosti</p>";
+      html += "<p style='color:#aaa;'>Žádné pending žádosti</p>";
     } else {
       for (var wi = 0; wi < wItems.length; wi++) {
         var w = wItems[wi];
         var statusColor = w.status === "approved" ? "#ffd700" : w.status === "done" ? "#00ff96" : "#ff8800";
         html += '<div class="req-item">';
         html += '<p style="color:#fff;font-weight:bold;">' + w.item + '</p>';
-        html += '<p style="color:#aaa;font-size:13px;">U�ivatel: ' + w.username + ' | ' + new Date(w.date).toLocaleString() + '</p>';
+        html += '<p style="color:#aaa;font-size:13px;">Uživatel: ' + w.username + ' | ' + new Date(w.date).toLocaleString() + '</p>';
         html += '<p style="color:' + statusColor + ';font-size:12px;">Stav: ' + w.status + '</p>';
         if (w.status === "pending") {
-          html += '<button class="btn-app" onclick="approve(' + w.row + ')">Schv�lit</button>';
+          html += '<button class="btn-app" onclick="approve(' + w.row + ')">Schválit</button>';
         } else if (w.status === "approved") {
-          html += '<button class="btn-done" disabled>�ek� na bota</button>';
+          html += '<button class="btn-done" disabled>Čeká na bota</button>';
         } else if (w.status === "done") {
           html += '<button class="btn-done" disabled>Hotovo</button>';
         }
@@ -71,18 +71,18 @@ async function loadAll() {
     html += "<p style='color:#f80;'>Chyba: " + e.message + "</p>";
   }
   
-  html += "<h2>��dosti o referral k�dy</h2>";
+  html += "<h2>Žádosti o referral kódy</h2>";
   try {
     var refItems = JSON.parse(refRes);
     if (refItems.length === 0) {
-      html += "<p style='color:#aaa;'>��dn� pending ��dosti</p>";
+      html += "<p style='color:#aaa;'>Žádné pending žádosti</p>";
     } else {
       for (var ri = 0; ri < refItems.length; ri++) {
         var r = refItems[ri];
         html += '<div class="req-item">';
         html += '<p style="color:#ffd700;font-weight:bold;font-size:18px;letter-spacing:3px;">' + r.code + '</p>';
-        html += '<p style="color:#aaa;font-size:13px;">U�ivatel: ' + r.username + ' | ' + new Date(r.date).toLocaleString() + '</p>';
-        html += '<button class="btn-app" onclick="approveRef(' + r.row + ')">Schv�lit</button>';
+        html += '<p style="color:#aaa;font-size:13px;">Uživatel: ' + r.username + ' | ' + new Date(r.date).toLocaleString() + '</p>';
+        html += '<button class="btn-app" onclick="approveRef(' + r.row + ')">Schválit</button>';
         html += '</div>';
       }
     }
@@ -90,11 +90,11 @@ async function loadAll() {
     html += "<p style='color:#f80;'>Chyba: " + e.message + "</p>";
   }
   
-  html += "<h2>P��choz� trade offeary</h2>";
+  html += "<h2>Příchozí trade offeary</h2>";
   if (res === "NO_KEY" || res.indexOf("ERROR:") === 0) {
     var msg = res;
     if (res.indexOf("script.external_request") > -1) {
-      msg = "Chyb� autorizace Steam API.";
+      msg = "Chybí autorizace Steam API.";
     }
     html += "<p style='color:#f80;'>" + msg + "</p>";
   } else {
@@ -102,38 +102,38 @@ async function loadAll() {
       var data = JSON.parse(res);
       var offers = data.response && data.response.trade_offers ? data.response.trade_offers : [];
       if (offers.length === 0) {
-        html += "<p style='color:#aaa;'>��dn� aktivn� nab�dky</p>";
+        html += "<p style='color:#aaa;'>Žádné aktivní nabídky</p>";
       } else {
         for (var i = 0; i < offers.length; i++) {
           var o = offers[i];
           var itemsGive = o.items_to_give ? o.items_to_give.map(function(x) { return x.market_hash_name || "?"; }).join(", ") : "";
           var itemsReceive = o.items_to_receive ? o.items_to_receive.map(function(x) { return x.market_hash_name || "?"; }).join(", ") : "";
           html += '<div class="req-item">';
-          html += '<p style="color:#fff;font-weight:bold;">Nab�dka #' + o.tradeofferid + '</p>';
-          if (itemsGive) html += '<p style="color:#00ff96;font-size:14px;">D�v�: ' + itemsGive + '</p>';
-          if (itemsReceive) html += '<p style="color:#f80;font-size:14px;">Dost�v�: ' + itemsReceive + '</p>';
+          html += '<p style="color:#fff;font-weight:bold;">Nabídka #' + o.tradeofferid + '</p>';
+          if (itemsGive) html += '<p style="color:#00ff96;font-size:14px;">Dává: ' + itemsGive + '</p>';
+          if (itemsReceive) html += '<p style="color:#f80;font-size:14px;">Dostává: ' + itemsReceive + '</p>';
           html += '<p style="color:#aaa;font-size:12px;">Stav: ' + o.state + ' | <a href="https://steamcommunity.com/tradeoffer/' + o.tradeofferid + '" target="_blank" style="color:#00ff96;">Zobrazit na Steamu</a></p>';
           html += '</div>';
         }
       }
     } catch (e) {
-      html += "<p style='color:#f80;'>Chyba parsov�n�: " + e.message + "</p>";
+      html += "<p style='color:#f80;'>Chyba parsování: " + e.message + "</p>";
     }
   }
 
-  html += "<h2>Kolo �t�st� - nastaven�</h2>";
+  html += "<h2>Kolo štěstí - nastavení</h2>";
   html += '<div class="req-item">';
-  html += '<p style="color:#fff;font-weight:bold;">Po�adovan� profilovka (URL z Steamu)</p>';
+  html += '<p style="color:#fff;font-weight:bold;">Požadovaná profilovka (URL z Steamu)</p>';
   html += '<input id="wheelPic" type="text" placeholder="https://..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
-  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Odm�ny (8 segment�, JSON)</p>';
-  html += '<textarea id="wheelPrizes" rows="6" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;font-size:13px;font-family:monospace;">[{"label":"0.50 K�","amount":0.5},{"label":"1 K�","amount":1},{"label":"0.20 K�","amount":0.2},{"label":"5 K�","amount":5},{"label":"0.10 K�","amount":0.1},{"label":"2 K�","amount":2},{"label":"0.50 K�","amount":0.5},{"label":"10 K�","amount":10}]</textarea>';
-  html += '<br><button class="btn-app" onclick="saveWheel()" style="margin-top:10px;">Ulo�it kolo</button>';
+  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Odměny (8 segmentů, JSON)</p>';
+  html += '<textarea id="wheelPrizes" rows="6" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;font-size:13px;font-family:monospace;">[{"label":"0.50 Kč","amount":0.5},{"label":"1 Kč","amount":1},{"label":"0.20 Kč","amount":0.2},{"label":"5 Kč","amount":5},{"label":"0.10 Kč","amount":0.1},{"label":"2 Kč","amount":2},{"label":"0.50 Kč","amount":0.5},{"label":"10 Kč","amount":10}]</textarea>';
+  html += '<br><button class="btn-app" onclick="saveWheel()" style="margin-top:10px;">Uložit kolo</button>';
   html += ' <span id="wheelMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '</div>';
 
-  html += "<h2>PriceEmpire - nastaven� cen</h2>";
+  html += "<h2>PriceEmpire - nastavení cen</h2>";
   html += '<div class="req-item">';
-  html += '<p style="color:#fff;font-weight:bold;">API kl�� (z pricempire.com/api)</p>';
+  html += '<p style="color:#fff;font-weight:bold;">API klíč (z pricempire.com/api)</p>';
   html += '<input id="peApiKey" type="password" placeholder="Bearer token..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
   html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Zdroj cen</p>';
   html += '<select id="peSource" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
@@ -144,31 +144,31 @@ async function loadAll() {
   html += '<option value="csmoney">CS.MONEY</option>';
   html += '<option value="dmarket">DMarket</option>';
   html += '<option value="youpin">YouPin898</option>';
-  html += '<option value="csfloat">CSFloat (vlastn� API)</option>';
-  html += '<option value="takeskin">Take.Skin (zdarma, bez kl��e) ?</option>';
+  html += '<option value="csfloat">CSFloat (vlastní API)</option>';
+  html += '<option value="takeskin">Take.Skin (zdarma, bez klíče) ⭐</option>';
   html += '</select>';
-  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">CSFloat API kl�� (pokud vybere� CSFloat)</p>';
+  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">CSFloat API klíč (pokud vybereš CSFloat)</p>';
   html += '<input id="peCsfloatKey" type="password" placeholder="CSFloat API key..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
-  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">M�na</p>';
+  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Měna</p>';
   html += '<select id="peCurrency" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
-  html += '<option value="CZK">CZK (K�)</option>';
+  html += '<option value="CZK">CZK (Kč)</option>';
   html += '<option value="USD">USD ($)</option>';
-  html += '<option value="EUR">EUR (�)</option>';
+  html += '<option value="EUR">EUR (€)</option>';
   html += '</select>';
-  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Profit n�sobi� (1.0 = beze zisku, 1.3 = +30%)</p>';
+  html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Profit násobič (1.0 = beze zisku, 1.3 = +30%)</p>';
   html += '<input id="peProfitMult" type="number" step="0.01" min="0.1" max="5" value="1.0" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
-  html += '<br><button class="btn-app" onclick="savePriceEmpire()" style="margin-top:10px;">Ulo�it nastaven�</button>';
+  html += '<br><button class="btn-app" onclick="savePriceEmpire()" style="margin-top:10px;">Uložit nastavení</button>';
   html += ' <span id="peMsg" style="color:#00ff96;font-size:13px;"></span>';
-  html += '<br><br><button class="btn-app" onclick="updatePrices()" style="background:#ffd700;color:#1a1a2e;">Aktualizovat ceny ze v�ech tabulek</button>';
+  html += '<br><br><button class="btn-app" onclick="updatePrices()" style="background:#ffd700;color:#1a1a2e;">Aktualizovat ceny ze všech tabulek</button>';
   html += ' <span id="peUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
-  html += '<br><br><button class="btn-app" onclick="updateImages()" style="background:#4b9aff;color:#fff;">Aktualizovat obr�zky (pr�hledn� ze Steamu)</button>';
+  html += '<br><br><button class="btn-app" onclick="updateImages()" style="background:#4b9aff;color:#fff;">Aktualizovat obrázky (průhledné ze Steamu)</button>';
   html += ' <span id="imgUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '</div>';
 
-  html += "<h2>Z�mek webu 🔒</h2>";
+  html += "<h2>Zámek webu 🔒</h2>";
   html += '<div class="req-item">';
   html += '<p style="color:#aaa;font-size:13px;">Stav: <span id="lockStatus" style="color:#ffd700;">...</span></p>';
-  html += '<input id="sitePw" type="password" placeholder="Nov� heslo" autocomplete="new-password" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
+  html += '<input id="sitePw" type="password" placeholder="Nové heslo" autocomplete="new-password" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
   html += '<button class="btn-app" onclick="saveSitePassword()">Zamknout heslem</button> ';
   html += '<button class="btn-app" onclick="clearSitePassword()" style="background:#555;color:#fff;">Odemknout web</button>';
   html += ' <span id="lockMsg" style="color:#00ff96;font-size:13px;"></span>';
@@ -229,12 +229,12 @@ async function saveWheel() {
   try {
     var prizes = JSON.parse(prizesText);
     if (!Array.isArray(prizes) || prizes.length !== 8) {
-      msg.textContent = "Mus� b�t p�esn� 8 odm�n!";
+      msg.textContent = "Musí být přesně 8 odměn!";
       msg.style.color = "#f80";
       return;
     }
     await callScript("setWheelConfig", { pic: pic, prizes: JSON.stringify(prizes) });
-    msg.textContent = "Ulo�eno!";
+    msg.textContent = "Uloženo!";
     msg.style.color = "#00ff96";
   } catch(e) {
     msg.textContent = "Chyba: " + e.message;
@@ -258,27 +258,27 @@ async function savePriceEmpire() {
   var currency = document.getElementById("peCurrency").value;
   var csfloatKey = document.getElementById("peCsfloatKey").value.trim();
   var profitMult = document.getElementById("peProfitMult").value;
-  if (source !== "csfloat" && !apiKey) { msg.textContent = "Zadej API kl��!"; msg.style.color = "#f80"; return; }
-  if (source === "csfloat" && !csfloatKey) { msg.textContent = "Zadej CSFloat API kl��!"; msg.style.color = "#f80"; return; }
+  if (source !== "csfloat" && !apiKey) { msg.textContent = "Zadej API klíč!"; msg.style.color = "#f80"; return; }
+  if (source === "csfloat" && !csfloatKey) { msg.textContent = "Zadej CSFloat API klíč!"; msg.style.color = "#f80"; return; }
   await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency, csfloatKey: csfloatKey, profitMultiplier: profitMult });
-  msg.textContent = "Ulo�eno!"; msg.style.color = "#00ff96";
+  msg.textContent = "Uloženo!"; msg.style.color = "#00ff96";
 }
 
 async function updateImages() {
   var msg = document.getElementById("imgUpdateMsg");
-  msg.textContent = "Stahuji obr�zky..."; msg.style.color = "#ffd700";
+  msg.textContent = "Stahuji obrázky..."; msg.style.color = "#ffd700";
   try {
     var res = JSON.parse(await callScript("updateSkinImages"));
     if (res.error) { msg.textContent = "Chyba: " + res.error; msg.style.color = "#f80"; }
-    else { msg.textContent = "Hotovo! Aktualizov�no: " + res.updated + " | P�esko�eno (u� URL): " + res.skipped + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,5).join(", ") + ")" : ""); msg.style.color = res.updated > 0 ? "#00ff96" : "#f80"; }
-  } catch(e) { msg.textContent = "B�� na serveru, zkontroluj tabulku za chv�li."; msg.style.color = "#ffd700"; }
+    else { msg.textContent = "Hotovo! Aktualizováno: " + res.updated + " | Přeskočeno (už URL): " + res.skipped + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,5).join(", ") + ")" : ""); msg.style.color = res.updated > 0 ? "#00ff96" : "#f80"; }
+  } catch(e) { msg.textContent = "Běží na serveru, zkontroluj tabulku za chvíli."; msg.style.color = "#ffd700"; }
 }
 
 async function updatePrices() {
   var msg = document.getElementById("peUpdateMsg");
   var btn = document.querySelector('button[onclick="updatePrices()"]');
   if(btn) btn.disabled = true;
-  msg.textContent = "Stahuji ceny, m��e trvat ~20s..."; msg.style.color = "#ffd700";
+  msg.textContent = "Stahuji ceny, může trvat ~20s..."; msg.style.color = "#ffd700";
   var source = document.getElementById("peSource").value;
   var currency = document.getElementById("peCurrency").value;
   try {
@@ -288,11 +288,11 @@ async function updatePrices() {
       msg.textContent = "Chyba: " + res.error;
       msg.style.color = "#f80";
     } else {
-      msg.textContent = "Hotovo! Aktualizov�no: " + res.updated + "/" + res.total + " | Chyb: " + res.errors + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,3).join(", ") + ")" : "");
+      msg.textContent = "Hotovo! Aktualizováno: " + res.updated + "/" + res.total + " | Chyb: " + res.errors + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,3).join(", ") + ")" : "");
       msg.style.color = res.updated > 0 ? "#00ff96" : "#f80";
     }
   } catch(e) {
-    msg.textContent = "Po�adavek b�� na serveru (CORS/timeout). Zkontroluj za 30s v tabulce, nebo spus� p�es Actions � Update prices � Run workflow.";
+    msg.textContent = "Požadavek běží na serveru (CORS/timeout). Zkontroluj za 30s v tabulce, nebo spusť přes Actions → Update prices → Run workflow.";
     msg.style.color = "#ffd700";
   }
   if(btn) btn.disabled = false;

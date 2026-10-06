@@ -41,8 +41,8 @@ h1{font-size:24px;margin-bottom:10px;}
 </style>
 </head>
 <body>
-<a href="hlav.html" class="back-link">‹ Zpìt</a>
-<h1>Inventáø</h1>
+<a href="hlav.html" class="back-link">â€¹ ZpÄ›t</a>
+<h1>InventÃ¡Å™</h1>
 <div id="sellAllWrap" style="margin-bottom:15px;"></div>
 <div id="inventory"></div>
 
@@ -85,7 +85,7 @@ async function loadInventory() {
   var container = document.getElementById("inventory");
   
   if (items.length === 0) {
-    container.innerHTML = "<p style='color:#aaa;'>Zatím nemáš ádné pøedmìty</p>";
+    container.innerHTML = "<p style='color:#aaa;'>ZatÃ­m nemÃ¡Å¡ Å¾Ã¡dnÃ© pÅ™edmÄ›ty</p>";
     return;
   }
   
@@ -103,7 +103,7 @@ async function loadInventory() {
     
     var actions = '<div class="actions">';
     if (price > 0) {
-      actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat ' + Number(price).toFixed(2) + ' Kè</button>';
+      actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat ' + Number(price).toFixed(2) + ' KÄ</button>';
     }
     if (userTradeLink) {
       actions += '<button class="btn-withdraw" onclick="requestWithdraw(\'' + item.name + '\',' + item.row + ')">Vyzvednout</button>';
@@ -139,8 +139,8 @@ async function removeItem(name, row) {
 async function sellFromInv(row, name, price) {
   var el = document.getElementById("pointsDisplay");
   if (el) {
-    var cur = parseFloat(el.textContent.replace("Kè:", "").trim()) || 0;
-    el.textContent = "Kè: " + (cur + price).toFixed(2);
+    var cur = parseFloat(el.textContent.replace("KÄ:", "").trim()) || 0;
+    el.textContent = "KÄ: " + (cur + price).toFixed(2);
   }
   var res = await sellItem(row, price);
   if (res === "SOLD") {
@@ -158,8 +158,8 @@ async function sellAll() {
   }
   var el = document.getElementById("pointsDisplay");
   if (el && total > 0) {
-    var cur = parseFloat(el.textContent.replace("Kè:", "").trim()) || 0;
-    el.textContent = "Kè: " + (cur + total).toFixed(2);
+    var cur = parseFloat(el.textContent.replace("KÄ:", "").trim()) || 0;
+    el.textContent = "KÄ: " + (cur + total).toFixed(2);
   }
   document.getElementById("inventory").innerHTML = "";
   var res = await callScript("sellAll", { username: getCurrentUser() });
@@ -178,7 +178,7 @@ function renderSellAll(items) {
   });
   var wrap = document.getElementById("sellAllWrap");
   if (count > 0) {
-    wrap.innerHTML = '<button onclick="sellAll()" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Prodat vše (' + count + ' za ' + total.toFixed(2) + ' Kè)</button>';
+    wrap.innerHTML = '<button onclick="sellAll()" style="padding:10px 25px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Prodat vÅ¡e (' + count + ' za ' + total.toFixed(2) + ' KÄ)</button>';
   } else {
     wrap.innerHTML = "";
   }

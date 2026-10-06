@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="cs" translate="no">
 <body>
-<a href="hlav.html" class="back-link">‹ Zpìt</a>
+<a href="hlav.html" class="back-link">â€¹ ZpÄ›t</a>
 <h1>Profil</h1>
 <div id="profile"></div>
 
@@ -41,7 +41,7 @@ async function changePic() {
 async function loadProfile() {
   var res = await getProfile();
   if (res === "NOT_FOUND") {
-    document.getElementById("profile").innerHTML = "<p style='color:#fff;'>Uivatel nenalezen</p>";
+    document.getElementById("profile").innerHTML = "<p style='color:#fff;'>UÅ¾ivatel nenalezen</p>";
     return;
   }
   var data = JSON.parse(res);
@@ -58,28 +58,28 @@ async function loadProfile() {
   html += data.profilePic ? "" : data.username.charAt(0).toUpperCase();
   html += '</div>';
   html += '<p><strong>' + data.username + '</strong></p>';
-  html += '<p>Kè: ' + pts.toFixed(2) + '</p>';
+  html += '<p>KÄ: ' + pts.toFixed(2) + '</p>';
   html += '<p>Level ' + lvl + '</p>';
   html += '<div style="width:80%;max-width:300px;margin:10px auto;background:#444;border-radius:10px;overflow:hidden;height:20px;">';
   html += '<div style="width:' + progress + '%;background:#00ff96;height:20px;border-radius:10px;"></div>';
   html += '</div>';
-  html += '<p style="font-size:14px;color:#aaa;">' + xp + ' / ' + bounds.max + ' XP na další level</p>';
-  html += '<button onclick="showLevelRewards(' + lvl + ')" style="padding:8px 20px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:13px;font-weight:bold;cursor:pointer;margin-bottom:10px;">Odmìny za levely</button>';
+  html += '<p style="font-size:14px;color:#aaa;">' + xp + ' / ' + bounds.max + ' XP na dalÅ¡Ã­ level</p>';
+  html += '<button onclick="showLevelRewards(' + lvl + ')" style="padding:8px 20px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:13px;font-weight:bold;cursor:pointer;margin-bottom:10px;">OdmÄ›ny za levely</button>';
   html += '<div id="levelRewards" style="display:none;"></div>';
   html += '<hr style="border-color:#444;margin:20px 0;">';
   html += '<p style="font-size:16px;color:#aaa;">Steam Trade Link</p>';
-  html += '<p style="font-size:12px;color:#666;">Najdeš ho na <a href="https://steamcommunity.com/profiles/76561198785128182/tradeoffers/privacy" target="_blank" style="color:#00ff96;">této stránce</a> (dole)</p>';
+  html += '<p style="font-size:12px;color:#666;">NajdeÅ¡ ho na <a href="https://steamcommunity.com/profiles/76561198785128182/tradeoffers/privacy" target="_blank" style="color:#00ff96;">tÃ©to strÃ¡nce</a> (dole)</p>';
   html += '<input id="tradeLinkInput" type="text" value="' + (data.tradeLink || "") + '" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..." style="width:80%;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:14px;outline:none;">';
   html += '<br><br>';
-  html += '<button onclick="saveTrade()" style="padding:10px 30px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Uloit trade link</button>';
+  html += '<button onclick="saveTrade()" style="padding:10px 30px;background:linear-gradient(135deg,#00ff96,#00cc78);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">UloÅ¾it trade link</button>';
   html += '<hr style="border-color:#444;margin:20px 0;">';
-  html += '<p style="font-size:16px;color:#aaa;">Partnerskı program</p>';
-  html += '<p style="font-size:12px;color:#888;">Sdílej svùj kód a získej odmìny:</p>';
-  html += '<p style="font-size:12px;color:#00ff96;">• Tvùj kamarád dostane <b>6 Kè</b> zdarma + <b>10%</b> bonus pøi depositu</p>';
-  html += '<p style="font-size:12px;color:#ffd700;">• Ty dostaneš <b>1%</b> z kadého Kè co utratí za bedny</p>';
+  html += '<p style="font-size:16px;color:#aaa;">PartnerskÃ½ program</p>';
+  html += '<p style="font-size:12px;color:#888;">SdÃ­lej svÅ¯j kÃ³d a zÃ­skej odmÄ›ny:</p>';
+  html += '<p style="font-size:12px;color:#00ff96;">â€¢ TvÅ¯j kamarÃ¡d dostane <b>6 KÄ</b> zdarma + <b>10%</b> bonus pÅ™i depositu</p>';
+  html += '<p style="font-size:12px;color:#ffd700;">â€¢ Ty dostaneÅ¡ <b>1%</b> z kaÅ¾dÃ©ho KÄ co utratÃ­ za bedny</p>';
   html += '<div id="refCodeSection"></div>';
   html += '<hr style="border-color:#444;margin:20px 0;">';
-  html += '<p style="font-size:16px;color:#aaa;">Denní odmìna</p>';
+  html += '<p style="font-size:16px;color:#aaa;">DennÃ­ odmÄ›na</p>';
   html += '<div id="dailySection"></div>';
   html += '</div>';
   
@@ -93,14 +93,14 @@ async function saveTrade() {
   var link = document.getElementById("tradeLinkInput").value.trim();
   if (!link) link = "";
   await saveTradeLink(link);
-  alert("Trade link uloen");
+  alert("Trade link uloÅ¾en");
 }
 
 function copyRef() {
   var input = document.getElementById("refLink");
   input.select();
   document.execCommand("copy");
-  alert("Odkaz zkopírován!");
+  alert("Odkaz zkopÃ­rovÃ¡n!");
 }
 
 async function loadRefStats() {
@@ -114,21 +114,21 @@ async function loadRefStats() {
   if (code.startsWith("pending:")) {
     var pendingCode = code.replace("pending:", "");
     el.innerHTML = '<p style="font-size:20px;color:#ffa500;font-weight:bold;letter-spacing:4px;margin:10px 0;">' + pendingCode + '</p>' +
-      '<p style="font-size:14px;color:#ffa500;">Èeká na schválení...</p>';
+      '<p style="font-size:14px;color:#ffa500;">ÄŒekÃ¡ na schvÃ¡lenÃ­...</p>';
   } else if (code) {
     var refLink = "https://ytbpetrak7-create.github.io/bedny/index.html?ref=" + code;
     el.innerHTML = '<p style="font-size:20px;color:#ffd700;font-weight:bold;letter-spacing:4px;margin:10px 0;">' + code + '</p>' +
       '<input id="refLink" type="text" value="' + refLink + '" readonly style="width:80%;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:14px;outline:none;">' +
       '<br><br>' +
-      '<button onclick="copyRef()" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Kopírovat odkaz</button>';
+      '<button onclick="copyRef()" style="padding:10px 30px;background:linear-gradient(135deg,#ff4444,#cc0000);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">KopÃ­rovat odkaz</button>';
   } else {
-    el.innerHTML = '<p style="font-size:14px;color:#888;margin-bottom:10px;">Nemáš svùj referral kód</p>' +
-      '<button onclick="showCustomCodeForm()" style="padding:10px 30px;background:linear-gradient(135deg,#6f42c1,#5a32a3);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">Vytvoøit vlastní kód</button>' +
+    el.innerHTML = '<p style="font-size:14px;color:#888;margin-bottom:10px;">NemÃ¡Å¡ svÅ¯j referral kÃ³d</p>' +
+      '<button onclick="showCustomCodeForm()" style="padding:10px 30px;background:linear-gradient(135deg,#6f42c1,#5a32a3);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">VytvoÅ™it vlastnÃ­ kÃ³d</button>' +
       '<div id="customCodeForm" style="display:none;margin-top:15px;">' +
-      '<input id="customCodeInput" type="text" maxlength="4" placeholder="4 znaky (napø. M777)" style="width:150px;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:18px;text-align:center;letter-spacing:3px;text-transform:uppercase;outline:none;">' +
+      '<input id="customCodeInput" type="text" maxlength="4" placeholder="4 znaky (napÅ™. M777)" style="width:150px;padding:10px;border:2px solid #0f3460;border-radius:10px;background:#1a1a2e;color:#fff;font-size:18px;text-align:center;letter-spacing:3px;text-transform:uppercase;outline:none;">' +
       '<br><br>' +
-      '<button onclick="requestCustomCode()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:10px;color:#1a1a2e;font-size:14px;font-weight:bold;cursor:pointer;">Odeslat ádost</button>' +
-      '<p style="font-size:11px;color:#888;margin-top:8px;">Admin musí kód schválit</p>' +
+      '<button onclick="requestCustomCode()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:10px;color:#1a1a2e;font-size:14px;font-weight:bold;cursor:pointer;">Odeslat Å¾Ã¡dost</button>' +
+      '<p style="font-size:11px;color:#888;margin-top:8px;">Admin musÃ­ kÃ³d schvÃ¡lit</p>' +
       '</div>';
   }
   
@@ -136,9 +136,9 @@ async function loadRefStats() {
   try {
     var stats = JSON.parse(statsRes);
     el.innerHTML += '<div style="margin-top:15px;padding:15px;border:1px solid #444;border-radius:10px;">';
-    el.innerHTML += '<p style="font-size:14px;color:#00ff96;">Pozvaní hráèi: <b>' + stats.count + '</b></p>';
-    el.innerHTML += '<p style="font-size:13px;color:#aaa;">Celkem XP od referralù: <b>' + stats.totalXp + '</b></p>';
-    el.innerHTML += '<p style="font-size:13px;color:#ffd700;">Získáno z provize: <b>' + stats.earned + ' Kè</b></p>';
+    el.innerHTML += '<p style="font-size:14px;color:#00ff96;">PozvanÃ­ hrÃ¡Äi: <b>' + stats.count + '</b></p>';
+    el.innerHTML += '<p style="font-size:13px;color:#aaa;">Celkem XP od referralÅ¯: <b>' + stats.totalXp + '</b></p>';
+    el.innerHTML += '<p style="font-size:13px;color:#ffd700;">ZÃ­skÃ¡no z provize: <b>' + stats.earned + ' KÄ</b></p>';
     el.innerHTML += '</div>';
   } catch(e) {}
 }
@@ -150,10 +150,10 @@ function showCustomCodeForm() {
 
 async function requestCustomCode() {
   var code = document.getElementById("customCodeInput").value.trim();
-  if (code.length !== 4) { alert("Kód musí mít 4 znaky"); return; }
+  if (code.length !== 4) { alert("KÃ³d musÃ­ mÃ­t 4 znaky"); return; }
   var res = await callScript("requestRefCode", { username: getCurrentUser(), code: code });
   if (res === "OK") {
-    alert("ádost odeslána! Poèkej na schválení adminem.");
+    alert("Å½Ã¡dost odeslÃ¡na! PoÄkej na schvÃ¡lenÃ­ adminem.");
     document.getElementById("customCodeForm").style.display = "none";
     loadRefStats();
   } else {
@@ -189,35 +189,35 @@ async function loadDailyStatus() {
       var col = active ? "#1a1a2e" : next ? "#1a1a2e" : "#888";
       html += '<div style="width:50px;text-align:center;padding:8px 0;background:' + bg + ';border-radius:8px;color:' + col + ';">';
       html += '<div style="font-size:11px;">Den ' + d.day + '</div>';
-      html += '<div style="font-size:13px;font-weight:bold;">' + d.reward.toFixed(2) + ' Kè</div>';
+      html += '<div style="font-size:13px;font-weight:bold;">' + d.reward.toFixed(2) + ' KÄ</div>';
       html += '</div>';
     }
     html += '</div>';
     if (s.claimed) {
-      html += '<p style="color:#00ff96;font-size:14px;text-align:center;">Dnes u máš splnìno!</p>';
+      html += '<p style="color:#00ff96;font-size:14px;text-align:center;">Dnes uÅ¾ mÃ¡Å¡ splnÄ›no!</p>';
     } else {
       html += '<div style="text-align:center;margin-top:10px;">';
-      html += '<button onclick="claimDaily()" style="padding:12px 40px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Vyzvednout ' + s.nextReward.toFixed(2) + ' Kè</button>';
+      html += '<button onclick="claimDaily()" style="padding:12px 40px;background:linear-gradient(135deg,#ffd700,#ffaa00);border:none;border-radius:10px;color:#1a1a2e;font-size:16px;font-weight:bold;cursor:pointer;">Vyzvednout ' + s.nextReward.toFixed(2) + ' KÄ</button>';
       html += '</div>';
     }
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = '<p style="color:#888;">Naèítání...</p>';
+    el.innerHTML = '<p style="color:#888;">NaÄÃ­tÃ¡nÃ­...</p>';
   }
 }
 
 async function claimDaily() {
   var btn = document.querySelector("#dailySection button");
-  if (btn) { btn.disabled = true; btn.textContent = "Naèítání..."; }
+  if (btn) { btn.disabled = true; btn.textContent = "NaÄÃ­tÃ¡nÃ­..."; }
   var res = await callScript("claimDailyReward", { username: getCurrentUser() });
   if (res === "ALREADY_CLAIMED") {
-    alert("U sis dnes odmìnu vyzvedl!");
+    alert("UÅ¾ sis dnes odmÄ›nu vyzvedl!");
     loadDailyStatus();
     return;
   }
   try {
     var s = JSON.parse(res);
-    alert("Získal jsi " + s.reward.toFixed(2) + " Kè! (Den " + s.streak + "/7)");
+    alert("ZÃ­skal jsi " + s.reward.toFixed(2) + " KÄ! (Den " + s.streak + "/7)");
     createPointsDisplay();
     loadDailyStatus();
   } catch(e) {
@@ -248,7 +248,7 @@ async function showLevelRewards(currentLvl) {
     var claimed = [];
     try { claimed = JSON.parse(claimedRes); } catch(e) {}
     var html = '<div style="margin:10px 0;padding:10px;border:1px solid #444;border-radius:10px;max-height:300px;overflow-y:auto;">';
-    html += '<p style="font-size:14px;color:#ffd700;font-weight:bold;margin-bottom:10px;">Odmìny za levely:</p>';
+    html += '<p style="font-size:14px;color:#ffd700;font-weight:bold;margin-bottom:10px;">OdmÄ›ny za levely:</p>';
     for (var i = 0; i < levelRewardsDef.length; i++) {
       var r = levelRewardsDef[i];
       var unlocked = currentLvl >= r.level;
@@ -260,9 +260,9 @@ async function showLevelRewards(currentLvl) {
       if (isClaimed) {
         html += '<span style="font-weight:bold;">Vyzvednuto ?</span>';
       } else if (unlocked) {
-        html += '<button onclick="claimLevelReward(' + r.level + ')" style="padding:4px 12px;background:#1a1a2e;color:#ffd700;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">' + r.reward + ' Kè</button>';
+        html += '<button onclick="claimLevelReward(' + r.level + ')" style="padding:4px 12px;background:#1a1a2e;color:#ffd700;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">' + r.reward + ' KÄ</button>';
       } else {
-        html += '<span>' + r.reward + ' Kè</span>';
+        html += '<span>' + r.reward + ' KÄ</span>';
       }
       html += '</div>';
     }
@@ -277,7 +277,7 @@ async function showLevelRewards(currentLvl) {
 async function claimLevelReward(level) {
   var res = await callScript("claimLevelReward", { username: getCurrentUser(), level: level });
   if (res === "OK") {
-    alert("Odmìna za level " + level + " vyzvednuta!");
+    alert("OdmÄ›na za level " + level + " vyzvednuta!");
     createPointsDisplay();
     loadProfile();
   } else {
