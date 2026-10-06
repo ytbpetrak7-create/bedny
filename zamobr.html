@@ -81,6 +81,7 @@ function showTab(tab) {
 }
 
 var selectedItems = [];
+var WORKER_URL = "";
 
 async function loadTradeLink() {
   var info = document.getElementById("tradeInfo");
@@ -113,7 +114,12 @@ async function loadInventory() {
     if (!Array.isArray(items)) {
       var errMsg = (items && items.error) ? items.error : "Neznámá chyba";
       if (/429|403|HTTP|Steam/i.test(errMsg)) {
-        document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Steam blokuje přímé načtení, zkouším přes bota...</p>';
+        if (WORKER_URL) {
+          document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Steam blokuje přímé načtení, zkouším přes proxy...</p>';
+          var okWorker = await loadInventoryViaWorker(steamId);
+          if (okWorker) return;
+        }
+        document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Zkouším přes bota...</p>';
         loadInventoryViaBot();
         return;
       }
@@ -132,6 +138,42 @@ async function loadInventory() {
   } catch(e) {
     document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
   }
+}
+
+async function loadInventoryViaWorker(steamId) {
+  try {
+    var r = await fetch(WORKER_URL + "?steamid=" + encodeURIComponent(steamId));
+    if (!r.ok) return false;
+    var j = await r.json();
+    if (!j || !j.success || !j.assets) return false;
+    var depRes = await callScript("getDepositSkins");
+    var accepted = JSON.parse(depRes);
+    var result = [];
+    var descs = j.descriptions || {};
+    for (var id in j.assets) {
+      var asset = j.assets[id];
+      var desc = descs[asset.classid + "_" + asset.instanceid];
+      if (!desc || !desc.market_hash_name) continue;
+      var name = desc.market_hash_name;
+      var wm = name.match(/\(([^)]+)\)\s*$/);
+      var steamWear = wm ? wm[1] : "";
+      var base = name.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+      for (var a = 0; a < accepted.length; a++) {
+        if (accepted[a].name && accepted[a].name.toLowerCase() === base && accepted[a].price > 0) {
+          if (!accepted[a].wear || (accepted[a].wear || "").toLowerCase() === steamWear.toLowerCase()) {
+            var ic = desc.icon_url_large || desc.icon_url || "";
+            if (ic) ic = "https://community.akamai.steamstatic.com/economy/image/" + ic;
+            result.push({ name: name, price: accepted[a].price, depositable: true, assetId: asset.id, amount: asset.amount || "1", contextid: asset.contextid || "2", icon: ic });
+            break;
+          }
+        }
+      }
+    }
+    if (!result.length) return false;
+    result.sort(function(a, b) { return a.name.localeCompare(b.name); });
+    renderDepositItems(result);
+    return true;
+  } catch (e) { return false; }
 }
 
 async function loadInventoryViaBot() {
