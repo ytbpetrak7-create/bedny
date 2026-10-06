@@ -118,6 +118,8 @@ async function loadInventory() {
           document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Steam blokuje přímé načtení, zkouším přes proxy...</p>';
           var okWorker = await loadInventoryViaWorker(steamId);
           if (okWorker) return;
+          document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Proxy neuspělo (soukromý inventář?), zkouším přes bota...</p>';
+          await new Promise(function(r) { setTimeout(r, 1200); });
         }
         document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Zkouším přes bota...</p>';
         loadInventoryViaBot();
@@ -141,8 +143,11 @@ async function loadInventory() {
 }
 
 async function loadInventoryViaWorker(steamId) {
+  var ctrl = new AbortController();
+  var timer = setTimeout(function() { ctrl.abort(); }, 20000);
   try {
-    var r = await fetch(WORKER_URL + "?steamid=" + encodeURIComponent(steamId));
+    var r = await fetch(WORKER_URL + "?steamid=" + encodeURIComponent(steamId), { signal: ctrl.signal });
+    clearTimeout(timer);
     if (!r.ok) return false;
     var j = await r.json();
     if (!j || !j.success || !j.assets) return false;
