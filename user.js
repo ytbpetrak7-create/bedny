@@ -227,7 +227,7 @@ siteGate();
 (function() {
   function loadAI() {
     var s = document.createElement("script");
-    s.src = "ai-chat.js?ver=1";
+    s.src = "ai-chat.js?ver=2";
     (document.body || document.documentElement).appendChild(s);
   }
   if (document.body) loadAI();

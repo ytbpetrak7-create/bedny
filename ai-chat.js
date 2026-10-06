@@ -51,6 +51,44 @@
     return m;
   }
 
+  function ensurePuter() {
+    return new Promise(function(resolve) {
+      if (window.puter && window.puter.ai) return resolve(true);
+      var s = document.createElement("script");
+      s.src = "https://js.puter.com/v2/";
+      s.onload = function() { resolve(true); };
+      s.onerror = function() { resolve(false); };
+      document.head.appendChild(s);
+      setTimeout(function() { resolve(!!(window.puter && window.puter.ai)); }, 8000);
+    });
+  }
+
+  async function askPuter() {
+    var ok = await ensurePuter();
+    if (!ok || !window.puter || !window.puter.ai) throw new Error("puter nedustupny");
+    var resp = await window.puter.ai.chat(history);
+    var txt = "";
+    if (resp) {
+      if (resp.message && typeof resp.message.content === "string") txt = resp.message.content;
+      else if (typeof resp.text === "string") txt = resp.text;
+      else txt = String(resp);
+    }
+    txt = (txt || "").trim();
+    if (!txt) throw new Error("prazdna odpoved");
+    return txt;
+  }
+
+  async function askPollinations() {
+    var convo = history.filter(function(h) { return h.role !== "system"; }).map(function(h) {
+      return (h.role === "user" ? "Uzivatel: " : "Asistent: ") + h.content;
+    }).join("\n");
+    var res = await fetch("https://text.pollinations.ai/" + encodeURIComponent(SYSTEM + "\n\n" + convo));
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var t = (await res.text()).trim();
+    if (!t) throw new Error("prazdna odpoved");
+    return t;
+  }
+
   async function send() {
     var inp = document.getElementById("aiIn");
     var q = inp.value.trim();
@@ -60,19 +98,14 @@
     history.push({ role: "user", content: q });
     if (history.length > 12) history = [history[0]].concat(history.slice(-11));
     var typing = addMsg("ai", "...");
-    try {
-      var res = await fetch("https://text.pollinations.ai/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, model: "openai", private: true })
-      });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      var ans = (await res.text()).trim() || "Zkus to prosím znovu.";
-      typing.textContent = ans;
-      history.push({ role: "assistant", content: ans });
-    } catch (e) {
-      typing.textContent = "AI teď neodpovídá, zkus to za chvíli. 😕";
+    var ans = null;
+    try { ans = await askPuter(); }
+    catch (e1) {
+      try { ans = await askPollinations(); }
+      catch (e2) { ans = null; }
     }
+    typing.textContent = ans || "AI teď neodpovídá, zkus to za chvíli. 😕";
+    if (ans) history.push({ role: "assistant", content: ans });
     var box = document.getElementById("aiMsgs");
     box.scrollTop = box.scrollHeight;
   }
