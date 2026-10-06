@@ -189,6 +189,26 @@ function getUserInventory(steamId) {
   });
 }
 
+var communityLoggedIn = false;
+
+function communityLogin() {
+  if (!BOT.sharedSecret || communityLoggedIn) return;
+  community.login({
+    accountName: BOT.accountName,
+    password: BOT.password,
+    twoFactorCode: SteamTotp.generateAuthCode(BOT.sharedSecret)
+  }, (err) => {
+    if (err) { console.log("Community login error: " + err.message); return; }
+    communityLoggedIn = true;
+    console.log("✅ Community login OK (mobilni potvrzeni aktivni)");
+  });
+}
+
+if (BOT.sharedSecret) {
+  communityLogin();
+  setInterval(communityLogin, 3600000);
+}
+
 function confirmOffer(offerId, row) {
   if (!BOT.identitySecret) {
     console.log("Offer #" + offerId + " odeslan, ale NENI identitySecret - potvrd rucne v mobilni app!");
