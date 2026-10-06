@@ -116,10 +116,10 @@ async function loadInventory() {
       if (/429|403|HTTP|Steam/i.test(errMsg)) {
         if (WORKER_URL) {
           document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Steam blokuje přímé načtení, zkouším přes proxy...</p>';
-          var okWorker = await loadInventoryViaWorker(steamId);
-          if (okWorker) return;
-          document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Proxy neuspělo (soukromý inventář?), zkouším přes bota...</p>';
-          await new Promise(function(r) { setTimeout(r, 1200); });
+          var wRes = await loadInventoryViaWorker(steamId);
+          if (wRes && wRes.ok) return;
+          document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Proxy: ' + ((wRes && wRes.reason) || "neznámá chyba") + '</p><p style="color:#aaa;text-align:center;">Zkouším přes bota...</p>';
+          await new Promise(function(r) { setTimeout(r, 1500); });
         }
         document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Zkouším přes bota...</p>';
         loadInventoryViaBot();
@@ -148,9 +148,9 @@ async function loadInventoryViaWorker(steamId) {
   try {
     var r = await fetch(WORKER_URL + "?steamid=" + encodeURIComponent(steamId), { signal: ctrl.signal });
     clearTimeout(timer);
-    if (!r.ok) return false;
+    if (!r.ok) return { ok: false, reason: "proxy HTTP " + r.status + (r.status === 403 ? " (soukromý inventář?)" : "") };
     var j = await r.json();
-    if (!j || !j.success || !j.assets) return false;
+    if (!j || !j.success || !j.assets) return { ok: false, reason: "Steam nevrátil inventář (soukromý?)" };
     var depRes = await callScript("getDepositSkins");
     var accepted = JSON.parse(depRes);
     var result = [];
@@ -174,11 +174,14 @@ async function loadInventoryViaWorker(steamId) {
         }
       }
     }
-    if (!result.length) return false;
+    if (!result.length) return { ok: false, reason: "žádný skin neodpovídá seznamu přijatých" };
     result.sort(function(a, b) { return a.name.localeCompare(b.name); });
     renderDepositItems(result);
-    return true;
-  } catch (e) { return false; }
+    return { ok: true };
+  } catch (e) {
+    clearTimeout(timer);
+    return { ok: false, reason: e.name === "AbortError" ? "proxy timeout (20s)" : "chyba proxy" };
+  }
 }
 
 async function loadInventoryViaBot() {
