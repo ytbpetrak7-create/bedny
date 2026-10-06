@@ -340,6 +340,17 @@ if (!getCurrentUser()) {
 
 var lastItemPrice = 0;
 var allItems = [];
+function dropCardHTML(name, img, price, onclick) {
+  var im = img || "";
+  if (im && !im.startsWith("http")) im = "https://ytbpetrak7-create.github.io/bedny/" + im;
+  var h = '<div onclick="' + onclick + '" style="width:130px;border:2px solid #00ff96;border-radius:10px;cursor:pointer;text-align:center;background:#0d2b1a;overflow:hidden;">';
+  h += '<div style="background:#1a1a2e;padding:8px;"><img src="' + fixImg(im) + '" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto;" loading="lazy" onerror="this.style.display=\'none\'"></div>';
+  h += '<div style="padding:6px 4px;">';
+  h += '<p style="color:#ddd;font-size:10px;margin:0;line-height:1.3;min-height:28px;overflow:hidden;">' + name + '</p>';
+  h += '<p style="color:#00ff96;font-size:12px;font-weight:bold;margin:3px 0 0;">' + Number(price).toFixed(2) + ' Kč</p>';
+  h += '</div></div>';
+  return h;
+}
 function wearColor(w){ var m={"Factory New":"#4b9aff","Minimal Wear":"#6ecf68","Field-Tested":"#ffd54d","Well-Worn":"#ff8c42","Battle-Scarred":"#d64545"}; return m[w]||"#888"; }
 function wearBadge(w){ if(!w) return ""; return '<span style="background:'+wearColor(w)+';color:#000;font-size:9px;font-weight:bold;padding:2px 6px;border-radius:6px;margin-top:2px;display:inline-block;">'+w+'</span>'; }
 
@@ -617,17 +628,26 @@ function addItemToResults(name, img, price, index, row) {
     container.innerHTML = '<div class="results-grid"></div>';
     grid = container.querySelector(".results-grid");
   }
-  if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
   var card = document.createElement("div");
   card.className = "skin-card";
   card.style.animationDelay = (index * 0.1) + "s";
   card.style.cursor = "pointer";
+  card.style.width = "130px";
+  card.style.border = "2px solid #00ff96";
+  card.style.borderRadius = "10px";
+  card.style.background = "#0d2b1a";
+  card.style.overflow = "hidden";
+  card.style.textAlign = "center";
   card.setAttribute("data-idx", index);
-  var cardHtml = '';
-  if (img) { cardHtml += '<img src="' + fixImg(img) + '" alt="' + name + '" loading="lazy">'; }
-  else { cardHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
-  cardHtml += '<span class="sname">' + name + '</span>';
-  cardHtml += '<span class="sprice">' + Number(price).toFixed(2) + ' Kč</span>';
+  var im = img || "";
+  if (im && !im.startsWith("http")) im = "https://ytbpetrak7-create.github.io/bedny/" + im;
+  var cardHtml = '<div style="background:#1a1a2e;padding:8px;">';
+  if (im) { cardHtml += '<img src="' + fixImg(im) + '" alt="' + name + '" loading="lazy" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display=\'none\'">'; }
+  else { cardHtml += '<div style="width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:8px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:28px;">🎁</div>'; }
+  cardHtml += '</div><div style="padding:6px 4px;">';
+  cardHtml += '<p style="color:#ddd;font-size:10px;margin:0;line-height:1.3;min-height:28px;overflow:hidden;">' + name + '</p>';
+  cardHtml += '<p style="color:#00ff96;font-size:12px;font-weight:bold;margin:3px 0 0;">' + Number(price).toFixed(2) + ' Kč</p>';
+  cardHtml += '</div>';
   card.innerHTML = cardHtml;
   card.addEventListener("click", function() { toggleResultItem(card, index, name, img, price, row); });
   grid.appendChild(card);
@@ -641,12 +661,12 @@ function toggleResultItem(card, index, name, img, price, row) {
   }
   if (pos >= 0) {
     selectedResults.splice(pos, 1);
-    card.style.borderColor = "rgba(255,255,255,0.05)";
     card.style.boxShadow = "none";
+    card.style.transform = "scale(1)";
   } else {
     selectedResults.push({ index: index, name: name, img: img, price: price, row: row });
-    card.style.borderColor = "#00ff96";
-    card.style.boxShadow = "0 0 12px rgba(0,255,150,0.4)";
+    card.style.boxShadow = "0 0 16px rgba(0,255,150,0.7)";
+    card.style.transform = "scale(0.97)";
   }
   updateSellSelectedBtn();
 }
@@ -746,12 +766,8 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
       if(allItems.length < 1){
         document.getElementById("afterSlot").style.display = "none";
       } else {
-        var wMatch = itemName.match(/\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)/);
-        var wStr = wMatch ? wMatch[1] : (winnerItem && winnerItem.wear ? winnerItem.wear : "");
         var cardImg = itemImg || (winnerItem && winnerItem.image) || "";
-        if(cardImg && !cardImg.startsWith("http")) cardImg="https://ytbpetrak7-create.github.io/bedny/"+cardImg;
-        var displayName = itemName.replace(/\s*\(.*\)\s*$/, "");
-        nextDiv.innerHTML = '<div onclick="openAgain()" style="width:140px;background:linear-gradient(135deg,#c850ff,#a040e0);border-radius:16px;padding:10px;text-align:center;cursor:pointer;"><img src="'+fixImg(cardImg)+'" style="width:100px;height:80px;object-fit:contain;display:block;margin:0 auto 4px;" onerror="this.style.display=\'none\'"><div style="color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+displayName+'</div><div style="display:inline-block;background:#ffd54d;color:#000;font-size:10px;font-weight:bold;padding:2px 8px;border-radius:8px;margin:3px 0;">'+wStr+'</div><div style="color:#fff;font-size:11px;">'+Number(itemPrice).toFixed(2)+' Kč</div></div>';
+        nextDiv.innerHTML = dropCardHTML(itemName, cardImg, itemPrice, "openAgain()");
         document.getElementById("afterSlot").style.display = "flex";
         document.getElementById("skinStrip").style.display = "none";
       }
@@ -819,11 +835,7 @@ document.getElementById("openBoxButton").addEventListener("click", async () => {
         afterSlot2.style.display = "none";
       } else {
         slotData.forEach(function(sd){
-          var wM = sd.name.match(/\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)/);
-          var wS = wM ? wM[1] : "";
-          var dName = sd.name.replace(/\s*\(.*\)\s*$/, "");
-          var cImg = sd.img || ""; if(cImg && !cImg.startsWith("http")) cImg="https://ytbpetrak7-create.github.io/bedny/"+cImg;
-          nextDiv2.innerHTML += '<div onclick="openAgain()" style="width:140px;background:linear-gradient(135deg,#c850ff,#a040e0);border-radius:16px;padding:10px;text-align:center;cursor:pointer;"><img src="'+fixImg(cImg)+'" style="width:100px;height:80px;object-fit:contain;display:block;margin:0 auto 4px;" onerror="this.style.display=\'none\'"><div style="color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+dName+'</div><div style="display:inline-block;background:#ffd54d;color:#000;font-size:10px;font-weight:bold;padding:2px 8px;border-radius:8px;margin:3px 0;">'+wS+'</div><div style="color:#fff;font-size:11px;">'+Number(sd.price).toFixed(2)+' Kč</div></div>';
+          nextDiv2.innerHTML += dropCardHTML(sd.name, sd.img, sd.price, "openAgain()");
         });
         afterSlot2.style.display = "flex";
         document.getElementById("skinStrip").style.display = "none";

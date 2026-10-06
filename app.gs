@@ -302,6 +302,7 @@
       if (params.currency) propsPE.setProperty("priceEmpireCurrency", params.currency);
       if (params.csfloatKey) propsPE.setProperty("csfloatApiKey", params.csfloatKey);
       if (params.profitMultiplier) propsPE.setProperty("priceEmpireProfitMultiplier", params.profitMultiplier);
+      if (params.depositMultiplier) propsPE.setProperty("priceEmpireDepositMultiplier", params.depositMultiplier);
       result = "OK";
       break;
     case "getPriceEmpireConfig":
@@ -311,7 +312,8 @@
         source: propsPE2.getProperty("priceEmpireSource") || "buff163",
         currency: propsPE2.getProperty("priceEmpireCurrency") || "CZK",
         csfloatKey: propsPE2.getProperty("csfloatApiKey") || "",
-        profitMultiplier: propsPE2.getProperty("priceEmpireProfitMultiplier") || "1.0"
+        profitMultiplier: propsPE2.getProperty("priceEmpireProfitMultiplier") || "1.0",
+        depositMultiplier: propsPE2.getProperty("priceEmpireDepositMultiplier") || "0.7"
       });
       break;
     case "updatePricesFromPriceEmpire":
@@ -349,6 +351,11 @@
   function siteHash(pw) {
     var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pw, Utilities.Charset.UTF_8);
     return bytes.map(function(b) { var v = b < 0 ? b + 256 : b; var s = v.toString(16); return s.length === 1 ? "0" + s : s; }).join("");
+  }
+
+  function sheetMultiplier(props, sheetName) {
+    if (sheetName === "DepositSkins") return parseFloat(props.getProperty("priceEmpireDepositMultiplier") || "0.7");
+    return parseFloat(props.getProperty("priceEmpireProfitMultiplier") || "1.0");
   }
 
   function getSheet(ss, name) {
@@ -1812,7 +1819,7 @@
         var info = allNames[skinName];
         if (price !== undefined && price > 0) {
           var sheet = ss.getSheetByName(info.sheet);
-          if (sheet) { sheet.getRange(info.row, info.col).setValue(Math.round(price * profitMultiplier)); updated++; }
+          if (sheet) { sheet.getRange(info.row, info.col).setValue(Math.round(price * sheetMultiplier(props, info.sheet))); updated++; }
         } else {
           notFound.push(skinName);
         }
@@ -1981,7 +1988,7 @@
         var r = resolveMarketName(info.base, info.wear);
         if (r && r.price > 0) {
           var sheet = ss.getSheetByName(info.sheet);
-          if (sheet) { sheet.getRange(info.row, info.col).setValue(Math.max(1, Math.round(r.price * rate * profitMultiplier))); updated++; }
+          if (sheet) { sheet.getRange(info.row, info.col).setValue(Math.max(1, Math.round(r.price * rate * sheetMultiplier(props, info.sheet)))); updated++; }
         } else {
           notFound.push(label);
         }
@@ -2029,7 +2036,7 @@
           var priceCents = data[0].price;
           var priceUSD = priceCents / 100;
           var rate = rates[currency] || 23.5;
-          var finalPrice = Math.round(priceUSD * rate * profitMultiplier);
+          var finalPrice = Math.round(priceUSD * rate * sheetMultiplier(props, info.sheet));
           var sheet = ss.getSheetByName(info.sheet);
           if (sheet) { sheet.getRange(info.row, info.col).setValue(finalPrice); updated++; }
           found = true;
