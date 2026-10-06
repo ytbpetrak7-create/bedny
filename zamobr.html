@@ -53,7 +53,7 @@
 .inv-item:active { transform: scale(0.95); }
 </style>
 <script src="script.js"></script>
-<script src="user.js?ver=12"></script>
+<script src="user.js?ver=13"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
@@ -95,8 +95,14 @@ async function loadTradeLink() {
 }
 
 async function loadInventory() {
-  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
   selectedItems = [];
+  var cached = (typeof getInvCache === "function") ? getInvCache() : null;
+  if (cached && cached.length) {
+    cached.sort(function(a, b) { return a.name.localeCompare(b.name); });
+    renderDepositItems(cached);
+    return;
+  }
+  document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Načítání inventáře...</p>';
 
   try {
     var profileRes = await Promise.race([
@@ -120,6 +126,7 @@ async function loadInventory() {
       settled = true;
       items.sort(function(a, b) { return a.name.localeCompare(b.name); });
       renderDepositItems(items);
+      if (typeof setInvCache === "function") setInvCache(items);
       return true;
     }
 
@@ -306,6 +313,7 @@ async function sendDeposit() {
   var itemsJson = JSON.stringify(selectedItems.map(function(i) { return { name: i.name, assetId: i.assetId, amount: i.amount || "1", contextid: i.contextid || "2", price: i.price }; }));
   var res = await callScript("requestDeposit", { username: getCurrentUser(), items: itemsJson });
   if (res === "OK") {
+    if (typeof clearInvCache === "function") clearInvCache();
     document.getElementById("depositResult").innerHTML = '<div style="padding:15px;border:1px solid #00ff96;border-radius:10px;background:#0d2b1a;text-align:center;">' +
       '<p style="color:#00ff96;font-size:16px;font-weight:bold;">Požadavek odeslán!</p>' +
       '<p style="color:#aaa;font-size:13px;margin-top:5px;">Bot zkontroluje tvůj inventář a pošle trade offer</p>' +

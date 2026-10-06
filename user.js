@@ -223,6 +223,89 @@ async function siteGate() {
 }
 siteGate();
 
+var INV_CACHE_MS = 5 * 60 * 1000;
+var PREFETCH_WORKER_URL = "https://plain-cell-ae3f.pet7bot1.workers.dev/";
+
+function getInvCache() {
+  try {
+    var c = JSON.parse(sessionStorage.getItem("invCache") || "null");
+    if (c && c.user === getCurrentUser() && c.items && (Date.now() - c.ts) < INV_CACHE_MS) return c.items;
+  } catch (e) {}
+  return null;
+}
+
+function setInvCache(items) {
+  try {
+    sessionStorage.setItem("invCache", JSON.stringify({ user: getCurrentUser(), ts: Date.now(), items: items }));
+  } catch (e) {}
+}
+
+function clearInvCache() {
+  try { sessionStorage.removeItem("invCache"); } catch (e) {}
+}
+
+async function prefetchInventory() {
+  try {
+    if (!getCurrentUser()) return;
+    if (getInvCache()) return;
+    var prof = JSON.parse(await callScript("getProfile", { username: getCurrentUser() }));
+    if (!prof || !prof.steamId) return;
+    var steamId = prof.steamId;
+    var gasP = (async function() {
+      try {
+        var r = await callScript("getMySteamInventory", { username: getCurrentUser() });
+        var p = JSON.parse(r);
+        if (Array.isArray(p) && p.length) return p;
+      } catch (e) {}
+      return null;
+    })();
+    var workerP = (async function() {
+      try {
+        var r = await fetch(PREFETCH_WORKER_URL + "?steamid=" + encodeURIComponent(steamId));
+        if (!r.ok) return null;
+        var j = await r.json();
+        if (!j || !j.success || !j.assets) return null;
+        var dep = JSON.parse(await callScript("getDepositSkins"));
+        function toArr(x) { if (!x) return []; if (Array.isArray(x)) return x; var a = []; for (var k in x) a.push(x[k]); return a; }
+        var dm = {};
+        var da = toArr(j.descriptions);
+        for (var di = 0; di < da.length; di++) dm[da[di].classid + "_" + da[di].instanceid] = da[di];
+        var out = [];
+        var aa = toArr(j.assets);
+        for (var ai = 0; ai < aa.length; ai++) {
+          var as = aa[ai];
+          var d = dm[as.classid + "_" + as.instanceid];
+          if (!d || !d.market_hash_name) continue;
+          var nm = d.market_hash_name;
+          var m = nm.match(/\(([^)]+)\)\s*$/);
+          var sw = m ? m[1] : "";
+          var base = nm.replace(/\s*\(.*\)\s*$/, "").toLowerCase();
+          for (var a = 0; a < dep.length; a++) {
+            if (dep[a].name && dep[a].name.toLowerCase() === base && dep[a].price > 0) {
+              if (!dep[a].wear || (dep[a].wear || "").toLowerCase() === sw.toLowerCase()) {
+                var ic = d.icon_url_large || d.icon_url || "";
+                if (ic) ic = "https://community.akamai.steamstatic.com/economy/image/" + ic;
+                out.push({ name: nm, price: dep[a].price, depositable: true, assetId: as.assetid || as.id, amount: as.amount || "1", contextid: as.contextid || "2", icon: ic });
+                break;
+              }
+            }
+          }
+        }
+        return out.length ? out : null;
+      } catch (e) { return null; }
+    })();
+    var res = await Promise.race([
+      (async function() { var r = await Promise.all([gasP, workerP]); return r[0] || r[1]; })(),
+      new Promise(function(res) { setTimeout(function() { res(null); }, 20000); })
+    ]);
+    if (res && res.length) setInvCache(res);
+  } catch (e) {}
+}
+
+if (window.location.href.indexOf("hlav.html") > -1) {
+  setTimeout(prefetchInventory, 2000);
+}
+
 // AI chat widget na vsech strankach
 (function() {
   function loadAI() {
