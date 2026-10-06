@@ -112,6 +112,11 @@ async function loadInventory() {
 
     if (!Array.isArray(items)) {
       var errMsg = (items && items.error) ? items.error : "Neznámá chyba";
+      if (/429|403|HTTP|Steam/i.test(errMsg)) {
+        document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Steam blokuje přímé načtení, zkouším přes bota...</p>';
+        loadInventoryViaBot();
+        return;
+      }
       document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + errMsg + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
       return;
     }

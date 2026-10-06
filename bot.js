@@ -10,7 +10,7 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbz89Ud1exW-1dpUuyuO1q23
 
 const client = new SteamUser();
 const community = new SteamCommunity();
-const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 30000, cancelTime: 43200000 });
+const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 120000, cancelTime: 43200000 });
 
 const BOT = {
   accountName: "pet7bot1",
@@ -85,8 +85,8 @@ var pollStarted = false;
 
 function autoConfirm() {
   manager.getOffers({ confirmedNeedsConfirmation: true }, (err, sent, received) => {
-    if (err) { console.log("Auto-confirm error:", err.message); return setTimeout(autoConfirm, 30000); }
-    
+    if (err) { console.log("Auto-confirm error:", err.message); return setTimeout(autoConfirm, 60000); }
+
     const needsConfirm = [...(sent || []), ...(received || [])];
     for (const offer of needsConfirm) {
       offer.accept((err) => {
@@ -94,7 +94,7 @@ function autoConfirm() {
         else console.log(`✅ Auto-potvrzeno: #${offer.id}`);
       });
     }
-    setTimeout(autoConfirm, 10000);
+    setTimeout(autoConfirm, 60000);
   });
 }
 
@@ -145,7 +145,7 @@ function gasPost(url, body) {
 }
 
 function parseTradeLink(url) {
-  const m = url.match(/partner=(\d+)&token=(\w+)/);
+  const m = String(url || "").match(/partner=(\d+)[&?]token=([\w-]+)/);
   return m ? { partner: m[1], token: m[2] } : null;
 }
 
@@ -290,14 +290,15 @@ async function poll() {
         if (Date.now() - lastTry < 600000) continue;
 
         const t = parseTradeLink(w.tradeLink);
-        if (!t) continue;
+        if (!t) { console.log("Offer #" + w.row + ": spatny trade link, preskakuji"); continue; }
         const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
         if (!found) {
-          gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
+          console.log("Offer #" + w.row + ": '" + w.item + "' neni v botove inventari, preskakuji");
           continue;
         }
+        console.log("Offer #" + w.row + ": posilam '" + found.market_hash_name + "' (asset " + found.id + ") partneru " + t.partner);
         lastWithdrawalAttempt[w.row] = Date.now();
-        await wait(5000);
+        await wait(15000);
         const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
         offer.addMyItem(found);
         offer.setMessage(w.item);
