@@ -107,50 +107,64 @@ async function loadInventory() {
       return;
     }
 
-    var directRes = await callScript("getMySteamInventory", { username: getCurrentUser() });
-    var items;
-    try { items = JSON.parse(directRes); } catch(e) { items = []; }
+    var settled = false;
+    function useItems(items) {
+      if (settled || !items || !items.length) return false;
+      settled = true;
+      items.sort(function(a, b) { return a.name.localeCompare(b.name); });
+      renderDepositItems(items);
+      return true;
+    }
 
-    if (!Array.isArray(items)) {
-      var errMsg = (items && items.error) ? items.error : "Neznámá chyba";
-      if (/429|403|HTTP|Steam/i.test(errMsg)) {
-        if (WORKER_URL) {
-          document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Steam blokuje přímé načtení, zkouším přes proxy...</p>';
-          var wRes = await loadInventoryViaWorker(steamId);
-          if (wRes && wRes.ok) return;
-          document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Proxy: ' + ((wRes && wRes.reason) || "neznámá chyba") + '</p><p style="color:#aaa;text-align:center;">Zkouším přes bota...</p>';
-          await new Promise(function(r) { setTimeout(r, 1500); });
-        }
-        document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Zkouším přes bota...</p>';
-        loadInventoryViaBot();
-        return;
-      }
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + errMsg + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
+    var gasP = (async function() {
+      try {
+        var r = await callScript("getMySteamInventory", { username: getCurrentUser() });
+        var parsed = JSON.parse(r);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+        if (parsed && parsed.error) return { error: parsed.error };
+      } catch (e) {}
+      return null;
+    })();
+
+    var workerP = WORKER_URL ? fetchWorkerItems(steamId) : Promise.resolve(null);
+
+    var winner = await Promise.race([
+      (async function() {
+        var res = await Promise.all([gasP, workerP]);
+        if (res[0] && Array.isArray(res[0]) && res[0].length) return { items: res[0] };
+        if (res[1] && res[1].length) return { items: res[1] };
+        if (res[0] && res[0].error) return { error: res[0].error };
+        return null;
+      })(),
+      new Promise(function(res) { setTimeout(function() { res(null); }, 25000); })
+    ]);
+
+    if (winner && winner.items && useItems(winner.items)) return;
+
+    if (winner && winner.error && !/429|403|HTTP|Steam/i.test(winner.error)) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + winner.error + '</p>';
       return;
     }
 
-    if (items.length === 0) {
-      document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Inventář je prázdný nebo žádný skin není v seznamu přijatých.</p>';
-      return;
+    if (!settled) {
+      document.getElementById("invItems").innerHTML = '<p style="color:#aaa;text-align:center;">Přímé cesty selhaly, zkouším přes terminálového bota...</p>';
+      loadInventoryViaBot();
     }
-
-    items.sort(function(a, b) { return a.name.localeCompare(b.name); });
-    renderDepositItems(items);
 
   } catch(e) {
     document.getElementById("invItems").innerHTML = '<p style="color:#f80;text-align:center;">Chyba: ' + e.message + '</p><p style="text-align:center;margin-top:10px;"><button onclick="loadInventoryViaBot()" style="padding:10px 25px;background:#00ff96;border:none;border-radius:8px;color:#111;font-weight:bold;cursor:pointer;">Zkusit přes bota</button></p>';
   }
 }
 
-async function loadInventoryViaWorker(steamId) {
+async function fetchWorkerItems(steamId) {
   var ctrl = new AbortController();
-  var timer = setTimeout(function() { ctrl.abort(); }, 20000);
+  var timer = setTimeout(function() { ctrl.abort(); }, 12000);
   try {
     var r = await fetch(WORKER_URL + "?steamid=" + encodeURIComponent(steamId), { signal: ctrl.signal });
     clearTimeout(timer);
-    if (!r.ok) return { ok: false, reason: "proxy HTTP " + r.status + (r.status === 403 ? " (soukromý inventář?)" : "") };
+    if (!r.ok) return null;
     var j = await r.json();
-    if (!j || !j.success || !j.assets) return { ok: false, reason: "Steam nevrátil inventář (soukromý?)" };
+    if (!j || !j.success || !j.assets) return null;
     var depRes = await callScript("getDepositSkins");
     var accepted = JSON.parse(depRes);
     var result = [];
@@ -180,13 +194,11 @@ async function loadInventoryViaWorker(steamId) {
         }
       }
     }
-    if (!result.length) return { ok: false, reason: "žádný skin neodpovídá seznamu přijatých" };
-    result.sort(function(a, b) { return a.name.localeCompare(b.name); });
-    renderDepositItems(result);
-    return { ok: true };
+    if (!result.length) return null;
+    return result;
   } catch (e) {
     clearTimeout(timer);
-    return { ok: false, reason: e.name === "AbortError" ? "proxy timeout (20s)" : "chyba proxy" };
+    return null;
   }
 }
 
