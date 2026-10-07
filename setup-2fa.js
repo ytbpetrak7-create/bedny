@@ -32,14 +32,18 @@ const ask = (q) => new Promise((r) => rl.question(q, (a) => r(a.trim())));
 
     if (startResult.actionRequired) {
       const types = (startResult.validActions || []).map((a) => a.type);
+      console.log("Steam chce overeni typem: " + JSON.stringify(types) + " (2=email, 3=mobil)");
       const hasDevice = types.indexOf(EAuthSessionGuardType.DeviceCode) !== -1;
       const hasEmail = types.indexOf(EAuthSessionGuardType.EmailCode) !== -1;
       let code;
-      if (hasDevice && !hasEmail) code = await ask("Kod z MOBILNI app (Steam Guard v telefonu): ");
+      if (hasDevice && !hasEmail) code = await ask("Kod z MOBILNI app (5 znaku VELKYMI, primo z aplikace - NE z emailu): ");
       else if (hasEmail && !hasDevice) code = await ask("Kod z emailu (SteamGuard): ");
       else code = await ask("Kod (mobilni app, prip. email): ");
+      if (/[a-z]/.test(code)) {
+        console.log("POZOR: kod obsahuje mala pismena - vypada na EMAIL kod. Mobilni kod ma jen VELKA pismena/cislice.");
+      }
       try {
-        await session.submitSteamGuardCode(code);
+        await session.submitSteamGuardCode(code.toUpperCase());
       } catch (e) {
         throw new Error("Spatny kod nebo zamitnuto: " + e.message);
       }
