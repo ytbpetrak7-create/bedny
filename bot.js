@@ -213,10 +213,13 @@ if (BOT.sharedSecret) {
   setInterval(communityLogin, 3600000);
 }
 
+var pendingConfirm = {};
+var pendingConfirmLogged = {};
+
 function confirmOffer(offerId, row) {
   if (!BOT.identitySecret) {
-    console.log("Offer #" + offerId + " odeslan, ale NENI identitySecret - potvrd rucne v mobilni app!");
-    gasGet(GAS_URL + "?action=completeWithdrawal&row=" + row).catch(()=>{});
+    pendingConfirm[row] = { offerId: offerId, at: Date.now() };
+    console.log("Offer #" + offerId + " odeslan, ceka na rucni potvrzeni v mobilni app!");
     return;
   }
   community.acceptConfirmationForObject(BOT.identitySecret, offerId, (err) => {
@@ -256,6 +259,25 @@ async function poll() {
     if (items && items.length && botInv) {
       for (const w of items) {
         if (w.status !== "approved") continue;
+        if (pendingConfirm[w.row]) {
+          const pc = pendingConfirm[w.row];
+          const st = await new Promise((res) => manager.getOffer(pc.offerId, (e, o) => res(e ? null : o)));
+          if (st && (st.state === 2 || st.state === 9)) {
+            if (!pendingConfirmLogged[w.row] || Date.now() - pendingConfirmLogged[w.row] > 1800000) {
+              console.log("Offer #" + w.row + ": stale ceka na rucni potvrzeni (trade #" + pc.offerId + ")");
+              pendingConfirmLogged[w.row] = Date.now();
+            }
+            continue;
+          }
+          if (st && st.state === 3) {
+            console.log("Offer #" + w.row + ": trade prijat, oznacuji hotovo");
+            delete pendingConfirm[w.row];
+            gasGet(GAS_URL + "?action=completeWithdrawal&row=" + w.row).catch(()=>{});
+            continue;
+          }
+          console.log("Offer #" + w.row + ": predchozi trade skoncil (state=" + (st ? st.state : "?") + "), posilam znovu");
+          delete pendingConfirm[w.row];
+        }
         if (!w.tradeLink && !w.username) continue;
         let tradeUrl = w.tradeLink || "";
         try {
