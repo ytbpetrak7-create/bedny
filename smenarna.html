@@ -14,6 +14,9 @@ h1{text-align:center;margin:10px 0 5px;font-size:24px;}
 .item{background:rgba(255,255,255,0.05);border-radius:8px;padding:8px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .2s;}
 .item:hover{border-color:#00ff96;background:rgba(0,255,150,0.05);}
 .item.selected{border-color:#00ff96;background:rgba(0,255,150,0.1);}
+.item.locked{opacity:0.45;cursor:not-allowed;position:relative;}
+.item.locked:hover{border-color:#f44;background:rgba(255,68,68,0.05);}
+.item .lock{position:absolute;top:5px;right:5px;font-size:16px;filter:drop-shadow(0 0 3px rgba(0,0,0,0.8));}
 .item img{width:100%;height:80px;object-fit:contain;border-radius:4px;}
 .item .name{font-size:10px;color:#ccc;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .item .price{font-size:11px;color:#00ff96;font-weight:bold;}
@@ -32,7 +35,7 @@ h1{text-align:center;margin:10px 0 5px;font-size:24px;}
 <body>
 <a href="hlav.html" class="back-link">&larr; Zpět</a>
 <h1>Směnárna skinů</h1>
-<p class="subtitle">Vyber skiny ze svého inventáře a vyměň je za jiné. Rozdíl v ceně se přičte/odečte z Kč.</p>
+<p class="subtitle">Vyber skiny ze svého inventáře a vyměň je za jiné. Rozdíl v ceně se přičte/odečte z Kč. Zamčené skiny (🔒) se vyměnit nedají.</p>
 
 <div class="columns">
   <div class="col">
@@ -58,7 +61,7 @@ h1{text-align:center;margin:10px 0 5px;font-size:24px;}
   <button class="exchange-btn" id="exchangeBtn" disabled>Vyměnit</button>
 </div>
 
-<script src="user.js?ver=13"></script>
+<script src="user.js?ver=14"></script>
 <script>
 if (!getCurrentUser()) { window.location.href = "index.html"; }
 
@@ -74,12 +77,12 @@ async function load() {
   JSON.parse(r1).forEach(function(x) {
     var img = x.image || "";
     if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
-    itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img };
+    itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img, locked: Number(x.locked) === 1 };
   });
   JSON.parse(r2).forEach(function(x) {
     var img = x.image || "";
     if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
-    if (!itemMap[x.name.trim()]) itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img };
+    if (!itemMap[x.name.trim()]) itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img, locked: Number(x.locked) === 1 };
   });
 
   var invResult = await getInventory();
@@ -97,12 +100,14 @@ function renderMyItems() {
   c.innerHTML = "";
   myInv.forEach(function(item, idx) {
     var d = itemMap[item.name.trim()] || { price: 0, image: "" };
+    var isLocked = !!d.locked;
     var div = document.createElement("div");
-    div.className = "item" + (selectedMy.indexOf(idx) !== -1 ? " selected" : "");
-    div.innerHTML = '<img src="' + (d.image || "") + '" onerror="this.style.display=\'none\'">' +
+    div.className = "item" + (isLocked ? " locked" : "") + (selectedMy.indexOf(idx) !== -1 ? " selected" : "");
+    div.innerHTML = (isLocked ? '<div class="lock" title="Tento skin nelze vyměnit">🔒</div>' : '') +
+      '<img src="' + (d.image || "") + '" onerror="this.style.display=\'none\'">' +
       '<div class="name" title="' + item.name + '">' + item.name + '</div>' +
       '<div class="price">' + (d.price > 0 ? d.price.toFixed(2) + " Kč" : "-") + '</div>';
-    div.onclick = function() { toggleMy(idx); };
+    if (!isLocked) div.onclick = function() { toggleMy(idx); };
     c.appendChild(div);
   });
 }
@@ -123,6 +128,8 @@ function renderAllItems() {
 }
 
 function toggleMy(idx) {
+  var d = itemMap[myInv[idx].name.trim()] || {};
+  if (d.locked) return;
   var i = selectedMy.indexOf(idx);
   if (i === -1) selectedMy.push(idx); else selectedMy.splice(i, 1);
   renderMyItems();
@@ -190,6 +197,11 @@ async function doExchange() {
     await load();
     updatePoints();
     updateSummary();
+  } else if (res.indexOf("ITEM_LOCKED") === 0) {
+    alert("Tenhle skin je zamčený a nedá se vyměnit: " + res.substring(12));
+    await load();
+    updateSummary();
+    document.getElementById("exchangeBtn").disabled = false;
   } else {
     alert("Chyba: " + res);
     document.getElementById("exchangeBtn").disabled = false;

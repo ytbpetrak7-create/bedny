@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz89Ud1exW-1dpUuyuO1q23upXGWEf7C5ydVBEOz3M8yDB-ZlU3GGMP8bWPqUGveq3c5Q/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSGsGAVy9hKYGZs3oZpZNPI2VT6ROUAKYgphqs13tHMWbEMrf59JDtct0kfgU5vf2dTQ/exec";
 
 async function callScript(action, params = {}) {
   const url = new URL(SCRIPT_URL);
@@ -68,6 +68,29 @@ async function getBoxInfo(boxName) {
   var data = await callScript("getBoxInfo", { box: boxName });
   sessionStorage.setItem("boxInfo_" + boxName, data);
   return data;
+}
+
+async function getBoxItemsAdmin(box) {
+  return await callScript("getBoxItemsAdmin", { username: getUsername(), box: box });
+}
+
+async function updateBoxItem(box, row, data) {
+  data = data || {};
+  data.username = getUsername();
+  data.box = box;
+  data.row = row;
+  return await callScript("updateBoxItem", data);
+}
+
+async function addBoxItem(box, data) {
+  data = data || {};
+  data.username = getUsername();
+  data.box = box;
+  return await callScript("addBoxItem", data);
+}
+
+async function deleteBoxItem(box, row) {
+  return await callScript("deleteBoxItem", { username: getUsername(), box: box, row: row });
 }
 
 async function deleteInventoryItem(item, row) {

@@ -16,7 +16,7 @@ h2{color:#fff;font-size:18px;margin:20px 0 10px;}
 <div id="adminContent"></div>
 <link rel="stylesheet" href="inventory.css">
 </body>
-<script src="user.js?ver=13"></script>
+<script src="user.js?ver=14"></script>
 <script>
 if (!getCurrentUser()) {
   window.location.href = "index.html";
@@ -167,6 +167,16 @@ async function loadAll() {
   html += ' <span id="imgUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '</div>';
 
+  html += "<h2>Správce beden</h2>";
+  html += '<div class="req-item">';
+  html += '<p style="color:#aaa;font-size:13px;">Vyber bednu a uprav její obsah: název, obrázek, šanci, cenu, rare (★) a zámek (🔒). Uložení se ihned projeví v bedně.</p>';
+  html += '<select id="boxEditSelect" onchange="loadBoxEditor()" style="padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;font-size:14px;">';
+  html += '<option value="Boxes1">Boxes1</option>';
+  html += '<option value="Boxes2">Boxes2</option>';
+  html += '</select>';
+  html += '<div id="boxItemsList"><p style="color:#aaa;">Načítám...</p></div>';
+  html += '</div>';
+
   html += "<h2>Zámek webu 🔒</h2>";
   html += '<div class="req-item">';
   html += '<p style="color:#aaa;font-size:13px;">Stav: <span id="lockStatus" style="color:#ffd700;">...</span></p>';
@@ -178,6 +188,8 @@ async function loadAll() {
 
   div.innerHTML = html;
 
+  loadBoxEditor();
+
   var wCfg = await callScript("getWheelConfig");
   try {
     var cfg = JSON.parse(wCfg);
@@ -187,6 +199,116 @@ async function loadAll() {
 
   await loadPriceEmpireConfig();
   await loadLockStatus();
+}
+
+function escHtml(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+var editBoxCurrent = "Boxes1";
+var editBoxItems = [];
+var editingRow = null;
+
+async function loadBoxEditor() {
+  var sel = document.getElementById("boxEditSelect");
+  if (sel) editBoxCurrent = sel.value;
+  editingRow = null;
+  var list = document.getElementById("boxItemsList");
+  if (list) list.innerHTML = "<p style='color:#aaa;'>Načítám...</p>";
+  var res = await getBoxItemsAdmin(editBoxCurrent);
+  if (res === "NOT_ADMIN") { list.innerHTML = "<p style='color:#f80;'>Nemáš oprávnění</p>"; return; }
+  try { editBoxItems = JSON.parse(res); } catch(e) { editBoxItems = []; }
+  renderBoxEditor();
+}
+
+function renderBoxEditor() {
+  var c = document.getElementById("boxItemsList");
+  if (!c) return;
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">';
+  html += '<tr style="color:#888;font-size:11px;"><td style="padding:4px;">Obrázek</td><td>Název</td><td>Šance</td><td>Cena</td><td>Rare</td><td>Lock</td><td></td></tr>';
+  editBoxItems.forEach(function(it) {
+    if (editingRow === it.row) {
+      html += '<tr><td colspan="7" style="background:#0d0d1a;padding:10px;border-radius:8px;border-top:1px solid #222;">' + editFormHTML(it, it.row) + '</td></tr>';
+    } else {
+      var img = it.image || "";
+      if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
+      html += '<tr style="border-top:1px solid #222;">';
+      html += '<td style="padding:4px;">' + (img ? '<img src="' + escHtml(img) + '" style="width:40px;height:40px;object-fit:contain;border-radius:4px;" onerror="this.style.display=\'none\'">' : '<span style="color:#555;">-</span>') + '</td>';
+      html += '<td style="color:#ddd;">' + escHtml(it.name) + (it.wear ? ' <span style="color:#888;font-size:11px;">(' + escHtml(it.wear) + ')</span>' : '') + '</td>';
+      html += '<td style="color:#aaa;">' + it.chance + '%</td>';
+      html += '<td style="color:#00ff96;">' + Number(it.sellPrice).toFixed(2) + ' Kč</td>';
+      html += '<td>' + (it.rare ? '<span style="color:#ff00ff;">★</span>' : '') + '</td>';
+      html += '<td>' + (it.locked ? '<span style="color:#ff8800;">🔒</span>' : '') + '</td>';
+      html += '<td style="white-space:nowrap;"><button class="btn-app" onclick="editBoxRow(' + it.row + ')" style="padding:4px 10px;font-size:12px;">Upravit</button> <button onclick="deleteBoxRow(' + it.row + ')" style="padding:4px 10px;font-size:12px;background:#f44;color:#fff;border:none;border-radius:6px;cursor:pointer;">Smazat</button></td>';
+      html += '</tr>';
+    }
+  });
+  if (editingRow === "new") {
+    html += '<tr><td colspan="7" style="background:#0d0d1a;padding:10px;border-radius:8px;border-top:1px solid #222;">' + editFormHTML({}, "new") + '</td></tr>';
+  }
+  html += '</table>';
+  html += '<br><button class="btn-app" onclick="editBoxRow(\'new\')">+ Přidat skin do bedny</button>';
+  html += ' <span id="boxEditMsg" style="color:#00ff96;font-size:13px;"></span>';
+  c.innerHTML = html;
+}
+
+function editFormHTML(it, row) {
+  var inputStyle = "width:100%;padding:6px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;font-size:13px;";
+  var labelStyle = "color:#888;font-size:11px;display:block;margin-bottom:2px;";
+  var h = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">';
+  h += '<div style="flex:2;min-width:170px;"><label style="' + labelStyle + '">Název</label><input id="be_name" value="' + escHtml(it.name || "") + '" style="' + inputStyle + '"></div>';
+  h += '<div style="flex:3;min-width:200px;"><label style="' + labelStyle + '">Obrázek (URL nebo název souboru)</label><input id="be_image" value="' + escHtml(it.image || "") + '" style="' + inputStyle + '"></div>';
+  h += '<div style="width:85px;"><label style="' + labelStyle + '">Šance %</label><input id="be_chance" type="number" step="0.01" min="0" value="' + (it.chance || "") + '" style="' + inputStyle + '"></div>';
+  h += '<div style="width:95px;"><label style="' + labelStyle + '">Cena Kč</label><input id="be_price" type="number" step="0.01" min="0" value="' + (it.sellPrice || "") + '" style="' + inputStyle + '"></div>';
+  h += '<div style="width:120px;"><label style="' + labelStyle + '">Wear</label><input id="be_wear" value="' + escHtml(it.wear || "") + '" placeholder="Field-Tested" style="' + inputStyle + '"></div>';
+  h += '<div style="display:flex;flex-direction:column;gap:4px;padding-top:16px;">';
+  h += '<label style="color:#ff00ff;font-size:12px;cursor:pointer;"><input type="checkbox" id="be_rare"' + (it.rare ? " checked" : "") + '> ★ Rare</label>';
+  h += '<label style="color:#ff8800;font-size:12px;cursor:pointer;"><input type="checkbox" id="be_locked"' + (it.locked ? " checked" : "") + '> 🔒 Zamčeno</label>';
+  h += '</div>';
+  h += '</div>';
+  h += '<div style="margin-top:10px;"><button class="btn-app" onclick="saveBoxRow(\'' + row + '\')">' + (row === "new" ? "Přidat" : "Uložit") + '</button> <button class="btn-done" onclick="cancelBoxEdit()">Zrušit</button></div>';
+  return h;
+}
+
+function editBoxRow(row) { editingRow = row; renderBoxEditor(); }
+function cancelBoxEdit() { editingRow = null; renderBoxEditor(); }
+
+function boxEditMsg(text, isError) {
+  var m = document.getElementById("boxEditMsg");
+  if (m) { m.textContent = text; m.style.color = isError ? "#f80" : "#00ff96"; }
+}
+
+async function saveBoxRow(row) {
+  var data = {
+    name: document.getElementById("be_name").value.trim(),
+    image: document.getElementById("be_image").value.trim(),
+    chance: document.getElementById("be_chance").value,
+    sellPrice: document.getElementById("be_price").value,
+    wear: document.getElementById("be_wear").value.trim(),
+    rare: document.getElementById("be_rare").checked ? 1 : 0,
+    locked: document.getElementById("be_locked").checked ? 1 : 0
+  };
+  if (!data.name) { boxEditMsg("Zadej název!", true); return; }
+  var res = row === "new" ? await addBoxItem(editBoxCurrent, data) : await updateBoxItem(editBoxCurrent, row, data);
+  if (res === "UPDATED" || res === "ADDED") {
+    sessionStorage.removeItem("boxInfo_" + editBoxCurrent);
+    editingRow = null;
+    await loadBoxEditor();
+    boxEditMsg("Uloženo ✓");
+  } else {
+    boxEditMsg("Chyba: " + res, true);
+  }
+}
+
+async function deleteBoxRow(row) {
+  if (!confirm("Opravdu smazat tenhle skin z bedny?")) return;
+  var res = await deleteBoxItem(editBoxCurrent, row);
+  if (res === "DELETED") {
+    sessionStorage.removeItem("boxInfo_" + editBoxCurrent);
+    editingRow = null;
+    await loadBoxEditor();
+    boxEditMsg("Smazáno ✓");
+  } else {
+    boxEditMsg("Chyba: " + res, true);
+  }
 }
 
 async function loadLockStatus() {

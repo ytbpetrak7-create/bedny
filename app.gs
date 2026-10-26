@@ -81,6 +81,18 @@
       case "getBoxInfo":
         result = getBoxInfo(ss, params.box);
         break;
+      case "getBoxItemsAdmin":
+        result = getBoxItemsAdmin(ss, params.box, params.username);
+        break;
+      case "updateBoxItem":
+        result = updateBoxItem(ss, params.box, params.username, params.row, params);
+        break;
+      case "addBoxItem":
+        result = addBoxItem(ss, params.box, params.username, params);
+        break;
+      case "deleteBoxItem":
+        result = deleteBoxItem(ss, params.box, params.username, params.row);
+        break;
       case "deleteInventoryItem":
         result = deleteInventoryItem(ss, params.username, params.item, params.row);
         break;
@@ -671,11 +683,71 @@
         var base = data[i][2].toString().trim();
         var wear = data[i][5] ? data[i][5].toString().trim() : "";
         var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
-        items.push({ name: full, base: base, wear: wear, image: (data[i][0] || "").toString().trim(), chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0, rare: Number(data[i][4]) || 0 });
+        items.push({ name: full, base: base, wear: wear, image: (data[i][0] || "").toString().trim(), chance: Number(data[i][1]), sellPrice: Number(data[i][3]) || 0, rare: Number(data[i][4]) || 0, locked: Number(data[i][6]) || 0 });
       }
     }
     
     return JSON.stringify(items);
+  }
+
+  function getBoxItemsAdmin(ss, box, username) {
+    if (isAdmin(ss, username) !== "YES") return "NOT_ADMIN";
+    var sheetName = box === "Boxes2" ? "Boxes2" : "Boxes1";
+    var data = getSheet(ss, sheetName).getDataRange().getValues();
+    var items = [];
+    for (var i = 1; i < data.length; i++) {
+      if (!data[i][2]) continue;
+      items.push({
+        row: i + 1,
+        image: (data[i][0] || "").toString().trim(),
+        chance: Number(data[i][1]) || 0,
+        name: data[i][2].toString().trim(),
+        sellPrice: Number(data[i][3]) || 0,
+        rare: Number(data[i][4]) || 0,
+        wear: data[i][5] ? data[i][5].toString().trim() : "",
+        locked: Number(data[i][6]) || 0
+      });
+    }
+    return JSON.stringify(items);
+  }
+
+  function writeBoxItem(sheet, row, p) {
+    sheet.getRange(row, 1).setValue((p.image || "").toString().trim());
+    sheet.getRange(row, 2).setValue(Number(p.chance) || 0);
+    sheet.getRange(row, 3).setValue((p.name || "").toString().trim());
+    sheet.getRange(row, 4).setValue(Number(p.sellPrice) || 0);
+    sheet.getRange(row, 5).setValue(Number(p.rare) || 0);
+    sheet.getRange(row, 6).setValue((p.wear || "").toString().trim());
+    sheet.getRange(row, 7).setValue(Number(p.locked) || 0);
+  }
+
+  function updateBoxItem(ss, box, username, row, p) {
+    if (isAdmin(ss, username) !== "YES") return "NOT_ADMIN";
+    if (!p.name || !p.name.toString().trim()) return "MISSING_NAME";
+    row = Number(row);
+    if (row < 2) return "BAD_ROW";
+    var sheetName = box === "Boxes2" ? "Boxes2" : "Boxes1";
+    writeBoxItem(getSheet(ss, sheetName), row, p);
+    return "UPDATED";
+  }
+
+  function addBoxItem(ss, box, username, p) {
+    if (isAdmin(ss, username) !== "YES") return "NOT_ADMIN";
+    if (!p.name || !p.name.toString().trim()) return "MISSING_NAME";
+    var sheetName = box === "Boxes2" ? "Boxes2" : "Boxes1";
+    var sheet = getSheet(ss, sheetName);
+    var row = sheet.getLastRow() + 1;
+    writeBoxItem(sheet, row, p);
+    return "ADDED";
+  }
+
+  function deleteBoxItem(ss, box, username, row) {
+    if (isAdmin(ss, username) !== "YES") return "NOT_ADMIN";
+    row = Number(row);
+    if (row < 2) return "BAD_ROW";
+    var sheetName = box === "Boxes2" ? "Boxes2" : "Boxes1";
+    getSheet(ss, sheetName).deleteRow(row);
+    return "DELETED";
   }
 
   function deleteInventoryItem(ss, username, item, row) {
@@ -1542,6 +1614,24 @@
     }
   }
 
+  function buildLockedMap(ss) {
+    var locked = {};
+    var sheetNames = ["Boxes1", "Boxes2"];
+    for (var s = 0; s < sheetNames.length; s++) {
+      var data = getSheet(ss, sheetNames[s]).getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        if (!data[i][2]) continue;
+        if (Number(data[i][6]) !== 1) continue;
+        var base = data[i][2].toString().trim();
+        var wear = data[i][5] ? data[i][5].toString().trim() : "";
+        var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
+        locked[full.toLowerCase()] = true;
+        locked[base.toLowerCase()] = true;
+      }
+    }
+    return locked;
+  }
+
   function exchangeSkins(ss, username, removeRows, removeNames, addNames, priceDiff) {
     if (!username || !removeRows || !addNames) return "MISSING";
 
@@ -1564,6 +1654,14 @@
 
     var invSheet = getSheet(ss, "Inventory");
     var rows = removeRows.split(";").map(function(r) { return Number(r); }).sort(function(a,b) { return b - a; });
+
+    var lockedMap = buildLockedMap(ss);
+    for (var j = 0; j < rows.length; j++) {
+      if (rows[j] < 2) continue;
+      var invName = invSheet.getRange(rows[j], 2).getValue().toString().trim();
+      if (lockedMap[invName.toLowerCase()]) return "ITEM_LOCKED:" + invName;
+    }
+
     for (var j = 0; j < rows.length; j++) {
       if (rows[j] > 0) invSheet.deleteRow(rows[j]);
     }
