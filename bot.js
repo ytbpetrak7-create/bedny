@@ -309,17 +309,13 @@ async function poll() {
         offer.setMessage(w.item);
         const userDetails = await new Promise((resolve) => {
           offer.getUserDetails((err, me, them) => {
-            if (err) { console.log("Offer #" + w.row + ": partner overeni selhalo: " + err.message + " (spatny/expirovany trade link?)"); resolve(null); }
+            if (err) { console.log("Offer #" + w.row + ": partner overeni selhalo (" + err.message + ") - pokracuji bez overeni"); resolve(null); }
             else {
               console.log("Offer #" + w.row + ": partner=" + (them.personaName || "?") + " escrowDnu=" + (them.escrowDays !== undefined ? them.escrowDays : "?"));
               resolve(them);
             }
           });
         });
-        if (!userDetails) {
-          failedOffers["w_" + w.row] = { at: Date.now(), retryAfter: 3600000, count: ((failedOffers["w_" + w.row] || {}).count || 0) + 1 };
-          continue;
-        }
         await new Promise((resolve) => {
           offer.send((err, status) => {
             if (err) {
