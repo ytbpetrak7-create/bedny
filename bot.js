@@ -149,6 +149,10 @@ function parseTradeLink(url) {
   return m ? { partner: m[1], token: m[2] } : null;
 }
 
+function normSkin(s) {
+  return String(s || "").toLowerCase().replace(/\(.*?\)/g, "").replace(/[^a-z0-9]/g, "");
+}
+
 function getInventory() {
   return new Promise((resolve, reject) => {
     manager.getInventoryContents(730, 2, true, (err, inv) => {
@@ -296,9 +300,15 @@ async function poll() {
 
         const t = parseTradeLink(tradeUrl);
         if (!t) { console.log("Offer #" + w.row + ": spatny trade link, preskakuji"); continue; }
-        const found = botInv.find(x => x.market_hash_name && x.market_hash_name.toLowerCase().includes(w.item.toLowerCase()));
+        const wNorm = normSkin(w.item);
+        const found = botInv.find(x => {
+          const m = x.market_hash_name;
+          if (!m) return false;
+          const mNorm = normSkin(m);
+          return mNorm === wNorm || mNorm.includes(wNorm);
+        });
         if (!found) {
-          console.log("Offer #" + w.row + ": '" + w.item + "' neni v botove inventari, preskakuji");
+          console.log("Offer #" + w.row + ": '" + w.item + "' (normalizovano '" + wNorm + "') neni v botove inventari (" + botInv.length + " polozek), preskakuji");
           continue;
         }
         console.log("Offer #" + w.row + ": posilam '" + found.market_hash_name + "' (asset " + found.id + ") partneru " + t.partner);
