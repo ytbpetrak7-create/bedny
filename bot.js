@@ -35,7 +35,7 @@ client.on("steamGuard", (domain, callback, isEmail) => {
 });
 
 client.on("loggedOn", () => { 
-  console.log("✅ Bot přihlášen"); 
+  console.log("✅ Bot přihlášen jako steamID: " + (client.steamID ? client.steamID.getSteamID64() : "?") + " (melo by patrit k pet7bot1, ne Petrak7)"); 
   client.setPersona(SteamUser.EPersonaState.Online); 
   client.gamesPlayed(730);
 });
