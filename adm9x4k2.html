@@ -264,8 +264,49 @@ function editFormHTML(it, row) {
   h += '<label style="color:#ff8800;font-size:12px;cursor:pointer;"><input type="checkbox" id="be_locked"' + (it.locked ? " checked" : "") + '> 🔒 Zamčeno</label>';
   h += '</div>';
   h += '</div>';
+  h += '<div style="margin-top:8px;"><button type="button" class="btn-app" onclick="showBotPicker()" style="background:#4b9aff;color:#fff;">🤖 Vybrat z botova inventáře</button></div>';
+  h += '<div id="botPicker" style="display:none;margin-top:8px;max-height:280px;overflow-y:auto;background:#0d0d1a;border:1px solid #0f3460;border-radius:8px;padding:8px;"></div>';
   h += '<div style="margin-top:10px;"><button class="btn-app" onclick="saveBoxRow(\'' + row + '\')">' + (row === "new" ? "Přidat" : "Uložit") + '</button> <button class="btn-done" onclick="cancelBoxEdit()">Zrušit</button></div>';
   return h;
+}
+
+async function showBotPicker() {
+  var p = document.getElementById("botPicker");
+  if (!p) return;
+  if (p.style.display === "block") { p.style.display = "none"; return; }
+  p.style.display = "block";
+  p.innerHTML = "<p style='color:#aaa;font-size:13px;'>Načítám botův inventář...</p>";
+  var res = await getBotInventory();
+  var items = [];
+  try { items = JSON.parse(res); } catch(e) { items = []; }
+  if (!items.length) {
+    p.innerHTML = "<p style='color:#f80;font-size:13px;'>Bot nemá žádné skiny nebo se inventář nepodařilo načíst</p>";
+    return;
+  }
+  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;">';
+  items.forEach(function(bi, idx) {
+    var img = bi.image || "";
+    html += '<div onclick="pickBotItem(' + idx + ')" style="background:rgba(255,255,255,0.05);border-radius:6px;padding:6px;text-align:center;cursor:pointer;border:2px solid transparent;" onmouseover="this.style.borderColor=\'#4b9aff\'" onmouseout="this.style.borderColor=\'transparent\'" title="' + escHtml(bi.name) + '">';
+    if (img) html += '<img src="' + escHtml(img) + '" style="width:60px;height:60px;object-fit:contain;" onerror="this.style.display=\'none\'">';
+    html += '<div style="color:#ccc;font-size:9px;line-height:1.2;max-height:36px;overflow:hidden;margin-top:2px;">' + escHtml(bi.name) + '</div>';
+    if (bi.price > 0) html += '<div style="color:#00ff96;font-size:9px;">' + Number(bi.price).toFixed(2) + ' Kč</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<p style="color:#888;font-size:11px;margin-top:6px;">Klikni na skin - název, obrázek a cena se vyplní do formuláře. Šanci a příznaky doplň ručně.</p>';
+  window._botPickerItems = items;
+  p.innerHTML = html;
+}
+
+function pickBotItem(idx) {
+  var bi = (window._botPickerItems || [])[idx];
+  if (!bi) return;
+  document.getElementById("be_name").value = bi.name || "";
+  document.getElementById("be_image").value = bi.image || "";
+  var priceEl = document.getElementById("be_price");
+  if (priceEl && bi.price > 0) priceEl.value = bi.price;
+  var p = document.getElementById("botPicker");
+  if (p) p.style.display = "none";
 }
 
 function editBoxRow(row) { editingRow = row; renderBoxEditor(); }
