@@ -379,10 +379,12 @@ async function poll() {
 async function processDeposits() {
   const botInv = botInvGlobal;
   const depRes = await gasGet(GAS_URL + "?action=getPendingDeposits");
-  if (!depRes || typeof depRes !== "string") return;
-  const pendings = JSON.parse(depRes);
-  if (!pendings || !pendings.length) return;
-
+  if (!depRes) return;
+  const pendings = typeof depRes === "string" ? JSON.parse(depRes) : depRes;
+  if (!pendings || !pendings.length) {
+    console.log("Pending deposits: none");
+    return;
+  }
   console.log("Pending deposits: " + pendings.length);
 
   for (const dep of pendings) {
