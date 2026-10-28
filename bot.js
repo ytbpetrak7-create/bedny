@@ -377,84 +377,78 @@ async function poll() {
 }
 
 async function processDeposits() {
-  const botInv = botInvGlobal;
+  // 1. Ziskat seznam uzivatelu s pending depositem (chteji vlozit skiny botovi)
   const depRes = await gasGet(GAS_URL + "?action=getPendingDeposits");
   if (!depRes) return;
   const pendings = typeof depRes === "string" ? JSON.parse(depRes) : depRes;
-  if (!pendings || !pendings.length) {
-    console.log("Pending deposits: none");
-    return;
-  }
-  console.log("Pending deposits: " + pendings.length);
+  if (!pendings || !pendings.length) return;
 
+  // Sestavit mapu steamID64 -> pending deposit pro rychle vyhledani
+  const pendingBySteam = {};
   for (const dep of pendings) {
-    const username = dep.username;
-    const items = dep.items || [];
-    if (!items.length) continue;
+    if (dep.steamId) pendingBySteam[dep.steamId] = dep;
+  }
 
-    const tlRes = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(username));
-    const tradeUrl = tlRes && tlRes !== "NOT_SET" ? tlRes : "";
-    if (!tradeUrl) {
-      console.log("Deposit " + username + ": nemá trade link, preskakuji");
+  // 2. Ziskat ceny z DepositSkins tabulky
+  const priceRes = await gasGet(GAS_URL + "?action=getDepositSkins");
+  const accepted = typeof priceRes === "string" ? JSON.parse(priceRes) : priceRes;
+  const priceMap = {};
+  for (const a of accepted) { if (a.name && a.price > 0) priceMap[a.name.toLowerCase()] = a.price; }
+
+  // 3. Ziskat prijate trade offers (hrac posila skiny botovi)
+  const received = await new Promise((resolve) => {
+    manager.getOffers({ get_received_offers: 1, active_only: 1 }, (err, offers) => {
+      resolve(err ? [] : (offers || []));
+    });
+  });
+
+  for (const offer of received) {
+    const partner = offer.partner;
+    if (!partner) continue;
+    const steamId64 = partner.getSteamID64 ? partner.getSteamID64() : partner.toString();
+
+    const dep = pendingBySteam[steamId64];
+    if (!dep) continue; // Tento uzivatel nemá zadny pending deposit
+
+    // Pocitat hodnotu toho, co hrac NABIZÍ (items_to_give = z hrace k botovi)
+    const giveItems = offer.items_to_give || [];
+    if (!giveItems.length) continue;
+
+    let totalValue = 0;
+    let matchedNames = [];
+    for (const it of giveItems) {
+      const name = it.market_hash_name || "";
+      const price = priceMap[name.toLowerCase()] || 0;
+      totalValue += price;
+      if (price > 0) matchedNames.push(name);
+    }
+    if (!matchedNames.length) {
+      console.log("Deposit " + dep.username + ": nabidka neobsahuje zadny skin z cenniku, odmítám");
+      try { await new Promise((res, rej) => offer.decline((e) => e ? rej(e) : res())); } catch(e) {}
       continue;
     }
-    const t = parseTradeLink(tradeUrl);
-    if (!t) continue;
 
-    // Najdi skiny v botove inventari
-    const offerItems = [];
-    let totalValue = 0;
-    let missing = false;
-    for (const wanted of items) {
-      const wNorm = normSkin(wanted.name);
-      const found = botInv.find(x => {
-        const m = x.market_hash_name || "";
-        const mNorm = normSkin(m);
-        return mNorm === wNorm || mNorm.includes(wNorm);
-      });
-      if (!found) {
-        console.log("Deposit " + username + ": '" + wanted.name + "' neni v botove inventari, preskakuji celou nabidku");
-        missing = true;
-        break;
-      }
-      offerItems.push(found);
-      totalValue += Number(found.price || 0);
-    }
-    if (missing || !offerItems.length) continue;
-
-    console.log("Deposit " + username + ": posilam " + offerItems.length + " itemu, celkem " + totalValue.toFixed(2) + " Kč");
+    console.log("Deposit " + dep.username + ": prijímam nabidku #" + offer.id + " (" + matchedNames.length + " skinu, " + totalValue.toFixed(2) + " Kč)");
 
     try {
-      const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
-      for (const it of offerItems) offer.addMyItem(it);
-      offer.setMessage("Vklad: " + offerItems.map(i => i.market_hash_name).join(", "));
-
       await new Promise((resolve, reject) => {
-        offer.send((err, status) => {
+        offer.accept((err) => {
           if (err) { reject(err); }
-          else { console.log("Deposit offer sent: " + status + " offer #" + offer.id); resolve(); }
+          else { console.log("Deposit " + dep.username + ": nabidka #" + offer.id + " prijata"); resolve(); }
         });
       });
 
-      // Uspesne odeslano - pridej Kc uzivateli
-      const completeRes = await gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(username) + "&amount=" + totalValue.toFixed(2));
+      // Pripsat Kc uzivateli (completeDeposit taky vymaže pending deposit)
+      const completeRes = await gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2));
       try {
         const completeData = JSON.parse(completeRes);
-        if (completeData.total) console.log("Deposit " + username + ": pripsano " + completeData.total + " Kč (bonus " + completeData.bonus + ")");
-      } catch(e) { console.log("Deposit " + username + ": completeDeposit odpoved: " + completeRes); }
+        if (completeData.total) console.log("Deposit " + dep.username + ": pripsano " + completeData.total + " Kč (bonus " + completeData.bonus + ")");
+      } catch(e) { console.log("Deposit " + dep.username + ": completeDeposit odpoved: " + completeRes); }
 
-      // Odeber odeslane itemy z botoveho inventare
-      const sentAssetIds = new Set(offerItems.map(i => i.assetId));
-      botInv = botInv.filter(x => !sentAssetIds.has(x.assetId));
-
-      // Uloz aktualizovany bot inventory do GAS
-      const botItemsForSave = botInv.map(x => ({ name: x.market_hash_name || "", price: x.price || 0, image: x.image || "", assetId: x.assetId, count: x.count || 1 }));
-      await gasPost(GAS_URL + "?action=saveBotInventory", { data: JSON.stringify(botItemsForSave) });
     } catch(e) {
-      console.error("Deposit offer send error for " + username + ": " + e.message);
+      console.error("Deposit accept error for " + dep.username + ": " + e.message);
     }
   }
-  botInvGlobal = botInv;
 }
 
 console.log("Bot spuštěn");
