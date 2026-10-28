@@ -262,9 +262,24 @@ async function poll() {
 
   try {
     const items = await gasGet(GAS_URL + "?action=getWithdrawals");
+    
+    // Načíst pending deposits - tyhle uživatele withdrawal přeskočí (oni posílají skiny botovi, neberou si je)
+    const pendingDepRes = await gasGet(GAS_URL + "?action=getPendingDeposits");
+    const pendingUsers = new Set();
+    if (pendingDepRes) {
+      const pendings = typeof pendingDepRes === "string" ? JSON.parse(pendingDepRes) : pendingDepRes;
+      for (const dep of pendings) {
+        if (dep.username) pendingUsers.add(dep.username);
+      }
+    }
+    
     if (items && items.length && botInv) {
       for (const w of items) {
         if (w.status !== "approved") continue;
+        if (pendingUsers.has(w.username)) {
+          console.log("Offer #" + w.row + ": preskakuji withdrawal - uzivatel " + w.username + " ma pending deposit");
+          continue;
+        }
         if (pendingConfirm[w.row]) {
           const pc = pendingConfirm[w.row];
           const st = await new Promise((res) => manager.getOffer(pc.offerId, (e, o) => res(e ? null : o)));
