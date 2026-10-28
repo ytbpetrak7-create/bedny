@@ -186,6 +186,9 @@
       case "requestDeposit":
         result = requestDeposit(ss, params.username, params.items);
         break;
+      case "updateDepositOfferId":
+        result = updateDepositOfferId(ss, params.username, params.offerId);
+        break;
       case "getPendingDeposits":
         result = getPendingDeposits();
         break;
@@ -1533,6 +1536,22 @@
     }));
 
     return "OK";
+  }
+
+  function updateDepositOfferId(ss, username, offerId) {
+    if (!username || !offerId) return "MISSING";
+    var props = PropertiesService.getScriptProperties();
+    var key = "deposit_" + username;
+    var existing = props.getProperty(key);
+    if (!existing) return "NOT_FOUND";
+    try {
+      var dep = JSON.parse(existing);
+      dep.offerId = offerId;
+      props.setProperty(key, JSON.stringify(dep));
+      return "OK";
+    } catch(e) {
+      return "ERROR: " + e.message;
+    }
   }
 
   function getPendingDeposits() {

@@ -135,6 +135,10 @@ async function exchangeSkins(username, removeRows, removeNames, addNames, priceD
   return await callScript("exchangeSkins", { username: username, removeRows: removeRows, removeNames: removeNames, addNames: addNames, priceDiff: priceDiff });
 }
 
+async function updateDepositOfferId(username, offerId) {
+  return await callScript("updateDepositOfferId", { username: username, offerId: offerId });
+}
+
 async function getBotInventory() {
   return await callScript("getBotInventory");
 }

@@ -392,76 +392,103 @@ async function poll() {
 }
 
 async function processDeposits() {
-  // 1. Ziskat seznam uzivatelu s pending depositem (chteji vlozit skiny botovi)
   const depRes = await gasGet(GAS_URL + "?action=getPendingDeposits");
   if (!depRes) return;
   const pendings = typeof depRes === "string" ? JSON.parse(depRes) : depRes;
   if (!pendings || !pendings.length) return;
 
-  // Sestavit mapu steamID64 -> pending deposit pro rychle vyhledani
-  const pendingBySteam = {};
-  for (const dep of pendings) {
-    if (dep.steamId) pendingBySteam[dep.steamId] = dep;
-  }
+  console.log("Pending deposits: " + pendings.length);
 
-  // 2. Ziskat ceny z DepositSkins tabulky
+  // Ziskat ceny z DepositSkins tabulky
   const priceRes = await gasGet(GAS_URL + "?action=getDepositSkins");
   const accepted = typeof priceRes === "string" ? JSON.parse(priceRes) : priceRes;
   const priceMap = {};
   for (const a of accepted) { if (a.name && a.price > 0) priceMap[a.name.toLowerCase()] = a.price; }
 
-  // 3. Ziskat prijate trade offers (hrac posila skiny botovi)
-  const received = await new Promise((resolve) => {
-    manager.getOffers({ get_received_offers: 1, active_only: 1 }, (err, offers) => {
-      resolve(err ? [] : (offers || []));
-    });
-  });
+  for (const dep of pendings) {
+    const username = dep.username;
+    const items = dep.items || [];
+    if (!items.length) continue;
 
-  for (const offer of received) {
-    const partner = offer.partner;
-    if (!partner) continue;
-    const steamId64 = partner.getSteamID64 ? partner.getSteamID64() : partner.toString();
-
-    const dep = pendingBySteam[steamId64];
-    if (!dep) continue; // Tento uzivatel nemá zadny pending deposit
-
-    // Pocitat hodnotu toho, co hrac NABIZÍ (items_to_give = z hrace k botovi)
-    const giveItems = offer.items_to_give || [];
-    if (!giveItems.length) continue;
-
-    let totalValue = 0;
-    let matchedNames = [];
-    for (const it of giveItems) {
-      const name = it.market_hash_name || "";
-      const price = priceMap[name.toLowerCase()] || 0;
-      totalValue += price;
-      if (price > 0) matchedNames.push(name);
-    }
-    if (!matchedNames.length) {
-      console.log("Deposit " + dep.username + ": nabidka neobsahuje zadny skin z cenniku, odmítám");
-      try { await new Promise((res, rej) => offer.decline((e) => e ? rej(e) : res())); } catch(e) {}
+    // Pokud uz mame offerId, zkontrolujeme stav nabidky
+    if (dep.offerId) {
+      try {
+        const st = await new Promise((resolve) => {
+          manager.getOffer(dep.offerId, (e, o) => resolve(e ? null : o));
+        });
+        if (st) {
+          if (st.state === 3) {
+            console.log("Deposit " + username + ": nabidka #" + dep.offerId + " prijata hracem");
+            const totalValue = items.reduce((sum, it) => sum + (Number(priceMap[it.name.toLowerCase()]) || 0), 0);
+            const completeRes = await gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(username) + "&amount=" + totalValue.toFixed(2));
+            try {
+              const completeData = JSON.parse(completeRes);
+              if (completeData.total) console.log("Deposit " + username + ": pripsano " + completeData.total + " Kč (bonus " + completeData.bonus + ")");
+            } catch(e) { console.log("Deposit " + username + ": completeDeposit: " + completeRes); }
+          } else if (st.state === 2 || st.state === 9) {
+            console.log("Deposit " + username + ": nabidka #" + dep.offerId + " stale ceka (nebo neplatna)");
+          } else if (st.state === 6 || st.state === 7 || st.state === 11) {
+            console.log("Deposit " + username + ": nabidka #" + dep.offerId + " zrusena/neuspesna");
+          }
+        }
+      } catch(e) {
+        console.error("Deposit offer status check error for " + username + ": " + e.message);
+      }
       continue;
     }
 
-    console.log("Deposit " + dep.username + ": prijímam nabidku #" + offer.id + " (" + matchedNames.length + " skinu, " + totalValue.toFixed(2) + " Kč)");
+    // Ziskat trade link hrace
+    const tlRes = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(username));
+    const tradeUrl = tlRes && tlRes !== "NOT_SET" ? tlRes : "";
+    if (!tradeUrl) {
+      console.log("Deposit " + username + ": nemá trade link, preskakuji");
+      continue;
+    }
+    const t = parseTradeLink(tradeUrl);
+    if (!t) continue;
+
+    // Vypocitat celkovou hodnotu a sestavit nabidku
+    let totalValue = 0;
+    const depositItems = [];
+    for (const it of items) {
+      const price = priceMap[it.name.toLowerCase()] || 0;
+      totalValue += price;
+      if (price > 0) {
+        depositItems.push(it);
+      }
+    }
+    if (!depositItems.length) {
+      console.log("Deposit " + username + ": zadne platne skiny v nabidce");
+      continue;
+    }
+
+    console.log("Deposit " + username + ": posilam nabidku pro " + depositItems.length + " skinu, celkem " + totalValue.toFixed(2) + " Kč");
 
     try {
+      const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
+      // Bot CHCE tyhle skiny od hrace (items_to_receive)
+      for (const it of depositItems) {
+        offer.addTheirItem({
+          appid: 730,
+          contextid: it.contextid || "2",
+          assetid: it.assetId
+        });
+      }
+      offer.setMessage("Vklad skinu na bedny.cz - hodnota " + totalValue.toFixed(2) + " Kč");
+
       await new Promise((resolve, reject) => {
-        offer.accept((err) => {
+        offer.send((err, status) => {
           if (err) { reject(err); }
-          else { console.log("Deposit " + dep.username + ": nabidka #" + offer.id + " prijata"); resolve(); }
+          else { console.log("Deposit offer sent to " + username + ": " + status + " offer #" + offer.id); resolve(); }
         });
       });
 
-      // Pripsat Kc uzivateli (completeDeposit taky vymaže pending deposit)
-      const completeRes = await gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(dep.username) + "&amount=" + totalValue.toFixed(2));
-      try {
-        const completeData = JSON.parse(completeRes);
-        if (completeData.total) console.log("Deposit " + dep.username + ": pripsano " + completeData.total + " Kč (bonus " + completeData.bonus + ")");
-      } catch(e) { console.log("Deposit " + dep.username + ": completeDeposit odpoved: " + completeRes); }
+      // Ulozit offerId do GAS, abychom neposilali znovu
+      await updateDepositOfferId(username, offer.id);
 
+      // Pockej chvili a zkusit zjistit stav (nebo nechat na dalsi poll)
     } catch(e) {
-      console.error("Deposit accept error for " + dep.username + ": " + e.message);
+      console.error("Deposit offer send error for " + username + ": " + e.message);
     }
   }
 }
