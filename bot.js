@@ -238,6 +238,7 @@ function confirmOffer(offerId, row) {
 }
 
 var pollCount = 0;
+var botInvGlobal = null;
 
 var lastWithdrawalAttempt = {};
 var lastDepositAttempt = {};
@@ -255,6 +256,7 @@ async function poll() {
   var botInv = null;
   try {
     botInv = await getInventory();
+    botInvGlobal = botInv;
     console.log("Poll: bot inventory loaded - " + botInv.length + " items");
   } catch(e) { console.error("Bot inventory error:", e.message); }
 
@@ -367,7 +369,90 @@ async function poll() {
     } catch(e) { console.error("Bot inventory save error:", e.message); }
   }
 
+  try {
+    await processDeposits();
+  } catch(e) { console.error("Deposit processing error:", e.message); }
+
   setTimeout(poll, 60000);
+}
+
+async function processDeposits() {
+  const botInv = botInvGlobal;
+  const depRes = await gasGet(GAS_URL + "?action=getPendingDeposits");
+  if (!depRes || typeof depRes !== "string") return;
+  const pendings = JSON.parse(depRes);
+  if (!pendings || !pendings.length) return;
+
+  console.log("Pending deposits: " + pendings.length);
+
+  for (const dep of pendings) {
+    const username = dep.username;
+    const items = dep.items || [];
+    if (!items.length) continue;
+
+    const tlRes = await gasGet(GAS_URL + "?action=getTradeLink&username=" + encodeURIComponent(username));
+    const tradeUrl = tlRes && tlRes !== "NOT_SET" ? tlRes : "";
+    if (!tradeUrl) {
+      console.log("Deposit " + username + ": nemá trade link, preskakuji");
+      continue;
+    }
+    const t = parseTradeLink(tradeUrl);
+    if (!t) continue;
+
+    // Najdi skiny v botove inventari
+    const offerItems = [];
+    let totalValue = 0;
+    let missing = false;
+    for (const wanted of items) {
+      const wNorm = normSkin(wanted.name);
+      const found = botInv.find(x => {
+        const m = x.market_hash_name || "";
+        const mNorm = normSkin(m);
+        return mNorm === wNorm || mNorm.includes(wNorm);
+      });
+      if (!found) {
+        console.log("Deposit " + username + ": '" + wanted.name + "' neni v botove inventari, preskakuji celou nabidku");
+        missing = true;
+        break;
+      }
+      offerItems.push(found);
+      totalValue += Number(found.price || 0);
+    }
+    if (missing || !offerItems.length) continue;
+
+    console.log("Deposit " + username + ": posilam " + offerItems.length + " itemu, celkem " + totalValue.toFixed(2) + " Kč");
+
+    try {
+      const offer = manager.createOffer(`https://steamcommunity.com/tradeoffer/new/?partner=${t.partner}&token=${t.token}`);
+      for (const it of offerItems) offer.addMyItem(it);
+      offer.setMessage("Vklad: " + offerItems.map(i => i.market_hash_name).join(", "));
+
+      await new Promise((resolve, reject) => {
+        offer.send((err, status) => {
+          if (err) { reject(err); }
+          else { console.log("Deposit offer sent: " + status + " offer #" + offer.id); resolve(); }
+        });
+      });
+
+      // Uspesne odeslano - pridej Kc uzivateli
+      const completeRes = await gasGet(GAS_URL + "?action=completeDeposit&username=" + encodeURIComponent(username) + "&amount=" + totalValue.toFixed(2));
+      try {
+        const completeData = JSON.parse(completeRes);
+        if (completeData.total) console.log("Deposit " + username + ": pripsano " + completeData.total + " Kč (bonus " + completeData.bonus + ")");
+      } catch(e) { console.log("Deposit " + username + ": completeDeposit odpoved: " + completeRes); }
+
+      // Odeber odeslane itemy z botoveho inventare
+      const sentAssetIds = new Set(offerItems.map(i => i.assetId));
+      botInv = botInv.filter(x => !sentAssetIds.has(x.assetId));
+
+      // Uloz aktualizovany bot inventory do GAS
+      const botItemsForSave = botInv.map(x => ({ name: x.market_hash_name || "", price: x.price || 0, image: x.image || "", assetId: x.assetId, count: x.count || 1 }));
+      await gasPost(GAS_URL + "?action=saveBotInventory", { data: JSON.stringify(botItemsForSave) });
+    } catch(e) {
+      console.error("Deposit offer send error for " + username + ": " + e.message);
+    }
+  }
+  botInvGlobal = botInv;
 }
 
 console.log("Bot spuštěn");
