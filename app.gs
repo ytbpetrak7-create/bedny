@@ -948,7 +948,7 @@
     }
     wSheet.appendRow([username, itemName, "pending", new Date(), tradeLink]);
     
-    invSheet.deleteRow(foundRow);
+    // POLozka zustava v inventari, bude smazana az v completeWithdrawal po uspesnem odeslani
     return "WITHDRAW_REQUESTED";
   }
 
@@ -966,7 +966,30 @@
 
   function completeWithdrawal(ss, row) {
     var wSheet = getSheet(ss, "Withdrawals");
+    var wData = wSheet.getDataRange().getValues();
+    var wUser = "", wItem = "";
+    for (var i = 1; i < wData.length; i++) {
+      if (i + 1 === Number(row)) {
+        wUser = wData[i][0] ? wData[i][0].toString().trim() : "";
+        wItem = wData[i][1] ? wData[i][1].toString().trim() : "";
+        break;
+      }
+    }
     wSheet.getRange(Number(row), 3).setValue("done");
+
+    // Smazat polozku z uzivatelskeho inventare az po uspesnem odeslani
+    if (wUser && wItem) {
+      var invSheet = getSheet(ss, "Inventory");
+      var invData = invSheet.getDataRange().getValues();
+      for (var j = 1; j < invData.length; j++) {
+        if (invData[j][0] && invData[j][0].toString().trim() === wUser &&
+            invData[j][1] && invData[j][1].toString().trim() === wItem) {
+          invSheet.deleteRow(j + 1);
+          break;
+        }
+      }
+    }
+
     return "COMPLETED";
   }
 
