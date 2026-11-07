@@ -434,7 +434,12 @@ async function processDeposits() {
     let matchedNames = [];
     for (const it of giveItems) {
       const name = it.market_hash_name || "";
-      const price = priceMap[name.toLowerCase()] || 0;
+      let price = priceMap[name.toLowerCase()] || 0;
+      // Fallback: zkusit bez wearu (odstranit "(...)" na konci)
+      if (price === 0) {
+        const baseName = name.replace(/\s*\(.*\)\s*$/, "").trim();
+        price = priceMap[baseName.toLowerCase()] || 0;
+      }
       totalValue += price;
       if (price > 0) matchedNames.push(name);
     }
