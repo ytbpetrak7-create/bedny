@@ -413,7 +413,7 @@ async function processDeposits() {
 
   // Ziskat prijate trade offers (hrac posila skiny botovi pet7bot1)
   const received = await new Promise((resolve) => {
-    manager.getOffers({ active_only: true }, (err, sent, received) => {
+    manager.getOffers({}, (err, sent, received) => {
       resolve(err ? [] : (received || []));
     });
   });
