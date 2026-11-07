@@ -496,7 +496,7 @@ async function processDeposits() {
       });
 
       // Ulozit offerId do GAS, abychom neposilali znovu
-      await updateDepositOfferId(username, offer.id);
+      await gasGet(GAS_URL + "?action=updateDepositOfferId&username=" + encodeURIComponent(username) + "&offerId=" + offer.id);
     } catch(e) {
       console.error("Deposit offer send error for " + username + ": " + e.message);
     }
