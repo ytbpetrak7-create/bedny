@@ -340,7 +340,7 @@
       result = getPriceNames(ss);
       break;
     case "savePricesFromBot":
-      result = savePricesFromBot(ss, params.data);
+      result = savePricesFromBot(ss, params.data, params.currency);
       break;
     case "testPriceEmpire":
       result = testPriceEmpire(params.apiKey, params.source, params.currency);
@@ -2259,10 +2259,12 @@
 
   // Ulozeni cen, ktere stahl bot (bot ma domaci IP, Steam ho nepoblokuje).
   // Vstup: [{ "n": "market_hash_name", "p": cena v USD }, ...]
-  function savePricesFromBot(ss, data) {
+  function savePricesFromBot(ss, data, currency) {
     var arr;
     try { arr = typeof data === "string" ? JSON.parse(data) : data; } catch (e) { return JSON.stringify({ error: "Neplatná data" }); }
     if (!arr || !arr.length) return JSON.stringify({ error: "Žádná data" });
+    currency = (currency || "USD").toString().toUpperCase();
+    var toCzk = (currency === "CZK") ? 1 : USD_CZK;
 
     var props = PropertiesService.getScriptProperties();
     var priceMap = {};
@@ -2291,7 +2293,7 @@
       if (price !== undefined && price > 0) {
         var sheet = ss.getSheetByName(info.sheet);
         if (sheet) {
-          var czk = price * USD_CZK * sheetMultiplier(props, info.sheet);
+          var czk = price * toCzk * sheetMultiplier(props, info.sheet);
           sheet.getRange(info.row, info.col).setValue(Math.max(1, Math.round(czk)));
           updated++;
         }

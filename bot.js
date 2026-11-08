@@ -4,14 +4,16 @@ const SteamCommunity = require("steamcommunity");
 const SteamTotp = require("steam-totp");
 const https = require("https");
 const fs = require("fs");
+const zlib = require("zlib");
 const readline = require("readline");
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbz89Ud1exW-1dpUuyuO1q23upXGWEf7C5ydVBEOz3M8yDB-ZlU3GGMP8bWPqUGveq3c5Q/exec";
 
 // ===== Denní aktualizace cen =====
-// Zdroj: "steamfree" = Steam Community Market (zdarma, bez klíče)
-// Lze přepsat přes env: PRICE_SOURCE / PRICE_CURRENCY / PRICE_UPDATE_HOUR
-const PRICE_SOURCE = process.env.PRICE_SOURCE || "steamfree";
+// Zdroj: "skinport" = ceny ze Skinportu (vychazi ze Steamu, jeden dotaz, bez limitu)
+//        "steam"    = primi dotazy na Steam Market (presna cena, ale Steam casto vraci 429)
+// Lze prepsat pres env: PRICE_SOURCE / PRICE_UPDATE_HOUR
+const PRICE_SOURCE = process.env.PRICE_SOURCE || "skinport";
 const PRICE_CURRENCY = process.env.PRICE_CURRENCY || "CZK";
 const PRICE_UPDATE_HOUR = parseInt(process.env.PRICE_UPDATE_HOUR || "3", 10);
 const PRICE_STATE_FILE = "price-state.json";
@@ -276,7 +278,7 @@ function savePriceState(s) {
 }
 
 async function runPriceUpdate() {
-  console.log("💰 Aktualizace cen: stahuji ze Steamu (přes bota), zdroj=" + PRICE_SOURCE);
+  console.log("💰 Aktualizace cen: zdroj=" + PRICE_SOURCE);
 
   // 1) Zjistit, které skiny máme v tabulkách
   var names;
@@ -293,7 +295,113 @@ async function runPriceUpdate() {
   }
   console.log("💰 Skinů k aktualizaci: " + names.length);
 
-  // 2) Stáhnout ceny ze Steamu (domácí IP projde, Google IP Steam blokuje)
+  if (PRICE_SOURCE === "steam") {
+    return runSteamPriceUpdate(names);
+  }
+  return runSkinportPriceUpdate(names);
+}
+
+// Hlavni zdroj: Skinport API – jeden dotaz vrati vsechny skiny v CZK.
+// suggested_price vychazi ze Steam trhu a byva dostupny i pro skiny bez nabidek.
+function fetchSkinportPrices() {
+  return new Promise((resolve) => {
+    var url = "https://api.skinport.com/v1/items?app_id=730&currency=CZK";
+    var req = https.get(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept-Encoding": "br" } }, (res) => {
+      var chunks = [];
+      res.on("data", c => chunks.push(c));
+      res.on("end", () => {
+        if (res.statusCode === 429) return resolve({ retry: true });
+        if (res.statusCode !== 200) return resolve({ error: "HTTP " + res.statusCode });
+        var buf = Buffer.concat(chunks);
+        try {
+          if (String(res.headers["content-encoding"] || "").indexOf("br") > -1) {
+            buf = zlib.brotliDecompressSync(buf);
+          }
+        } catch(e) {
+          return resolve({ error: "brotli: " + e.message });
+        }
+        try {
+          var items = JSON.parse(buf.toString());
+          if (!Array.isArray(items)) return resolve({ error: "neočekávaná odpověď" });
+          var map = {};
+          for (var i = 0; i < items.length; i++) {
+            var it = items[i];
+            if (!it || !it.market_hash_name) continue;
+            var p = it.suggested_price;
+            if (!(p > 0)) continue;
+            map[it.market_hash_name.toLowerCase()] = p;
+          }
+          resolve({ map: map, count: items.length });
+        } catch(e) {
+          resolve({ error: "parse: " + e.message });
+        }
+      });
+    });
+    req.on("error", (e) => resolve({ error: e.message }));
+    req.setTimeout(60000, () => { try { req.destroy(); } catch(e) {} resolve({ error: "timeout" }); });
+  });
+}
+
+function splitNormName(s) {
+  var wearMatch = String(s || "").match(/\(([^)]+)\)\s*$/);
+  return {
+    base: normName(s),
+    wear: wearMatch ? wearMatch[1].trim().toLowerCase() : ""
+  };
+}
+
+async function runSkinportPriceUpdate(names) {
+  console.log("💰 Stahuji ceny ze Skinportu (Steam ceny, 1 dotaz)...");
+  var sp = await fetchSkinportPrices();
+  if (sp.retry) { console.log("⏳ Skinport 429 – zkusím později."); return false; }
+  if (sp.error) { console.log("❌ Skinport: " + sp.error); return false; }
+  console.log("💰 Skinport: " + sp.count + " položek, " + Object.keys(sp.map).length + " s cenou");
+
+  // Index podle zakladu+opotrebeni (pak najde i nazvy bez "|" a s jinym formatem)
+  var byBaseWear = {};
+  var byBase = {};
+  var key;
+  for (key in sp.map) {
+    var parts = splitNormName(key);
+    var bw = parts.base + "|" + parts.wear;
+    var price = sp.map[key];
+    if (!(bw in byBaseWear) || price < byBaseWear[bw]) byBaseWear[bw] = price;
+    if (!(parts.base in byBase) || price < byBase[parts.base]) byBase[parts.base] = price;
+  }
+
+  var fetched = 0, failed = 0;
+  var batch = [];
+  var notFoundSample = [];
+  for (var i = 0; i < names.length; i++) {
+    var name = names[i];
+    var p = sp.map[String(name).toLowerCase()];
+    if (p === undefined) {
+      var nm = splitNormName(name);
+      var bwKey = nm.base + "|" + nm.wear;
+      if (nm.wear && (bwKey in byBaseWear)) p = byBaseWear[bwKey];
+      else if (nm.base in byBase) p = byBase[nm.base];
+    }
+    if (p > 0) {
+      batch.push({ n: name, p: Math.round(p * 100) / 100 });
+      fetched++;
+    } else {
+      failed++;
+      if (notFoundSample.length < 10) notFoundSample.push(name);
+    }
+    if (batch.length >= 25) {
+      await pushPricesToSheet(batch.splice(0), "CZK");
+    }
+  }
+  if (batch.length) await pushPricesToSheet(batch, "CZK");
+
+  if (notFoundSample.length) {
+    console.log("❌ Nenalezeno (" + failed + "): " + notFoundSample.join(", "));
+  }
+  console.log("✅ Ceny hotovo: nalezeno " + fetched + "/" + names.length + ", nenalezeno " + failed);
+  return fetched > 0;
+}
+
+async function runSteamPriceUpdate(names) {
   var fetched = 0, failed = 0, rateLimited = 0;
   var aborted = false;
   var batch = [];
@@ -415,10 +523,10 @@ async function steamLookupWithRetry(name) {
   return { retry: true };
 }
 
-async function pushPricesToSheet(items) {
+async function pushPricesToSheet(items, currency) {
   if (!items.length) return;
   try {
-    var res = await gasPost(GAS_URL + "?action=savePricesFromBot", { data: JSON.stringify(items) });
+    var res = await gasPost(GAS_URL + "?action=savePricesFromBot", { data: JSON.stringify(items), currency: currency || "USD" });
     if (typeof res === "string") { try { res = JSON.parse(res); } catch(e) {} }
     if (!res || typeof res !== "object") {
       console.log("❌ Uložení cen: neplatná odpověď: " + String(res).substring(0, 150));
