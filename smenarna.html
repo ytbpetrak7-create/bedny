@@ -35,7 +35,13 @@ h1{text-align:center;margin:10px 0 5px;font-size:24px;}
 <body>
 <a href="hlav.html" class="back-link">&larr; Zpět</a>
 <h1>Směnárna skinů</h1>
-<p class="subtitle">Vyber skiny ze svého inventáře a vyměň je za jiné. Rozdíl v ceně se přičte/odečte z Kč. Zamčené skiny (🔒) se vyměnit nedají.</p>
+<p class="subtitle">Vyber skiny ze svého inventáře a vyměň je za skiny z botova inventáře. Rozdíl v ceně se přičte/odečte z Kč. Zamčené skiny (🔒) se vyměnit nedají.</p>
+
+<div id="withdrawNotice" style="display:none;max-width:1200px;margin:0 auto 15px;padding:12px 15px;border:1px solid #ffd700;border-radius:10px;background:#2b2410;color:#ffd700;font-size:14px;">
+  🔒 Pro výměnu skinů musíš nejdřív provést vklad (jakákoliv částka).
+  <a href="zamobr.html" style="color:#00ff96;font-weight:bold;text-decoration:underline;">Vložit skin</a>
+</div>
+<div id="exchangeInfo" style="display:none;max-width:1200px;margin:0 auto 15px;padding:12px 15px;border:1px solid #00ff96;border-radius:10px;background:#0d2b1a;color:#c9ffe6;font-size:14px;"></div>
 
 <div class="columns">
   <div class="col">
@@ -70,6 +76,20 @@ var myInv = [];
 var botInv = [];
 var selectedMy = [];
 var selectedTarget = [];
+var canWithdraw = true;
+
+async function checkWithdrawAllowed() {
+  try {
+    var raw = await callScript("getWithdrawStatus", { username: getCurrentUser() });
+    var j = JSON.parse(raw);
+    canWithdraw = !!j.allowed;
+  } catch(e) {
+    canWithdraw = true;
+  }
+  var el = document.getElementById("withdrawNotice");
+  if (el) el.style.display = canWithdraw ? "none" : "block";
+  updateSummary();
+}
 
 async function load() {
   var r1 = await getBoxInfo("Boxes1");
@@ -91,8 +111,11 @@ async function load() {
   var botResult = await getBotInventory();
   try { botInv = JSON.parse(botResult); } catch(e) { botInv = []; }
 
+  await checkWithdrawAllowed();
+
   renderMyItems();
   renderAllItems();
+  updateSummary();
 }
 
 function renderMyItems() {
@@ -112,16 +135,40 @@ function renderMyItems() {
   });
 }
 
+var botGroups = [];
+
+function buildBotGroups() {
+  var seen = {};
+  botGroups = [];
+  botInv.forEach(function(it) {
+    var key = String(it.name || "").trim();
+    if (!key) return;
+    if (seen[key] === undefined) {
+      seen[key] = botGroups.length;
+      botGroups.push({ name: key, price: Number(it.price) || 0, image: it.image || "", assets: [] });
+    }
+    if (it.assetId) botGroups[seen[key]].assets.push(String(it.assetId));
+  });
+  botGroups.sort(function(a, b) { return b.price - a.price; });
+  // zahodit vyber, ktery uz neexistuje
+  selectedTarget = selectedTarget.filter(function(i) { return i < botGroups.length; });
+}
+
 function renderAllItems() {
   var c = document.getElementById("allItems");
   c.innerHTML = "";
-  botInv.forEach(function(item, idx) {
+  if (!botGroups.length) {
+    c.innerHTML = "<p style='color:#888;font-size:13px;padding:10px;'>Bot momentálně nemá skladem žádné skiny.</p>";
+    return;
+  }
+  botGroups.forEach(function(item, idx) {
     var div = document.createElement("div");
     div.className = "item" + (selectedTarget.indexOf(idx) !== -1 ? " selected" : "");
-    var imgSrc = item.image || itemMap[item.name.trim()]?.image || "";
+    var imgSrc = item.image || (itemMap[item.name] ? itemMap[item.name].image : "");
+    var countBadge = item.assets.length > 1 ? ' <span style="color:#888;">×' + item.assets.length + '</span>' : '';
     div.innerHTML = '<img src="' + imgSrc + '" onerror="this.style.display=\'none\'">' +
       '<div class="name" title="' + item.name + '">' + item.name + '</div>' +
-      '<div class="price">' + (item.price > 0 ? item.price.toFixed(2) + " Kč" : "-") + '</div>';
+      '<div class="price">' + (item.price > 0 ? item.price.toFixed(2) + " Kč" + countBadge : "-" + countBadge) + '</div>';
     div.onclick = function() { toggleTarget(idx); };
     c.appendChild(div);
   });
@@ -151,7 +198,7 @@ function updateSummary() {
   });
   var targetTotal = 0;
   selectedTarget.forEach(function(idx) {
-    targetTotal += botInv[idx].price || 0;
+    if (botGroups[idx]) targetTotal += botGroups[idx].price || 0;
   });
   var diff = targetTotal - myTotal;
   document.getElementById("myTotal").textContent = myTotal.toFixed(2);
@@ -167,49 +214,75 @@ function updateSummary() {
     diffEl.textContent = "Rozdíl: 0 Kč";
     diffEl.className = "diff neutral";
   }
-  document.getElementById("exchangeBtn").disabled = selectedMy.length === 0 || selectedTarget.length === 0;
+  document.getElementById("exchangeBtn").disabled =
+    !canWithdraw || selectedMy.length === 0 || selectedTarget.length === 0;
 }
 
 async function doExchange() {
   var removeItems = selectedMy.map(function(idx) { return { name: myInv[idx].name, row: myInv[idx].row }; });
-  var addItems = selectedTarget.map(function(idx) { return botInv[idx].name; });
-  var myTotal = 0;
-  selectedMy.forEach(function(idx) {
-    myTotal += (itemMap[myInv[idx].name.trim()] || { price: 0 }).price;
-  });
-  var targetTotal = 0;
+  var addAssets = [];
   selectedTarget.forEach(function(idx) {
-    targetTotal += botInv[idx].price || 0;
+    var g = botGroups[idx];
+    if (g && g.assets.length) addAssets.push(g.assets[0]);
   });
-  var diff = targetTotal - myTotal;
 
   document.getElementById("exchangeBtn").disabled = true;
   var res = await callScript("exchangeSkins", {
     username: getCurrentUser(),
     removeRows: removeItems.map(function(x) { return x.row; }).join(";"),
     removeNames: removeItems.map(function(x) { return x.name; }).join(";"),
-    addNames: addItems.join(";"),
-    priceDiff: diff.toFixed(2)
+    addAssets: addAssets.join(";")
   });
+  res = String(res || "").trim();
+
   if (res === "EXCHANGED") {
     selectedMy = [];
     selectedTarget = [];
     await load();
     updatePoints();
     updateSummary();
+    showInfo("✅ Vyměněno! Bot ti skiny pošle do Steamu – nabídku potvrď v obchodních nabídkách.");
+  } else if (res === "EXCHANGED_MANUAL") {
+    selectedMy = [];
+    selectedTarget = [];
+    await load();
+    updatePoints();
+    updateSummary();
+    showInfo("✅ Vyměněno! Skiny máš v inventáři. Pro odeslání z bota si nejdřív nastav trade link v profilu a pak klikni na Vyzvednout.");
+  } else if (res === "DEPOSIT_REQUIRED") {
+    canWithdraw = false;
+    document.getElementById("withdrawNotice").style.display = "block";
+    alert("Pro výměnu skinů musíš nejdřív provést vklad (jakákoliv částka). Otevři stránku Vložit.");
+    updateSummary();
+  } else if (res === "NOT_ENOUGH") {
+    alert("Nemáš dostatek Kč na doplacení rozdílu.");
+    document.getElementById("exchangeBtn").disabled = false;
+  } else if (res === "NOT_AVAILABLE") {
+    alert("Některý z vybraných skinů už mezitím někdo jiný vzal. Načítám nabídku znovu.");
+    selectedTarget = [];
+    await load();
   } else if (res.indexOf("ITEM_LOCKED") === 0) {
     alert("Tenhle skin je zamčený a nedá se vyměnit: " + res.substring(12));
     await load();
-    updateSummary();
-    document.getElementById("exchangeBtn").disabled = false;
+  } else if (res.indexOf("NO_PRICE") === 0) {
+    alert("U tohoto skinu nemáme cenu, nejde vyměnit: " + res.substring(9));
+    await load();
   } else {
     alert("Chyba: " + res);
     document.getElementById("exchangeBtn").disabled = false;
   }
 }
 
+function showInfo(msg) {
+  var el = document.getElementById("exchangeInfo");
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = "block";
+  setTimeout(function() { el.style.display = "none"; }, 15000);
+}
+
 document.getElementById("exchangeBtn").onclick = doExchange;
-load();
+load().then(buildBotGroups).then(renderAllItems);
 </script>
 </body>
 </html>

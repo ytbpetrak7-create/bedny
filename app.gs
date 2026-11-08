@@ -274,7 +274,7 @@
       result = JSON.stringify(dsArr);
       break;
     case "exchangeSkins":
-      result = exchangeSkins(ss, params.username, params.removeRows, params.removeNames, params.addNames, params.priceDiff);
+      result = exchangeSkins(ss, params.username, params.removeRows, params.removeNames, params.addNames, params.priceDiff, params.addAssets);
       break;
     case "getBotInventory":
       result = getBotInventory(ss);
@@ -286,28 +286,7 @@
       result = getSteamInventoryDirect(ss, params.username);
       break;
     case "saveBotInventory":
-      var props7 = PropertiesService.getScriptProperties();
-      var chunk = parseInt(params.chunk) || 0;
-      var total = parseInt(params.total) || 1;
-      if (total === 1) {
-        props7.setProperty("botInventory", params.data || "[]");
-      } else {
-        var existing = props7.getProperty("botInventory_chunks") || "{}";
-        var chunks = JSON.parse(existing);
-        chunks[chunk] = params.data || "";
-        if (Object.keys(chunks).length === total) {
-          var full = "";
-          for (var ci = 0; ci < total; ci++) {
-            full += chunks[ci] || "";
-          }
-          props7.setProperty("botInventory", full);
-          props7.deleteProperty("botInventory_chunks");
-        } else {
-          props7.setProperty("botInventory_chunks", JSON.stringify(chunks));
-        }
-        result = "OK";
-      }
-      result = "OK";
+      result = saveBotInventoryToSheet(ss, params.data);
       break;
     case "getWheelConfig":
       var propsW = PropertiesService.getScriptProperties();
@@ -1796,58 +1775,295 @@
     return locked;
   }
 
-  function exchangeSkins(ss, username, removeRows, removeNames, addNames, priceDiff) {
-    if (!username || !removeRows || !addNames) return "MISSING";
-
-    var diff = Number(priceDiff) || 0;
-
-    var usersSheet = getSheet(ss, "Users");
-    var userData = usersSheet.getDataRange().getValues();
-    var userRow = -1;
-    var userPts = 0;
-    for (var i = 1; i < userData.length; i++) {
-      if (userData[i][0] && userData[i][0].toString().trim() === username.trim()) {
-        userRow = i + 1;
-        userPts = Number(userData[i][2]) || 0;
-        break;
+  // ---------- Ceny pro smenarnu ----------
+  // Prodejni cena z beden ma prednost (to je cena, za kterou skin prodavame),
+  // fallback je vykupni cena z DepositSkins.
+  function buildSkinPriceMaps(ss) {
+    var box = {};
+    var dep = {};
+    var sheetNames = ["Boxes1", "Boxes2"];
+    for (var s = 0; s < sheetNames.length; s++) {
+      var data = getSheet(ss, sheetNames[s]).getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        if (!data[i][2]) continue;
+        var base = data[i][2].toString().trim();
+        var wear = data[i][5] ? data[i][5].toString().trim() : "";
+        var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
+        var p = Number(data[i][3]) || 0;
+        if (!(p > 0)) continue;
+        var k1 = full.toLowerCase();
+        var k2 = base.toLowerCase();
+        if (box[k1] === undefined || p > box[k1]) box[k1] = p;
+        if (box[k2] === undefined || p > box[k2]) box[k2] = p;
       }
     }
-    if (userRow === -1) return "USER_NOT_FOUND";
-
-    if (diff > 0 && userPts < diff) return "NOT_ENOUGH";
-
-    var invSheet = getSheet(ss, "Inventory");
-    var rows = removeRows.split(";").map(function(r) { return Number(r); }).sort(function(a,b) { return b - a; });
-
-    var lockedMap = buildLockedMap(ss);
-    for (var j = 0; j < rows.length; j++) {
-      if (rows[j] < 2) continue;
-      var invName = invSheet.getRange(rows[j], 2).getValue().toString().trim();
-      if (lockedMap[invName.toLowerCase()]) return "ITEM_LOCKED:" + invName;
+    var depData = getSheet(ss, "DepositSkins").getDataRange().getValues();
+    for (var j = 1; j < depData.length; j++) {
+      if (!depData[j][0]) continue;
+      var nm = depData[j][0].toString().trim().toLowerCase();
+      var price = Number(depData[j][1]) || 0;
+      if (price > 0 && dep[nm] === undefined) dep[nm] = price;
     }
+    return { box: box, dep: dep };
+  }
 
-    for (var j = 0; j < rows.length; j++) {
-      if (rows[j] > 0) invSheet.deleteRow(rows[j]);
+  function priceFromMaps(maps, name) {
+    var low = String(name || "").trim().toLowerCase();
+    if (maps.box[low] !== undefined) return maps.box[low];
+    if (maps.dep[low] !== undefined) return maps.dep[low];
+    var base = low.replace(/\s*\([^)]*\)\s*$/, "").trim();
+    if (maps.box[base] !== undefined) return maps.box[base];
+    if (maps.dep[base] !== undefined) return maps.dep[base];
+    return 0;
+  }
+
+  // ---------- Rezervace botovych skinu ----------
+  // Kdyz hrac skin vymeni, rezervujeme konkretni asset v botove inventari,
+  // aby ho nemohl dostat jeste nekdo jiny, dokud ho bot neposle.
+  var RESERVATION_TTL = 7 * 24 * 3600 * 1000;
+
+  function getReservations(props) {
+    var res;
+    try { res = JSON.parse(props.getProperty("reservedAssets") || "{}"); } catch(e) { res = {}; }
+    var now = Date.now();
+    var changed = false;
+    for (var k in res) {
+      if (!res[k] || !res[k].at || (now - Number(res[k].at)) > RESERVATION_TTL) {
+        delete res[k];
+        changed = true;
+      }
     }
+    if (changed) props.setProperty("reservedAssets", JSON.stringify(res));
+    return res;
+  }
 
-    var names = addNames.split(";").map(function(n) { return n.trim(); });
-    for (var k = 0; k < names.length; k++) {
-      if (names[k]) invSheet.appendRow([username, names[k], new Date()]);
+  function saveReservations(props, res) {
+    props.setProperty("reservedAssets", JSON.stringify(res));
+  }
+
+  function saveBotInventoryToSheet(ss, data) {
+    var arr;
+    try { arr = JSON.parse(data || "[]"); } catch(e) { return "INVALID_DATA"; }
+    if (!Array.isArray(arr)) return "INVALID_DATA";
+
+    var sheet = getSheet(ss, "BotInventory");
+    if (sheet.getLastRow() > 0) sheet.clear();
+    sheet.appendRow(["assetId", "name", "price", "image", "savedAt"]);
+
+    var rows = [];
+    var seenAsset = {};
+    for (var i = 0; i < arr.length; i++) {
+      var it = arr[i] || {};
+      var name = (it.name || "").toString().trim();
+      if (!name) continue;
+      var assetId = (it.assetId || "").toString().trim();
+      if (assetId) {
+        if (seenAsset[assetId]) continue;
+        seenAsset[assetId] = true;
+      }
+      rows.push([
+        assetId,
+        name,
+        Number(it.price) || 0,
+        (it.image || "").toString(),
+        new Date()
+      ]);
     }
+    if (rows.length) sheet.getRange(2, 1, rows.length, 5).setValues(rows);
 
-    if (diff > 0) {
-      usersSheet.getRange(userRow, 3).setValue(userPts - diff);
-    } else if (diff < 0) {
-      usersSheet.getRange(userRow, 3).setValue(userPts + Math.abs(diff));
+    // Zrus rezervace na assety, ktere uz v botove inventari nejsou (byly odeslany)
+    var props = PropertiesService.getScriptProperties();
+    var res = getReservations(props);
+    var changed = false;
+    for (var asset in res) {
+      if (!seenAsset[asset]) { delete res[asset]; changed = true; }
     }
+    if (changed) saveReservations(props, res);
 
-    return "EXCHANGED";
+    return "OK";
   }
 
   function getBotInventory(ss) {
+    var sheet = getSheet(ss, "BotInventory");
+    var data = sheet.getDataRange().getValues();
     var props = PropertiesService.getScriptProperties();
-    var data = props.getProperty("botInventory");
-    return data || "[]";
+
+    // zpetna kompatibilita: dokud bot novy format neposle, pouzij stary snapshot
+    if (data.length < 2) {
+      var legacy = props.getProperty("botInventory");
+      if (!legacy) return "[]";
+      data = null;
+      try {
+        var legacyArr = JSON.parse(legacy);
+        var outLegacy = [];
+        for (var li = 0; li < legacyArr.length; li++) {
+          var l = legacyArr[li] || {};
+          if (!l.name) continue;
+          outLegacy.push({ name: l.name, price: Number(l.price) || 0, image: l.image || "", assetId: l.assetId || "", count: 1 });
+        }
+        return JSON.stringify(outLegacy);
+      } catch(e) { return "[]"; }
+    }
+
+    var maps = buildSkinPriceMaps(ss);
+    var res = getReservations(props);
+    var out = [];
+    for (var i = 1; i < data.length; i++) {
+      var name = data[i][1] ? data[i][1].toString().trim() : "";
+      if (!name) continue;
+      var assetId = data[i][0] ? data[i][0].toString().trim() : "";
+      if (assetId && res[assetId]) continue;
+      var p = priceFromMaps(maps, name);
+      if (!(p > 0)) p = Number(data[i][2]) || 0;
+      out.push({
+        name: name,
+        price: Math.round(p * 100) / 100,
+        image: data[i][3] ? data[i][3].toString() : "",
+        assetId: assetId,
+        count: 1
+      });
+    }
+    return JSON.stringify(out);
+  }
+
+  // Smenarna: hrac da sve skiny (z weboveho inventare) a dostane skiny z botova inventare.
+  // Ceny i dostupnost se overuji na serveru, klientovi se neveri.
+  function exchangeSkins(ss, username, removeRows, removeNames, addNames, priceDiff, addAssets) {
+    if (!username) return "MISSING_USER";
+    if (!hasDeposit(ss, username)) return "DEPOSIT_REQUIRED";
+    if (!removeRows || (!addNames && !addAssets)) return "MISSING";
+
+    var lock = LockService.getScriptLock();
+    try { lock.waitLock(30000); } catch(e) { return "BUSY"; }
+    try {
+      var usersSheet = getSheet(ss, "Users");
+      var userData = usersSheet.getDataRange().getValues();
+      var userRow = -1;
+      var userPts = 0;
+      var tradeLink = "";
+      for (var i = 1; i < userData.length; i++) {
+        if (userData[i][0] && userData[i][0].toString().trim() === username.trim()) {
+          userRow = i + 1;
+          userPts = Number(userData[i][2]) || 0;
+          tradeLink = userData[i][6] ? userData[i][6].toString().trim() : "";
+          break;
+        }
+      }
+      if (userRow === -1) return "USER_NOT_FOUND";
+
+      var invSheet = getSheet(ss, "Inventory");
+      var invData = invSheet.getDataRange().getValues();
+      var maps = buildSkinPriceMaps(ss);
+      var lockedMap = buildLockedMap(ss);
+
+      // 1) Overit vlastni skiny a spocitat jejich cenu
+      var rows = String(removeRows).split(";").map(function(r) { return parseInt(r, 10) || 0; })
+        .filter(function(r) { return r > 1; })
+        .sort(function(a, b) { return b - a; });
+      if (!rows.length) return "MISSING";
+
+      var ownTotal = 0;
+      var toDelete = [];
+      for (var j = 0; j < rows.length; j++) {
+        var r = rows[j];
+        var rowUser = invData[r - 1] && invData[r - 1][0] ? invData[r - 1][0].toString().trim() : "";
+        var invName = invData[r - 1] && invData[r - 1][1] ? invData[r - 1][1].toString().trim() : "";
+        if (!invName) return "NOT_FOUND";
+        if (rowUser !== username.trim()) return "NOT_YOURS";
+        if (lockedMap[invName.toLowerCase()]) return "ITEM_LOCKED:" + invName;
+        var ownPrice = priceFromMaps(maps, invName);
+        if (!(ownPrice > 0)) return "NO_PRICE:" + invName;
+        ownTotal += ownPrice;
+        toDelete.push(r);
+      }
+
+      // 2) Vybrat skiny z botovy inventare (a overit, ze jsou volne)
+      var botArr;
+      try { botArr = JSON.parse(getBotInventory(ss)); } catch(e) { botArr = []; }
+      var reserved = getReservations(PropertiesService.getScriptProperties());
+      var wantAssets = String(addAssets || "").split(";").map(function(a) { return a.trim(); }).filter(function(a) { return a; });
+      var wantNames = String(addNames || "").split(";").map(function(n) { return n.trim(); }).filter(function(n) { return n; });
+      var wantCount = wantAssets.length || wantNames.length;
+
+      var picked = [];
+      var used = {};
+      function pickAsset(assetId) {
+        if (!assetId || used[assetId] || reserved[assetId]) return false;
+        for (var b = 0; b < botArr.length; b++) {
+          if (String(botArr[b].assetId) === String(assetId)) {
+            used[assetId] = true;
+            picked.push(botArr[b]);
+            return true;
+          }
+        }
+        return false;
+      }
+      function pickName(name) {
+        for (var b2 = 0; b2 < botArr.length; b2++) {
+          var cand = botArr[b2];
+          if (!cand.assetId || used[cand.assetId] || reserved[cand.assetId]) continue;
+          if (cand.name === name) {
+            used[cand.assetId] = true;
+            picked.push(cand);
+            return true;
+          }
+        }
+        return false;
+      }
+      if (wantAssets.length) {
+        for (var wa = 0; wa < wantAssets.length; wa++) pickAsset(wantAssets[wa]);
+      } else {
+        for (var wn = 0; wn < wantNames.length; wn++) pickName(wantNames[wn]);
+      }
+      if (picked.length !== wantCount) return "NOT_AVAILABLE";
+
+      // 3) Cena cilovych skinu + rozdil
+      var targetTotal = 0;
+      for (var pk = 0; pk < picked.length; pk++) {
+        var tp = Number(picked[pk].price) || 0;
+        if (!(tp > 0)) tp = priceFromMaps(maps, picked[pk].name);
+        if (!(tp > 0)) return "NO_PRICE:" + picked[pk].name;
+        targetTotal += tp;
+      }
+      var diff = Math.round((targetTotal - ownTotal) * 100) / 100;
+      if (diff > 0 && userPts < diff) return "NOT_ENOUGH";
+
+      // 4) Zapsat: smazat vlastni skiny, odepsat body, rezervovat, pridat skiny
+      for (var d = 0; d < toDelete.length; d++) invSheet.deleteRow(toDelete[d]);
+
+      if (diff > 0) {
+        usersSheet.getRange(userRow, 3).setValue(userPts - diff);
+      } else if (diff < 0) {
+        usersSheet.getRange(userRow, 3).setValue(userPts + Math.abs(diff));
+      }
+
+      var props = PropertiesService.getScriptProperties();
+      for (var rv = 0; rv < picked.length; rv++) {
+        if (picked[rv].assetId) {
+          reserved[String(picked[rv].assetId)] = { u: username.trim(), at: Date.now(), item: picked[rv].name };
+        }
+      }
+      saveReservations(props, reserved);
+
+      for (var ad = 0; ad < picked.length; ad++) {
+        invSheet.appendRow([username, picked[ad].name, new Date()]);
+      }
+
+      // 5) Rovnou zaradit do vyberu, aby to bot poslal (pokud ma hrac trade link)
+      if (tradeLink) {
+        var wSheet = getSheet(ss, "Withdrawals");
+        if (wSheet.getLastRow() === 0) {
+          wSheet.appendRow(["username", "item", "status", "date", "tradeLink"]);
+        }
+        for (var ww = 0; ww < picked.length; ww++) {
+          wSheet.appendRow([username, picked[ww].name, "approved", new Date(), tradeLink]);
+        }
+        return "EXCHANGED";
+      }
+      return "EXCHANGED_MANUAL";
+    } finally {
+      try { lock.releaseLock(); } catch(e) {}
+    }
   }
 
   function getSteamInventoryAll(ss, username) {

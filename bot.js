@@ -692,12 +692,10 @@ async function poll() {
       const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
       const priceMap = {};
       for (const a of accepted) { if (a.name && a.price > 0) priceMap[a.name.toLowerCase()] = a.price; }
-      const seen = {};
       const botItems = [];
       for (const item of botInv) {
         const name = item.market_hash_name || "";
-        if (!name || seen[name.toLowerCase()]) continue;
-        seen[name.toLowerCase()] = true;
+        if (!name) continue;
         botItems.push({ name: name, price: priceMap[name.toLowerCase()] || 0, image: item.icon_url_large ? "https://community.akamai.steamstatic.com/economy/image/" + item.icon_url_large : "", assetId: item.id, count: 1 });
       }
       await gasPost(GAS_URL + "?action=saveBotInventory", { data: JSON.stringify(botItems) });
