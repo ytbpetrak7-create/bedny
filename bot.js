@@ -58,6 +58,9 @@ client.on("webSession", (sessionID, cookies) => {
     pollStarted = true;
     console.log("▶️ Spouštím poll z webSession");
     poll();
+    // Denní aktualizace cen (kontrola každých 10 minut, spustí se 1x za den)
+    maybeUpdatePrices();
+    setInterval(maybeUpdatePrices, 10 * 60 * 1000);
   }
 });
 client.on("sentry", (buffer) => { 
@@ -100,7 +103,10 @@ function autoConfirm() {
 
 var sentry = fs.existsSync("sentry") ? fs.readFileSync("sentry") : null;
 
-if (BOT.sharedSecret) {
+if (process.argv.includes("--prices")) {
+  console.log("Režim: pouze aktualizace cen (bez přihlášení na Steam)");
+  runPriceUpdate().then(function(ok) { process.exit(ok ? 0 : 1); }).catch(function(e) { console.log("❌ Ceny error: " + e.message); process.exit(1); });
+} else if (BOT.sharedSecret) {
   const logOnOpts = { accountName: BOT.accountName, password: BOT.password, machineName: "bot", twoFactorCode: SteamTotp.generateAuthCode(BOT.sharedSecret) };
   if (sentry) logOnOpts.sentry = sentry;
   client.logOn(logOnOpts);
@@ -246,6 +252,67 @@ var failedOffers = {};
 var lastSteamCall = 0;
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ===== Denní aktualizace cen =====
+// Zdroj: "steamfree" = Steam Community Market (zdarma, bez klíče)
+// Lze přepsat přes env: PRICE_SOURCE / PRICE_CURRENCY / PRICE_UPDATE_HOUR
+const PRICE_SOURCE = process.env.PRICE_SOURCE || "steamfree";
+const PRICE_CURRENCY = process.env.PRICE_CURRENCY || "CZK";
+const PRICE_UPDATE_HOUR = parseInt(process.env.PRICE_UPDATE_HOUR || "3", 10);
+const PRICE_STATE_FILE = "price-state.json";
+
+function loadPriceState() {
+  try { return JSON.parse(fs.readFileSync(PRICE_STATE_FILE, "utf8")); } catch(e) { return {}; }
+}
+function savePriceState(s) {
+  try { fs.writeFileSync(PRICE_STATE_FILE, JSON.stringify(s)); } catch(e) {}
+}
+
+async function runPriceUpdate() {
+  console.log("💰 Aktualizace cen: zdroj=" + PRICE_SOURCE + ", měna=" + PRICE_CURRENCY);
+  var totalUpdated = 0, batches = 0;
+  for (var i = 0; i < 12; i++) {
+    var res;
+    try {
+      res = await gasGet(GAS_URL + "?action=updatePricesFromPriceEmpire&source=" + encodeURIComponent(PRICE_SOURCE) + "&currency=" + encodeURIComponent(PRICE_CURRENCY));
+    } catch(e) {
+      console.log("❌ Ceny: požadavek selhal: " + e.message);
+      return false;
+    }
+    if (typeof res === "string") {
+      try { res = JSON.parse(res); } catch(e) { }
+    }
+    if (!res || typeof res !== "object") {
+      console.log("❌ Ceny: neplatná odpověď serveru: " + String(res).substring(0, 200));
+      return false;
+    }
+    if (res.error) {
+      console.log("❌ Ceny: " + res.error);
+      return false;
+    }
+    batches++;
+    totalUpdated += res.updated || 0;
+    console.log("💰 Ceny dávka " + batches + ": aktualizováno " + (res.updated || 0) + ", zpracováno " + (res.nextOffset || 0) + "/" + (res.total || 0));
+    if (res.done !== false) break;
+    await wait(15000);
+  }
+  console.log("✅ Ceny hotovo: celkem aktualizováno " + totalUpdated + " skinů (" + batches + " dávek)");
+  return true;
+}
+
+async function maybeUpdatePrices() {
+  var st = loadPriceState();
+  var now = new Date();
+  var today = now.getFullYear() + "-" +
+    String(now.getMonth() + 1).padStart(2, "0") + "-" +
+    String(now.getDate()).padStart(2, "0");
+  if (st.lastDate === today) return;
+  if (now.getHours() < PRICE_UPDATE_HOUR) return;
+  // Zapsat předem, aby se update nespouštěl opakovaně při každém pollu
+  st.lastDate = today;
+  savePriceState(st);
+  try { await runPriceUpdate(); } catch(e) { console.log("❌ Ceny error: " + e.message); }
+}
 
 async function poll() {
   pollCount++;

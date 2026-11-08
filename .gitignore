@@ -3,6 +3,7 @@ cookies.json
 sentry
 package-lock.json
 bot-config.json
+price-state.json
 SDA*/
 *.maFile
 maFiles/
