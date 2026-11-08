@@ -488,12 +488,21 @@ async function processDeposits() {
       }
       offer.setMessage("Vklad skinu na bedny.cz - hodnota " + totalValue.toFixed(2) + " Kč");
 
-      await new Promise((resolve, reject) => {
-        offer.send((err, status) => {
-          if (err) { reject(err); }
-          else { console.log("Deposit offer sent to " + username + ": " + status + " offer #" + offer.id); resolve(); }
+      // Cekani pred odeslanim (rate limit ochrana)
+      await wait(10000);
+
+      let sendOk = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await new Promise((resolve, reject) => {
+          offer.send((err, status) => {
+            if (err) { reject(err); }
+            else { console.log("Deposit offer sent to " + username + ": " + status + " offer #" + offer.id); sendOk = true; resolve(); }
+          });
         });
-      });
+        if (sendOk) break;
+        console.log("Deposit " + username + ": pokus " + attempt + " selhal, zkusim znovu za 30s");
+        await wait(30000);
+      }
 
       // Ulozit offerId do GAS, abychom neposilali znovu
       await gasGet(GAS_URL + "?action=updateDepositOfferId&username=" + encodeURIComponent(username) + "&offerId=" + offer.id);
