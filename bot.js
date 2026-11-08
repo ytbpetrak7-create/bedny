@@ -292,12 +292,12 @@ async function runPriceUpdate() {
   var fetched = 0, failed = 0, rateLimited = 0;
   var batch = [];
   for (var i = 0; i < names.length; i++) {
-    var r = await steamMarketPrice(names[i]);
+    var r = await steamLookupPrice(names[i]);
     if (r && r.retry) {
       rateLimited++;
       console.log("⏳ Steam rate limit (429), čekám 60 s...");
       await wait(60000);
-      r = await steamMarketPrice(names[i]);
+      r = await steamLookupPrice(names[i]);
       if (r && r.retry) { failed++; await wait(5000); continue; }
     }
     if (r && r.price > 0) {
@@ -335,9 +335,19 @@ function parseUsdPrice(s) {
   return isNaN(v) ? 0 : v;
 }
 
-function steamMarketPrice(marketHashName) {
+function normName(s) {
+  return String(s || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/[^a-z0-9]/g, "");
+}
+
+// Najde skin na Steam Marketu podle (i nedokonalého) nazvu z tabulky.
+// Pouziva search/render – vrati cenu v USD (sell_price je v centech).
+function steamLookupPrice(name) {
   return new Promise((resolve) => {
-    var url = "https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=" + encodeURIComponent(marketHashName);
+    var wearMatch = String(name).match(/\(([^)]+)\)\s*$/);
+    var wear = wearMatch ? wearMatch[1].trim() : "";
+    var base = String(name).replace(/\s*\([^)]*\)\s*$/, "").trim();
+    var url = "https://steamcommunity.com/market/search/render/?query=" + encodeURIComponent(base) +
+      "&start=0&count=20&search_descriptions=0&sort_column=popular&sort_dir=desc&appid=730&norender=1";
     var req = https.get(url, { headers: { "Accept-Language": "en-US,en;q=0.9", "User-Agent": "Mozilla/5.0" } }, (res) => {
       var d = "";
       res.on("data", c => d += c);
@@ -346,10 +356,23 @@ function steamMarketPrice(marketHashName) {
         if (res.statusCode !== 200) return resolve({ error: res.statusCode });
         try {
           var j = JSON.parse(d);
-          if (!j || !j.success) return resolve({ notFound: true });
-          var p = parseUsdPrice(j.lowest_price || j.median_price || "");
-          if (!p) return resolve({ notFound: true });
-          resolve({ price: p });
+          var results = (j && j.results) || [];
+          var nb = normName(base);
+          var best = null;
+          for (var i = 0; i < results.length; i++) {
+            var r = results[i];
+            if (!r || !r.hash_name) continue;
+            if (normName(r.hash_name) !== nb) continue;
+            var rw = (r.hash_name.match(/\(([^)]+)\)\s*$/) || [])[1] || "";
+            if (wear && rw.toLowerCase() !== wear.toLowerCase()) {
+              if (!best) best = r;
+              continue;
+            }
+            best = r;
+            break;
+          }
+          if (!best || !(best.sell_price > 0)) return resolve({ notFound: true });
+          resolve({ price: best.sell_price / 100 });
         } catch(e) { resolve({ error: "parse" }); }
       });
     });
