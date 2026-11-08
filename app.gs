@@ -1888,6 +1888,23 @@
     return JSON.stringify({ ok: true, amount: amount, label: prize.label || "" });
   }
 
+  // Rucni spusteni v editoru Apps Scriptu (obejde deployment):
+  // Editor -> vyber funkci "runPriceUpdate" -> Run -> zobraz Execution log.
+  function runPriceUpdate() {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var res = updatePricesFromPriceEmpire(ss, null, null, null);
+    Logger.log(res);
+    return res;
+  }
+
+  // To same, ale vzdy pres Take.Skin (zdarma, bez klice).
+  function runPriceUpdateTakeSkin() {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var res = updatePricesFromTakeSkin(ss, "CZK");
+    Logger.log(res);
+    return res;
+  }
+
   function testPriceEmpire(paramKey, source, currency) {
     var props = PropertiesService.getScriptProperties();
     source = source || props.getProperty("priceEmpireSource") || "buff163";
