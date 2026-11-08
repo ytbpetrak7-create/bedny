@@ -113,6 +113,11 @@ var sentry = fs.existsSync("sentry") ? fs.readFileSync("sentry") : null;
 
 if (process.argv.includes("--prices")) {
   console.log("Režim: pouze aktualizace cen (bez přihlášení na Steam)");
+  try {
+    var savedCookies = JSON.parse(fs.readFileSync("cookies.json", "utf8"));
+    community.setCookies(savedCookies);
+    console.log("Cookies z cookies.json načteny (vyšší limit Steamu)");
+  } catch(e) { console.log("Cookies nenalezeny – pojedu anonymně (větší riziko 429)"); }
   runPriceUpdate().then(function(ok) { process.exit(ok ? 0 : 1); }).catch(function(e) { console.log("❌ Ceny error: " + e.message); process.exit(1); });
 } else if (BOT.sharedSecret) {
   const logOnOpts = { accountName: BOT.accountName, password: BOT.password, machineName: "bot", twoFactorCode: SteamTotp.generateAuthCode(BOT.sharedSecret) };
@@ -290,15 +295,15 @@ async function runPriceUpdate() {
 
   // 2) Stáhnout ceny ze Steamu (domácí IP projde, Google IP Steam blokuje)
   var fetched = 0, failed = 0, rateLimited = 0;
+  var aborted = false;
   var batch = [];
   for (var i = 0; i < names.length; i++) {
-    var r = await steamLookupPrice(names[i]);
+    var r = await steamLookupWithRetry(names[i]);
     if (r && r.retry) {
       rateLimited++;
-      console.log("⏳ Steam rate limit (429), čekám 60 s...");
-      await wait(60000);
-      r = await steamLookupPrice(names[i]);
-      if (r && r.retry) { failed++; await wait(5000); continue; }
+      aborted = true;
+      console.log("⛔ Steam blokuje i po pauzách – přerušuji aktualizaci, zkusím později.");
+      break;
     }
     if (r && r.price > 0) {
       batch.push({ n: names[i], p: r.price });
@@ -312,12 +317,12 @@ async function runPriceUpdate() {
     if ((i + 1) % 25 === 0) {
       console.log("💰 Ceny: " + (i + 1) + "/" + names.length + " (nalezeno " + fetched + ", chyb " + failed + ")");
     }
-    await wait(3200);
+    await wait(4000 + Math.floor(Math.random() * 800));
   }
   if (batch.length) await pushPricesToSheet(batch);
 
   console.log("✅ Ceny hotovo: nalezeno " + fetched + "/" + names.length + ", chyb " + failed + ", rate limit " + rateLimited);
-  return fetched > 0;
+  return !aborted && fetched > 0;
 }
 
 function parseUsdPrice(s) {
@@ -341,6 +346,7 @@ function normName(s) {
 
 // Najde skin na Steam Marketu podle (i nedokonalého) nazvu z tabulky.
 // Pouziva search/render – vrati cenu v USD (sell_price je v centech).
+// Posila se pres community.request, takze pouzije prihlasene cookies (vyssi limit).
 function steamLookupPrice(name) {
   return new Promise((resolve) => {
     var wearMatch = String(name).match(/\(([^)]+)\)\s*$/);
@@ -348,37 +354,65 @@ function steamLookupPrice(name) {
     var base = String(name).replace(/\s*\([^)]*\)\s*$/, "").trim();
     var url = "https://steamcommunity.com/market/search/render/?query=" + encodeURIComponent(base) +
       "&start=0&count=20&search_descriptions=0&sort_column=popular&sort_dir=desc&appid=730&norender=1";
-    var req = https.get(url, { headers: { "Accept-Language": "en-US,en;q=0.9", "User-Agent": "Mozilla/5.0" } }, (res) => {
-      var d = "";
-      res.on("data", c => d += c);
-      res.on("end", () => {
-        if (res.statusCode === 429) return resolve({ retry: true });
-        if (res.statusCode !== 200) return resolve({ error: res.statusCode });
-        try {
-          var j = JSON.parse(d);
-          var results = (j && j.results) || [];
-          var nb = normName(base);
-          var best = null;
-          for (var i = 0; i < results.length; i++) {
-            var r = results[i];
-            if (!r || !r.hash_name) continue;
-            if (normName(r.hash_name) !== nb) continue;
-            var rw = (r.hash_name.match(/\(([^)]+)\)\s*$/) || [])[1] || "";
-            if (wear && rw.toLowerCase() !== wear.toLowerCase()) {
-              if (!best) best = r;
-              continue;
-            }
-            best = r;
-            break;
+
+    function handle(err, res, body) {
+      if (err) return resolve({ error: err.message });
+      var code = res ? res.statusCode : 0;
+      if (code === 429) return resolve({ retry: true });
+      if (code !== 200 || !body) return resolve({ error: code });
+      try {
+        var results = body.results || [];
+        var nb = normName(base);
+        var best = null;
+        for (var i = 0; i < results.length; i++) {
+          var r = results[i];
+          if (!r || !r.hash_name) continue;
+          if (normName(r.hash_name) !== nb) continue;
+          var rw = (r.hash_name.match(/\(([^)]+)\)\s*$/) || [])[1] || "";
+          if (wear && rw.toLowerCase() !== wear.toLowerCase()) {
+            if (!best) best = r;
+            continue;
           }
-          if (!best || !(best.sell_price > 0)) return resolve({ notFound: true });
-          resolve({ price: best.sell_price / 100 });
-        } catch(e) { resolve({ error: "parse" }); }
+          best = r;
+          break;
+        }
+        if (!best || !(best.sell_price > 0)) return resolve({ notFound: true });
+        resolve({ price: best.sell_price / 100 });
+      } catch(e) { resolve({ error: "parse" }); }
+    }
+
+    try {
+      community.request({ url: url, method: "GET", json: true, headers: { "Accept-Language": "en-US,en;q=0.9" } }, handle);
+    } catch(e) {
+      // fallback bez cookies
+      var req = https.get(url, { headers: { "Accept-Language": "en-US,en;q=0.9", "User-Agent": "Mozilla/5.0" } }, (res) => {
+        var d = "";
+        res.on("data", c => d += c);
+        res.on("end", () => {
+          var body = null;
+          try { body = JSON.parse(d); } catch(e2) {}
+          handle(null, res, body);
+        });
       });
-    });
-    req.on("error", (e) => resolve({ error: e.message }));
-    req.setTimeout(20000, () => { try { req.destroy(); } catch(e) {} resolve({ error: "timeout" }); });
+      req.on("error", (e) => resolve({ error: e.message }));
+      req.setTimeout(20000, () => { try { req.destroy(); } catch(e2) {} resolve({ error: "timeout" }); });
+    }
   });
+}
+
+// Zkusi to znovu s rostouci pauzou. Vrati { retry: true }, kdyz Steam blokuje i po vsech pokusech.
+async function steamLookupWithRetry(name) {
+  var waits = [0, 60000, 300000];
+  for (var a = 0; a < waits.length; a++) {
+    if (waits[a]) {
+      console.log("⏳ Steam 429 – pauza " + Math.round(waits[a] / 1000) + " s (pokus " + (a + 1) + "/" + waits.length + ")");
+      await wait(waits[a]);
+    }
+    var r = await steamLookupPrice(name);
+    if (!r) return { error: "null" };
+    if (!r.retry) return r;
+  }
+  return { retry: true };
 }
 
 async function pushPricesToSheet(items) {
@@ -405,10 +439,18 @@ async function maybeUpdatePrices() {
     String(now.getDate()).padStart(2, "0");
   if (st.lastDate === today) return;
   if (now.getHours() < PRICE_UPDATE_HOUR) return;
-  // Zapsat předem, aby se update nespouštěl opakovaně při každém pollu
-  st.lastDate = today;
+  // Kdyz se to nepovede (Steam 429), zkusit znovu nejdriv za hodinu
+  if (st.lastAttempt && (Date.now() - st.lastAttempt) < 60 * 60 * 1000) return;
+  st.lastAttempt = Date.now();
   savePriceState(st);
-  try { await runPriceUpdate(); } catch(e) { console.log("❌ Ceny error: " + e.message); }
+  var ok = false;
+  try { ok = await runPriceUpdate(); } catch(e) { console.log("❌ Ceny error: " + e.message); }
+  if (ok) {
+    st.lastDate = today;
+    savePriceState(st);
+  } else {
+    console.log("↩️ Ceny se nepovedly, zkusím znovu za hodinu.");
+  }
 }
 
 async function poll() {
