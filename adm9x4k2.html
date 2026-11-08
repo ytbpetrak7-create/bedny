@@ -139,12 +139,11 @@ async function loadAll() {
   html += '<select id="peSource" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
   html += '<option value="buff163">Buff163 (CNY)</option>';
   html += '<option value="steam">Steam Market</option>';
-  html += '<option value="csfloat">CSFloat</option>';
+  html += '<option value="csfloat">CSFloat (vlastní API klíč)</option>';
   html += '<option value="skinport">Skinport</option>';
   html += '<option value="csmoney">CS.MONEY</option>';
   html += '<option value="dmarket">DMarket</option>';
   html += '<option value="youpin">YouPin898</option>';
-  html += '<option value="csfloat">CSFloat (vlastní API)</option>';
   html += '<option value="takeskin">Take.Skin (zdarma, bez klíče) ⭐</option>';
   html += '</select>';
   html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">CSFloat API klíč (pokud vybereš CSFloat)</p>';
@@ -160,6 +159,7 @@ async function loadAll() {
   html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Deposit násobič - výkup (0.7 = vykupuješ o 30% levněji = marže)</p>';
   html += '<input id="peDepositMult" type="number" step="0.01" min="0.1" max="5" value="0.7" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
   html += '<br><button class="btn-app" onclick="savePriceEmpire()" style="margin-top:10px;">Uložit nastavení</button>';
+  html += ' <button class="btn-app" onclick="testPriceEmpire()" style="margin-top:10px;">Otestovat API klíč</button>';
   html += ' <span id="peMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '<br><br><button class="btn-app" onclick="updatePrices()" style="background:#ffd700;color:#1a1a2e;">Aktualizovat ceny ze všech tabulek</button>';
   html += ' <span id="peUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
@@ -425,7 +425,7 @@ async function savePriceEmpire() {
   var csfloatKey = document.getElementById("peCsfloatKey").value.trim();
   var profitMult = document.getElementById("peProfitMult").value;
   var depositMult = document.getElementById("peDepositMult").value;
-  if (source !== "csfloat" && !apiKey) { msg.textContent = "Zadej API klíč!"; msg.style.color = "#f80"; return; }
+  if (source !== "csfloat" && source !== "takeskin" && !apiKey) { msg.textContent = "Zadej API klíč!"; msg.style.color = "#f80"; return; }
   if (source === "csfloat" && !csfloatKey) { msg.textContent = "Zadej CSFloat API klíč!"; msg.style.color = "#f80"; return; }
   await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency, csfloatKey: csfloatKey, profitMultiplier: profitMult, depositMultiplier: depositMult });
   msg.textContent = "Uloženo!"; msg.style.color = "#00ff96";
@@ -441,15 +441,43 @@ async function updateImages() {
   } catch(e) { msg.textContent = "Běží na serveru, zkontroluj tabulku za chvíli."; msg.style.color = "#ffd700"; }
 }
 
+async function testPriceEmpire() {
+  var msg = document.getElementById("peMsg");
+  var apiKey = document.getElementById("peApiKey").value.trim();
+  var source = document.getElementById("peSource").value;
+  var currency = document.getElementById("peCurrency").value;
+  msg.textContent = "Testuji API klíč..."; msg.style.color = "#ffd700";
+  try {
+    var raw = await callScript("testPriceEmpire", { apiKey: apiKey, source: source, currency: currency });
+    var res = JSON.parse(raw);
+    if (res.error) {
+      msg.textContent = "❌ " + res.error + (res.detail ? " | " + res.detail : "") + (res.url ? " | " + res.url : "");
+      msg.style.color = "#f80";
+    } else {
+      msg.textContent = "✅ Klíč funguje! Položek: " + res.count + (res.sample ? " | Ukázka: " + res.sample : "");
+      msg.style.color = "#00ff96";
+    }
+  } catch(e) {
+    msg.textContent = "Chyba: " + e.message;
+    msg.style.color = "#f80";
+  }
+}
+
 async function updatePrices() {
   var msg = document.getElementById("peUpdateMsg");
   var btn = document.querySelector('button[onclick="updatePrices()"]');
   if(btn) btn.disabled = true;
   msg.textContent = "Stahuji ceny, může trvat ~20s..."; msg.style.color = "#ffd700";
+  var apiKey = document.getElementById("peApiKey").value.trim();
   var source = document.getElementById("peSource").value;
   var currency = document.getElementById("peCurrency").value;
+  var csfloatKey = document.getElementById("peCsfloatKey").value.trim();
+  var profitMult = document.getElementById("peProfitMult").value;
+  var depositMult = document.getElementById("peDepositMult").value;
   try {
-    var raw = await callScript("updatePricesFromPriceEmpire", { source: source, currency: currency });
+    // Nejdřív uložit nastavení (aby klíč z pole byl i na serveru), pak aktualizovat
+    await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency, csfloatKey: csfloatKey, profitMultiplier: profitMult, depositMultiplier: depositMult });
+    var raw = await callScript("updatePricesFromPriceEmpire", { source: source, currency: currency, apiKey: apiKey });
     var res = JSON.parse(raw);
     if (res.error) {
       msg.textContent = "Chyba: " + res.error;
@@ -459,7 +487,7 @@ async function updatePrices() {
       msg.style.color = res.updated > 0 ? "#00ff96" : "#f80";
     }
   } catch(e) {
-    msg.textContent = "Požadavek běží na serveru (CORS/timeout). Zkontroluj za 30s v tabulce, nebo spusť přes Actions → Update prices → Run workflow.";
+    msg.textContent = "Požadavek běží na serveru (CORS/timeout). Zkontroluj tabulku za 30 s, případně klikni na Aktualizovat ceny znovu.";
     msg.style.color = "#ffd700";
   }
   if(btn) btn.disabled = false;

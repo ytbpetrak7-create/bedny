@@ -4,6 +4,8 @@
   const ADMIN_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=1724748264&token=DhhVwMmS";
   const BOT_TRADE_LINK = "https://steamcommunity.com/tradeoffer/new/?partner=724294414&token=GYHge3_G";
   const PRICEEMPIRE_API = "https://api.pricempire.com/v4/paid/items/prices";
+  // Volitelny zalozni klic (kdyz ho nechces zadavat v adminu). Nech prazdny, pokud ho vyplnujes v adminu.
+  const PRICEEMPIRE_API_KEY = "";
   const CSFLOAT_API = "https://csfloat.com/api/v1/listings";
   const TAKESKIN_API = "https://take.skin/api/public/v1/skins";
   const USD_CZK = 23.5;
@@ -332,7 +334,10 @@
       });
       break;
     case "updatePricesFromPriceEmpire":
-      result = updatePricesFromPriceEmpire(ss, params.source, params.currency);
+      result = updatePricesFromPriceEmpire(ss, params.source, params.currency, params.apiKey);
+      break;
+    case "testPriceEmpire":
+      result = testPriceEmpire(params.apiKey, params.source, params.currency);
       break;
     case "updateSkinImages":
       result = updateSkinImages(ss);
@@ -1883,7 +1888,44 @@
     return JSON.stringify({ ok: true, amount: amount, label: prize.label || "" });
   }
 
-  function updatePricesFromPriceEmpire(ss, source, currency) {
+  function testPriceEmpire(paramKey, source, currency) {
+    var props = PropertiesService.getScriptProperties();
+    source = source || props.getProperty("priceEmpireSource") || "buff163";
+    currency = currency || props.getProperty("priceEmpireCurrency") || "CZK";
+    var apiKey = (paramKey && paramKey.toString().trim()) || props.getProperty("priceEmpireApiKey") || PRICEEMPIRE_API_KEY;
+    if (!apiKey) return JSON.stringify({ error: "API klíč není nastaven (pole je prázdné a v Properties nic není)" });
+    var url = PRICEEMPIRE_API + "?app_id=730&sources=" + source + "&currency=" + currency + "&type=skin";
+    try {
+      var resp = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true,
+        headers: { "Authorization": "Bearer " + apiKey }
+      });
+      var code = resp.getResponseCode();
+      var body = resp.getContentText() || "";
+      if (code !== 200) {
+        if (body.length > 300) body = body.substring(0, 300) + "...";
+        return JSON.stringify({
+          error: "HTTP " + code + (code === 401 || code === 403 ? " - klíč je neplatný/vypršelý" : code === 404 ? " - špatná adresa API" : ""),
+          detail: body,
+          keyLength: apiKey.length,
+          url: url
+        });
+      }
+      var items = JSON.parse(body);
+      return JSON.stringify({
+        ok: true,
+        count: Array.isArray(items) ? items.length : 0,
+        sample: (Array.isArray(items) && items[0]) ? (items[0].market_hash_name || "") : "",
+        source: source,
+        currency: currency,
+        keyLength: apiKey.length
+      });
+    } catch (e) {
+      return JSON.stringify({ error: "Chyba požadavku: " + e.message, url: url });
+    }
+  }
+
+  function updatePricesFromPriceEmpire(ss, source, currency, paramKey) {
     var props = PropertiesService.getScriptProperties();
     source = source || props.getProperty("priceEmpireSource") || "buff163";
     currency = currency || props.getProperty("priceEmpireCurrency") || "CZK";
@@ -1930,8 +1972,8 @@
       return updatePricesFromTakeSkin(ss, currency);
     }
 
-    var apiKey = props.getProperty("priceEmpireApiKey");
-    if (!apiKey) return JSON.stringify({ error: "API klíč není nastaven" });
+    var apiKey = (paramKey && paramKey.toString().trim()) || props.getProperty("priceEmpireApiKey") || PRICEEMPIRE_API_KEY;
+    if (!apiKey) return JSON.stringify({ error: "API klíč není nastaven - vlož ho do pole API klíč a klikni Uložit nastavení (nebo ho nastav v app.gs jako PRICEEMPIRE_API_KEY)" });
 
     var updated = 0;
     var errors = 0;
@@ -1945,7 +1987,11 @@
         headers: { "Authorization": "Bearer " + apiKey }
       });
       var code = response.getResponseCode();
-      if (code !== 200) return JSON.stringify({ error: "API chyba: HTTP " + code });
+      if (code !== 200) {
+        var body = response.getContentText() || "";
+        if (body.length > 200) body = body.substring(0, 200) + "...";
+        return JSON.stringify({ error: "PriceEmpire HTTP " + code + (code === 401 || code === 403 ? " - API klíč je neplatný nebo vypršel" : "") + " | " + body });
+      }
 
       var items = JSON.parse(response.getContentText());
       if (!Array.isArray(items)) return JSON.stringify({ error: "Neočekávaná odpověď" });
