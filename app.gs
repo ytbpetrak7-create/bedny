@@ -132,9 +132,16 @@
         result = requestWithdraw(ss, params.username, params.itemName, params.row);
         break;
       case "getWithdrawStatus":
-        result = JSON.stringify({
-          allowed: PropertiesService.getScriptProperties().getProperty("depositDone_" + (params.username || "").toString().trim()) === "1"
-        });
+        result = JSON.stringify({ allowed: hasDeposit(ss, params.username) });
+        break;
+      case "setWithdrawUnlock":
+        result = setWithdrawUnlock(ss, params.username, params.admin, params.allow);
+        break;
+      case "getWithdrawUnlocks":
+        result = getWithdrawUnlocks(ss, params.admin);
+        break;
+      case "backfillWithdrawUnlocks":
+        result = backfillWithdrawUnlocks(ss, params.admin, params.dryRun);
         break;
       case "getWithdrawals":
         result = getWithdrawals(ss);
@@ -929,11 +936,101 @@
     return "SOLD|" + toSell.length + "|" + totalEarned;
   }
 
+  // ---------- Vklad jako podminka pro vyber skinu ----------
+  // Ulozeno v tabulce Users, sloupec 12 (L): datum prvniho dokonceneho vkladu.
+  // Prazdne = hrac jeste nikdy nevlozil skin -> nema narok na vyber.
+  function getDepositRow(usersSheet, username) {
+    var data = usersSheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === username.trim()) {
+        return { row: i + 1, value: data[i][11] ? data[i][11].toString().trim() : "" };
+      }
+    }
+    return null;
+  }
+
+  function hasDeposit(ss, username) {
+    if (!username) return false;
+    var u = getDepositRow(getSheet(ss, "Users"), username);
+    if (u && u.value) return true;
+    // zpetna kompatibilita s starsim ulozenim ve ScriptProperties
+    return PropertiesService.getScriptProperties().getProperty("depositDone_" + username.trim()) === "1";
+  }
+
+  function markDeposit(ss, username) {
+    if (!username) return false;
+    var usersSheet = getSheet(ss, "Users");
+    var u = getDepositRow(usersSheet, username);
+    if (!u) return false;
+    if (!u.value) usersSheet.getRange(u.row, 12).setValue(new Date().toISOString());
+    return true;
+  }
+
+  // Admin: rucne odemknout (allow=1) nebo zamknout (allow=0) vyber skinu hraci,
+  // ktery vkladal jeste pred zavedenim teto podminky.
+  function setWithdrawUnlock(ss, username, admin, allow) {
+    if (isAdmin(ss, admin) !== "YES") return "NOT_ADMIN";
+    if (!username) return "MISSING_USER";
+    var usersSheet = getSheet(ss, "Users");
+    var u = getDepositRow(usersSheet, username);
+    if (!u) return "USER_NOT_FOUND";
+    var on = (allow === true || allow === "1" || allow === 1 || allow === "true");
+    usersSheet.getRange(u.row, 12).setValue(on ? new Date().toISOString() : "");
+    return on ? "UNLOCKED" : "LOCKED";
+  }
+
+  // Admin: seznam hracu, kteri uz maji vyber odemceny (vkladali)
+  function getWithdrawUnlocks(ss, admin) {
+    if (isAdmin(ss, admin) !== "YES") return "NOT_ADMIN";
+    var data = getSheet(ss, "Users").getDataRange().getValues();
+    var out = [];
+    for (var i = 1; i < data.length; i++) {
+      if (!data[i][0]) continue;
+      out.push({
+        username: data[i][0].toString().trim(),
+        depositDone: data[i][11] ? data[i][11].toString().trim() : ""
+      });
+    }
+    return JSON.stringify(out);
+  }
+
+  // Admin: jednorazove odemknout stavajici hrace, kteri uz maji skiny v inventari
+  // nebo historii vyberu (tzn. v minulosti vkladali). dryRun=1 jen vypise seznam.
+  function backfillWithdrawUnlocks(ss, admin, dryRun) {
+    if (isAdmin(ss, admin) !== "YES") return "NOT_ADMIN";
+    var usersSheet = getSheet(ss, "Users");
+    var data = usersSheet.getDataRange().getValues();
+    var rowByName = {};
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0]) rowByName[data[i][0].toString().trim().toLowerCase()] = i + 1;
+    }
+    var candidates = {};
+    var inv = getSheet(ss, "Inventory").getDataRange().getValues();
+    for (var j = 1; j < inv.length; j++) {
+      if (inv[j][0]) candidates[inv[j][0].toString().trim().toLowerCase()] = true;
+    }
+    var wd = getSheet(ss, "Withdrawals").getDataRange().getValues();
+    for (var k = 1; k < wd.length; k++) {
+      if (wd[k][0]) candidates[wd[k][0].toString().trim().toLowerCase()] = true;
+    }
+    var dry = (dryRun === "1" || dryRun === 1 || dryRun === true || dryRun === "true");
+    var unlocked = [];
+    var now = new Date().toISOString();
+    Object.keys(candidates).forEach(function(name) {
+      var row = rowByName[name];
+      if (!row) return;
+      var cur = data[row - 1][11] ? data[row - 1][11].toString().trim() : "";
+      if (cur) return;
+      if (!dry) usersSheet.getRange(row, 12).setValue(now);
+      unlocked.push(data[row - 1][0].toString().trim());
+    });
+    return JSON.stringify({ dryRun: dry, count: unlocked.length, users: unlocked });
+  }
+
   function requestWithdraw(ss, username, itemName, row) {
     if (!username) return "MISSING_USER";
     // Podminka: uzivatel musi mit za sebou alespon jeden dokonceny vklad (jakakoliv castka)
-    var propsGate = PropertiesService.getScriptProperties();
-    if (propsGate.getProperty("depositDone_" + username.trim()) !== "1") {
+    if (!hasDeposit(ss, username)) {
       return "DEPOSIT_REQUIRED";
     }
     const invSheet = getSheet(ss, "Inventory");
@@ -1201,6 +1298,7 @@
         bonus = Math.round(total * 0.10 * 100) / 100;
       }
       usersSheet.getRange(userRow, 3).setValue(currentPts + total + bonus);
+      markDeposit(ss, username);
       return JSON.stringify({ total: total, bonus: bonus, credited: credited, notFound: notFound });
     }
     
@@ -1611,10 +1709,9 @@
           bonus = Math.round(pts * 0.10 * 100) / 100;
         }
         usersSheet.getRange(i + 1, 3).setValue(current + pts + bonus);
-        var propsDep = PropertiesService.getScriptProperties();
         // Znamenat, ze uzivatel ma za sebou vklad -> odemkne vyber skinu
-        propsDep.setProperty("depositDone_" + username.trim(), "1");
-        propsDep.deleteProperty("deposit_" + username);
+        markDeposit(ss, username);
+        PropertiesService.getScriptProperties().deleteProperty("deposit_" + username);
         return JSON.stringify({ credited: pts, bonus: bonus, total: pts + bonus });
       }
     }
