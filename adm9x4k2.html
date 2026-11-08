@@ -138,7 +138,8 @@ async function loadAll() {
   html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Zdroj cen</p>';
   html += '<select id="peSource" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
   html += '<option value="buff163">Buff163 (CNY)</option>';
-  html += '<option value="steam">Steam Market</option>';
+  html += '<option value="steam">Steam Market (PriceEmpire, placený klíč)</option>';
+  html += '<option value="steamfree">Steam Market (zdarma, bez klíče) 🔥</option>';
   html += '<option value="csfloat">CSFloat (vlastní API klíč)</option>';
   html += '<option value="skinport">Skinport</option>';
   html += '<option value="csmoney">CS.MONEY</option>';
@@ -425,7 +426,7 @@ async function savePriceEmpire() {
   var csfloatKey = document.getElementById("peCsfloatKey").value.trim();
   var profitMult = document.getElementById("peProfitMult").value;
   var depositMult = document.getElementById("peDepositMult").value;
-  if (source !== "csfloat" && source !== "takeskin" && !apiKey) { msg.textContent = "Zadej API klíč!"; msg.style.color = "#f80"; return; }
+  if (source !== "csfloat" && source !== "takeskin" && source !== "steamfree" && !apiKey) { msg.textContent = "Zadej API klíč!"; msg.style.color = "#f80"; return; }
   if (source === "csfloat" && !csfloatKey) { msg.textContent = "Zadej CSFloat API klíč!"; msg.style.color = "#f80"; return; }
   await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency, csfloatKey: csfloatKey, profitMultiplier: profitMult, depositMultiplier: depositMult });
   msg.textContent = "Uloženo!"; msg.style.color = "#00ff96";
@@ -494,6 +495,9 @@ async function updatePrices() {
     if (res.error) {
       msg.textContent = "Chyba: " + res.error;
       msg.style.color = "#f80";
+    } else if (res.done === false) {
+      msg.textContent = "Dávka hotová: aktualizováno " + res.updated + " | Zpracováno " + res.nextOffset + "/" + res.total + ". Klikni znovu na „Aktualizovat ceny“ pro pokračování.";
+      msg.style.color = "#ffd700";
     } else {
       msg.textContent = "Hotovo! Aktualizováno: " + res.updated + "/" + res.total + " | Chyb: " + res.errors + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,3).join(", ") + ")" : "");
       msg.style.color = res.updated > 0 ? "#00ff96" : "#f80";

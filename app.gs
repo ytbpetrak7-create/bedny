@@ -1905,6 +1905,15 @@
     return res;
   }
 
+  // To same, ale pres Steam Community Market (zdarma, bez klice).
+  // Pozor: Steam dovoli jen omezeny pocet dotazu, jedna davka = max 90 skinu.
+  function runPriceUpdateSteam() {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var res = updatePricesFromSteamMarket(ss, "CZK");
+    Logger.log(res);
+    return res;
+  }
+
   function testPriceEmpire(paramKey, source, currency) {
     var props = PropertiesService.getScriptProperties();
     source = source || props.getProperty("priceEmpireSource") || "buff163";
@@ -1987,6 +1996,10 @@
 
     if (source === "takeskin") {
       return updatePricesFromTakeSkin(ss, currency);
+    }
+
+    if (source === "steamfree") {
+      return updatePricesFromSteamMarket(ss, currency);
     }
 
     var apiKey = (paramKey && paramKey.toString().trim()) || props.getProperty("priceEmpireApiKey") || PRICEEMPIRE_API_KEY;
@@ -2222,6 +2235,104 @@
       if (n < keys.length - 1) Utilities.sleep(1200);
     }
     return JSON.stringify({ updated: updated, errors: 0, notFound: notFound, total: keys.length, source: "takeskin", currency: currency });
+  }
+
+  // Ceny primo ze Steam Community Market (zdarma, bez API klice).
+  // Steam dovoli jen omezeny pocet dotazu, proto se zpracovava po davkach
+  // a offset se uklada do Properties (dalsi kliknuti pokracuje).
+  function updatePricesFromSteamMarket(ss, currency) {
+    var props = PropertiesService.getScriptProperties();
+    currency = currency || props.getProperty("priceEmpireCurrency") || "CZK";
+    var allNames = collectPriceNames(ss);
+    var keys = Object.keys(allNames);
+    if (!keys.length) return JSON.stringify({ error: "Žádné skiny v tabulkách" });
+
+    var offset = parseInt(props.getProperty("steamPriceOffset") || "0", 10) || 0;
+    if (offset >= keys.length) offset = 0;
+
+    // Steam meny: 1=USD, 3=EUR. CZK Steam nepodporuje -> pocitame z USD.
+    var currencyCode = (currency === "EUR") ? 3 : 1;
+    var toTarget = 1;
+    if (currency === "CZK") toTarget = USD_CZK;
+    else if (currency === "EUR") toTarget = 1;
+    else toTarget = 1;
+
+    var limit = 90;
+    var started = Date.now();
+    var updated = 0, errors = 0, notFound = [], processed = 0, rateLimited = 0;
+    var n = offset;
+    for (; n < keys.length && processed < limit; n++) {
+      if (Date.now() - started > 4.5 * 60 * 1000) break;
+      var info = allNames[keys[n]];
+      var label = info.base + ((info.wear && info.base.indexOf("(") === -1) ? " (" + info.wear + ")" : "");
+      var r = steamMarketPrice(label, currencyCode);
+      processed++;
+      if (r && r.retry) {
+        rateLimited++;
+        Utilities.sleep(60000);
+        r = steamMarketPrice(label, currencyCode);
+        if (!r || r.retry) { errors++; break; }
+      }
+      if (r && r.price > 0) {
+        var target = r.price * toTarget;
+        var sheet = ss.getSheetByName(info.sheet);
+        if (sheet) {
+          sheet.getRange(info.row, info.col).setValue(Math.max(1, Math.round(target * sheetMultiplier(props, info.sheet))));
+          updated++;
+        }
+      } else if (r && r.notFound) {
+        notFound.push(label);
+      } else {
+        errors++;
+      }
+      if (processed < limit && n < keys.length - 1) Utilities.sleep(2000);
+    }
+
+    var nextOffset = n;
+    var done = nextOffset >= keys.length;
+    props.setProperty("steamPriceOffset", done ? "0" : String(nextOffset));
+    return JSON.stringify({
+      updated: updated, errors: errors, notFound: notFound, total: keys.length,
+      processed: processed, nextOffset: done ? 0 : nextOffset, done: done,
+      source: "steamfree", currency: currency, rateLimited: rateLimited
+    });
+  }
+
+  function steamMarketPrice(marketHashName, currencyCode) {
+    var url = "https://steamcommunity.com/market/priceoverview/?appid=730&currency=" + currencyCode +
+      "&market_hash_name=" + encodeURIComponent(marketHashName);
+    try {
+      var resp = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true,
+        headers: { "Accept-Language": "en-US,en;q=0.9" }
+      });
+      var code = resp.getResponseCode();
+      if (code === 429) return { retry: true };
+      if (code !== 200) return { error: "HTTP " + code };
+      var d = JSON.parse(resp.getContentText());
+      if (!d || !d.success) return { notFound: true };
+      var val = parseSteamPrice(d.lowest_price || d.median_price || "");
+      if (!val || val <= 0) return { notFound: true };
+      return { price: val };
+    } catch (e) {
+      return { error: e.message };
+    }
+  }
+
+  function parseSteamPrice(s) {
+    s = (s || "").toString().replace(/\s/g, "");
+    s = s.replace(/[^0-9.,]/g, "");
+    if (!s) return 0;
+    if (s.indexOf(",") > -1 && s.indexOf(".") > -1) {
+      if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+      else s = s.replace(/,/g, "");
+    } else if (s.indexOf(",") > -1) {
+      var parts = s.split(",");
+      if (parts.length === 2 && parts[1].length === 2) s = s.replace(",", ".");
+      else s = s.replace(/,/g, "");
+    }
+    var v = parseFloat(s);
+    return isNaN(v) ? 0 : v;
   }
 
   function updatePricesFromCSFloat(ss, names, allNames, currency) {
