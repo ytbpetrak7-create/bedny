@@ -157,6 +157,13 @@ function gasPost(url, body) {
     const u = new URL(url);
     const options = { hostname: u.hostname, path: u.pathname + u.search, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) } };
     const req = https.request(options, (res) => {
+      // Apps Script po POSTu vraci 302 na googleusercontent – je potreba ho nasledovat
+      if ((res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303 || res.statusCode === 307 || res.statusCode === 308) && res.headers.location) {
+        res.resume();
+        var loc = res.headers.location;
+        if (loc.indexOf("http") !== 0) loc = "https://" + u.hostname + loc;
+        return resolve(gasGet(loc));
+      }
       let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve(d); } });
     });
     req.on("error", reject);
