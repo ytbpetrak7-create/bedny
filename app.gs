@@ -131,6 +131,11 @@
       case "requestWithdraw":
         result = requestWithdraw(ss, params.username, params.itemName, params.row);
         break;
+      case "getWithdrawStatus":
+        result = JSON.stringify({
+          allowed: PropertiesService.getScriptProperties().getProperty("depositDone_" + (params.username || "").toString().trim()) === "1"
+        });
+        break;
       case "getWithdrawals":
         result = getWithdrawals(ss);
         break;
@@ -925,6 +930,12 @@
   }
 
   function requestWithdraw(ss, username, itemName, row) {
+    if (!username) return "MISSING_USER";
+    // Podminka: uzivatel musi mit za sebou alespon jeden dokonceny vklad (jakakoliv castka)
+    var propsGate = PropertiesService.getScriptProperties();
+    if (propsGate.getProperty("depositDone_" + username.trim()) !== "1") {
+      return "DEPOSIT_REQUIRED";
+    }
     const invSheet = getSheet(ss, "Inventory");
     const invData = invSheet.getDataRange().getValues();
     var foundRow = -1;
@@ -1600,7 +1611,10 @@
           bonus = Math.round(pts * 0.10 * 100) / 100;
         }
         usersSheet.getRange(i + 1, 3).setValue(current + pts + bonus);
-        PropertiesService.getScriptProperties().deleteProperty("deposit_" + username);
+        var propsDep = PropertiesService.getScriptProperties();
+        // Znamenat, ze uzivatel ma za sebou vklad -> odemkne vyber skinu
+        propsDep.setProperty("depositDone_" + username.trim(), "1");
+        propsDep.deleteProperty("deposit_" + username);
         return JSON.stringify({ credited: pts, bonus: bonus, total: pts + bonus });
       }
     }

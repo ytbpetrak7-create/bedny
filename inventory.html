@@ -44,6 +44,10 @@ h1{font-size:24px;margin-bottom:10px;}
 <a href="hlav.html" class="back-link">‹ Zpět</a>
 <h1>Inventář</h1>
 <div id="sellAllWrap" style="margin-bottom:15px;"></div>
+<div id="withdrawNotice" style="display:none;margin-bottom:15px;padding:12px 15px;border:1px solid #ffd700;border-radius:10px;background:#2b2410;color:#ffd700;font-size:14px;">
+  🔒 Pro výběr skinu musíš nejdřív provést vklad (jakákoliv částka).
+  <a href="zamobr.html" style="color:#00ff96;font-weight:bold;text-decoration:underline;">Vložit skin</a>
+</div>
 <div id="inventory"></div>
 
 <link rel="stylesheet" href="1bed.css">
@@ -60,6 +64,7 @@ if (!getCurrentUser()) {
 var itemMap = {};
 var adminTradeLink = "";
 var userTradeLink = "";
+var canWithdraw = true;
 
 async function loadData() {
   var results = await Promise.all([
@@ -76,10 +81,24 @@ async function loadData() {
   userTradeLink = pd.tradeLink || "";
 }
 
+async function checkWithdrawAllowed() {
+  try {
+    var raw = await callScript("getWithdrawStatus", { username: getCurrentUser() });
+    var j = JSON.parse(raw);
+    canWithdraw = !!j.allowed;
+  } catch(e) {
+    canWithdraw = true;
+  }
+  var el = document.getElementById("withdrawNotice");
+  if (el) el.style.display = canWithdraw ? "none" : "block";
+}
+
 async function loadInventory() {
   var dataPromise = loadData();
   var invPromise = getInventory();
+  var statusPromise = checkWithdrawAllowed();
   await dataPromise;
+  await statusPromise;
   var result = await invPromise;
   var items = JSON.parse(result);
   var container = document.getElementById("inventory");
@@ -106,7 +125,11 @@ async function loadInventory() {
       actions += '<button class="btn-sell" onclick="sellFromInv(' + item.row + ',\'' + item.name + '\',' + price + ')">Prodat ' + Number(price).toFixed(2) + ' Kč</button>';
     }
     if (userTradeLink) {
-      actions += '<button class="btn-withdraw" onclick="requestWithdraw(\'' + item.name + '\',' + item.row + ')">Vyzvednout</button>';
+      if (canWithdraw) {
+        actions += '<button class="btn-withdraw" onclick="requestWithdraw(\'' + item.name + '\',' + item.row + ')">Vyzvednout</button>';
+      } else {
+        actions += '<button class="btn-withdraw" style="opacity:.45;cursor:not-allowed;" onclick="alert(\'Pro výběr skinu musíš nejdřív provést vklad (jakákoliv částka). Otevři stránku Vložit.\')">🔒 Vyzvednout</button>';
+      }
     }
     actions += '</div>';
     
@@ -122,6 +145,11 @@ async function requestWithdraw(itemName, row) {
   var res = await callScript("requestWithdraw", { username: uname, itemName: itemName, row: row });
   if (res === "WITHDRAW_REQUESTED") {
     loadInventory();
+  } else if (res === "DEPOSIT_REQUIRED") {
+    alert("Pro výběr skinu musíš nejdřív provést vklad (jakákoliv částka). Otevři stránku Vložit.");
+    canWithdraw = false;
+    var el = document.getElementById("withdrawNotice");
+    if (el) el.style.display = "block";
   } else {
     alert("Chyba: " + res);
   }
