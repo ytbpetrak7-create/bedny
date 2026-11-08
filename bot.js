@@ -8,6 +8,14 @@ const readline = require("readline");
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbz89Ud1exW-1dpUuyuO1q23upXGWEf7C5ydVBEOz3M8yDB-ZlU3GGMP8bWPqUGveq3c5Q/exec";
 
+// ===== Denní aktualizace cen =====
+// Zdroj: "steamfree" = Steam Community Market (zdarma, bez klíče)
+// Lze přepsat přes env: PRICE_SOURCE / PRICE_CURRENCY / PRICE_UPDATE_HOUR
+const PRICE_SOURCE = process.env.PRICE_SOURCE || "steamfree";
+const PRICE_CURRENCY = process.env.PRICE_CURRENCY || "CZK";
+const PRICE_UPDATE_HOUR = parseInt(process.env.PRICE_UPDATE_HOUR || "3", 10);
+const PRICE_STATE_FILE = "price-state.json";
+
 const client = new SteamUser();
 const community = new SteamCommunity();
 const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 120000, cancelTime: 43200000 });
@@ -254,12 +262,6 @@ var lastSteamCall = 0;
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ===== Denní aktualizace cen =====
-// Zdroj: "steamfree" = Steam Community Market (zdarma, bez klíče)
-// Lze přepsat přes env: PRICE_SOURCE / PRICE_CURRENCY / PRICE_UPDATE_HOUR
-const PRICE_SOURCE = process.env.PRICE_SOURCE || "steamfree";
-const PRICE_CURRENCY = process.env.PRICE_CURRENCY || "CZK";
-const PRICE_UPDATE_HOUR = parseInt(process.env.PRICE_UPDATE_HOUR || "3", 10);
-const PRICE_STATE_FILE = "price-state.json";
 
 function loadPriceState() {
   try { return JSON.parse(fs.readFileSync(PRICE_STATE_FILE, "utf8")); } catch(e) { return {}; }
