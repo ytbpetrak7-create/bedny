@@ -49,10 +49,16 @@ jobs:
       - name: Push code to GAS
         run: clasp push --force
 
-      - name: Deploy new version (same /exec URL)
+      - name: Deploy new version (all /exec URLs)
         run: |
+          # Deployment ID, na ktere vedou URL pouzivane webem/botem.
+          # Kdyz se URL zmeni, doplni se sem nove ID.
+          ID_WEB="AKfycbz89Ud1exW-1dpUuyuO1q23upXGWEf7C5ydVBEOz3M8yDB-ZlU3GGMP8bWPqUGveq3c5Q"
+          ID_SITE="AKfycbxuncRzlzuOnkPtiixn4tHw7Mj74HDeZXuOb0sB6PJimwUaOh1BeVY0aH7icR9as_Yp2Q"
           DEPLOY_ID="${{ secrets.GAS_DEPLOYMENT_ID }}"
-          if [ -z "$DEPLOY_ID" ]; then
-            DEPLOY_ID="AKfycbz89Ud1exW-1dpUuyuO1q23upXGWEf7C5ydVBEOz3M8yDB-ZlU3GGMP8bWPqUGveq3c5Q"
-          fi
-          clasp deploy --deploymentId "$DEPLOY_ID" -d "Auto deploy ${{ github.sha }}"
+          for ID in "$ID_WEB" "$ID_SITE" "$DEPLOY_ID"; do
+            if [ -n "$ID" ]; then
+              echo "Deploying to $ID"
+              clasp deploy --deploymentId "$ID" -d "Auto deploy ${{ github.sha }}" || echo "WARN: deploy to $ID failed (deployment neexistuje?)"
+            fi
+          done
