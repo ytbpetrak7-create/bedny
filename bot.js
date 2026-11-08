@@ -271,35 +271,107 @@ function savePriceState(s) {
 }
 
 async function runPriceUpdate() {
-  console.log("💰 Aktualizace cen: zdroj=" + PRICE_SOURCE + ", měna=" + PRICE_CURRENCY);
-  var totalUpdated = 0, batches = 0;
-  for (var i = 0; i < 12; i++) {
-    var res;
-    try {
-      res = await gasGet(GAS_URL + "?action=updatePricesFromPriceEmpire&source=" + encodeURIComponent(PRICE_SOURCE) + "&currency=" + encodeURIComponent(PRICE_CURRENCY));
-    } catch(e) {
-      console.log("❌ Ceny: požadavek selhal: " + e.message);
-      return false;
-    }
-    if (typeof res === "string") {
-      try { res = JSON.parse(res); } catch(e) { }
-    }
-    if (!res || typeof res !== "object") {
-      console.log("❌ Ceny: neplatná odpověď serveru: " + String(res).substring(0, 200));
-      return false;
-    }
-    if (res.error) {
-      console.log("❌ Ceny: " + res.error);
-      return false;
-    }
-    batches++;
-    totalUpdated += res.updated || 0;
-    console.log("💰 Ceny dávka " + batches + ": aktualizováno " + (res.updated || 0) + ", zpracováno " + (res.nextOffset || 0) + "/" + (res.total || 0));
-    if (res.done !== false) break;
-    await wait(15000);
+  console.log("💰 Aktualizace cen: stahuji ze Steamu (přes bota), zdroj=" + PRICE_SOURCE);
+
+  // 1) Zjistit, které skiny máme v tabulkách
+  var names;
+  try {
+    names = await gasGet(GAS_URL + "?action=getPriceNames");
+    if (typeof names === "string") { try { names = JSON.parse(names); } catch(e) {} }
+  } catch(e) {
+    console.log("❌ Ceny: nepodařilo se načíst seznam skinů: " + e.message);
+    return false;
   }
-  console.log("✅ Ceny hotovo: celkem aktualizováno " + totalUpdated + " skinů (" + batches + " dávek)");
-  return true;
+  if (!Array.isArray(names) || !names.length) {
+    console.log("❌ Ceny: server nevrátil žádné skiny");
+    return false;
+  }
+  console.log("💰 Skinů k aktualizaci: " + names.length);
+
+  // 2) Stáhnout ceny ze Steamu (domácí IP projde, Google IP Steam blokuje)
+  var fetched = 0, failed = 0, rateLimited = 0;
+  var batch = [];
+  for (var i = 0; i < names.length; i++) {
+    var r = await steamMarketPrice(names[i]);
+    if (r && r.retry) {
+      rateLimited++;
+      console.log("⏳ Steam rate limit (429), čekám 60 s...");
+      await wait(60000);
+      r = await steamMarketPrice(names[i]);
+      if (r && r.retry) { failed++; await wait(5000); continue; }
+    }
+    if (r && r.price > 0) {
+      batch.push({ n: names[i], p: r.price });
+      fetched++;
+    } else {
+      failed++;
+    }
+    if (batch.length >= 25) {
+      await pushPricesToSheet(batch.splice(0));
+    }
+    if ((i + 1) % 25 === 0) {
+      console.log("💰 Ceny: " + (i + 1) + "/" + names.length + " (nalezeno " + fetched + ", chyb " + failed + ")");
+    }
+    await wait(3200);
+  }
+  if (batch.length) await pushPricesToSheet(batch);
+
+  console.log("✅ Ceny hotovo: nalezeno " + fetched + "/" + names.length + ", chyb " + failed + ", rate limit " + rateLimited);
+  return fetched > 0;
+}
+
+function parseUsdPrice(s) {
+  s = String(s || "").replace(/\s/g, "").replace(/[^0-9.,]/g, "");
+  if (!s) return 0;
+  if (s.indexOf(",") > -1 && s.indexOf(".") > -1) {
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+    else s = s.replace(/,/g, "");
+  } else if (s.indexOf(",") > -1) {
+    var parts = s.split(",");
+    if (parts.length === 2 && parts[1].length === 2) s = s.replace(",", ".");
+    else s = s.replace(/,/g, "");
+  }
+  var v = parseFloat(s);
+  return isNaN(v) ? 0 : v;
+}
+
+function steamMarketPrice(marketHashName) {
+  return new Promise((resolve) => {
+    var url = "https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=" + encodeURIComponent(marketHashName);
+    var req = https.get(url, { headers: { "Accept-Language": "en-US,en;q=0.9", "User-Agent": "Mozilla/5.0" } }, (res) => {
+      var d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => {
+        if (res.statusCode === 429) return resolve({ retry: true });
+        if (res.statusCode !== 200) return resolve({ error: res.statusCode });
+        try {
+          var j = JSON.parse(d);
+          if (!j || !j.success) return resolve({ notFound: true });
+          var p = parseUsdPrice(j.lowest_price || j.median_price || "");
+          if (!p) return resolve({ notFound: true });
+          resolve({ price: p });
+        } catch(e) { resolve({ error: "parse" }); }
+      });
+    });
+    req.on("error", (e) => resolve({ error: e.message }));
+    req.setTimeout(20000, () => { try { req.destroy(); } catch(e) {} resolve({ error: "timeout" }); });
+  });
+}
+
+async function pushPricesToSheet(items) {
+  if (!items.length) return;
+  try {
+    var res = await gasPost(GAS_URL + "?action=savePricesFromBot", { data: JSON.stringify(items) });
+    if (typeof res === "string") { try { res = JSON.parse(res); } catch(e) {} }
+    if (!res || typeof res !== "object") {
+      console.log("❌ Uložení cen: neplatná odpověď: " + String(res).substring(0, 150));
+      return;
+    }
+    if (res.error) { console.log("❌ Uložení cen: " + res.error); return; }
+    console.log("💾 Uloženo " + (res.updated || 0) + " cen (nenalezeno " + ((res.notFound || []).length) + ")");
+  } catch(e) {
+    console.log("❌ Uložení cen selhalo: " + e.message);
+  }
 }
 
 async function maybeUpdatePrices() {

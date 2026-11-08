@@ -336,6 +336,12 @@
     case "updatePricesFromPriceEmpire":
       result = updatePricesFromPriceEmpire(ss, params.source, params.currency, params.apiKey);
       break;
+    case "getPriceNames":
+      result = getPriceNames(ss);
+      break;
+    case "savePricesFromBot":
+      result = savePricesFromBot(ss, params.data);
+      break;
     case "testPriceEmpire":
       result = testPriceEmpire(params.apiKey, params.source, params.currency);
       break;
@@ -2235,6 +2241,65 @@
       if (n < keys.length - 1) Utilities.sleep(1200);
     }
     return JSON.stringify({ updated: updated, errors: 0, notFound: notFound, total: keys.length, source: "takeskin", currency: currency });
+  }
+
+  // Seznam vsech market_hash_name, ktere je potreba aktualizovat (pro bota).
+  function getPriceNames(ss) {
+    var all = collectPriceNames(ss);
+    var keys = Object.keys(all);
+    var names = [];
+    var seen = {};
+    for (var i = 0; i < keys.length; i++) {
+      var info = all[keys[i]];
+      var mhn = info.base + ((info.wear && info.base.indexOf("(") === -1) ? " (" + info.wear + ")" : "");
+      if (!seen[mhn]) { seen[mhn] = 1; names.push(mhn); }
+    }
+    return JSON.stringify(names);
+  }
+
+  // Ulozeni cen, ktere stahl bot (bot ma domaci IP, Steam ho nepoblokuje).
+  // Vstup: [{ "n": "market_hash_name", "p": cena v USD }, ...]
+  function savePricesFromBot(ss, data) {
+    var arr;
+    try { arr = typeof data === "string" ? JSON.parse(data) : data; } catch (e) { return JSON.stringify({ error: "Neplatná data" }); }
+    if (!arr || !arr.length) return JSON.stringify({ error: "Žádná data" });
+
+    var props = PropertiesService.getScriptProperties();
+    var priceMap = {};
+    var baseMap = {};
+    for (var i = 0; i < arr.length; i++) {
+      var nm = (arr[i].n || arr[i].name || "").toString().trim();
+      var p = Number(arr[i].p || arr[i].price || 0);
+      if (!nm || !(p > 0)) continue;
+      var low = nm.toLowerCase();
+      priceMap[low] = p;
+      var base = low.replace(/\s*\(.*\)\s*$/, "").trim();
+      if (baseMap[base] === undefined || p < baseMap[base]) baseMap[base] = p;
+    }
+
+    var all = collectPriceNames(ss);
+    var keys = Object.keys(all);
+    var updated = 0;
+    var notFound = [];
+    for (var k = 0; k < keys.length; k++) {
+      var info = all[keys[k]];
+      var mhn = info.base + ((info.wear && info.base.indexOf("(") === -1) ? " (" + info.wear + ")" : "");
+      var mLow = mhn.toLowerCase();
+      var baseLow = info.base.toLowerCase().trim();
+      var price = priceMap[mLow];
+      if (price === undefined) price = baseMap[baseLow];
+      if (price !== undefined && price > 0) {
+        var sheet = ss.getSheetByName(info.sheet);
+        if (sheet) {
+          var czk = price * USD_CZK * sheetMultiplier(props, info.sheet);
+          sheet.getRange(info.row, info.col).setValue(Math.max(1, Math.round(czk)));
+          updated++;
+        }
+      } else {
+        notFound.push(mhn);
+      }
+    }
+    return JSON.stringify({ ok: true, updated: updated, total: keys.length, notFound: notFound });
   }
 
   // Ceny primo ze Steam Community Market (zdarma, bez API klice).
