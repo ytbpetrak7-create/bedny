@@ -441,6 +441,18 @@ async function updateImages() {
   } catch(e) { msg.textContent = "Běží na serveru, zkontroluj tabulku za chvíli."; msg.style.color = "#ffd700"; }
 }
 
+function parseScriptJson(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch(e) {
+    var t = String(raw == null ? "" : raw).trim();
+    if (t === "Unknown action") {
+      return { error: "Server nezná tuto akci → běží stará verze Apps Scriptu. Nasaď novou verzi (Deploy → Manage deployments → Edit → New version → Deploy)." };
+    }
+    return { error: "Neplatná odpověď serveru: " + t.substring(0, 150) };
+  }
+}
+
 async function testPriceEmpire() {
   var msg = document.getElementById("peMsg");
   var apiKey = document.getElementById("peApiKey").value.trim();
@@ -449,7 +461,7 @@ async function testPriceEmpire() {
   msg.textContent = "Testuji API klíč..."; msg.style.color = "#ffd700";
   try {
     var raw = await callScript("testPriceEmpire", { apiKey: apiKey, source: source, currency: currency });
-    var res = JSON.parse(raw);
+    var res = parseScriptJson(raw);
     if (res.error) {
       msg.textContent = "❌ " + res.error + (res.detail ? " | " + res.detail : "") + (res.url ? " | " + res.url : "");
       msg.style.color = "#f80";
@@ -478,7 +490,7 @@ async function updatePrices() {
     // Nejdřív uložit nastavení (aby klíč z pole byl i na serveru), pak aktualizovat
     await callScript("setPriceEmpireConfig", { apiKey: apiKey, source: source, currency: currency, csfloatKey: csfloatKey, profitMultiplier: profitMult, depositMultiplier: depositMult });
     var raw = await callScript("updatePricesFromPriceEmpire", { source: source, currency: currency, apiKey: apiKey });
-    var res = JSON.parse(raw);
+    var res = parseScriptJson(raw);
     if (res.error) {
       msg.textContent = "Chyba: " + res.error;
       msg.style.color = "#f80";
