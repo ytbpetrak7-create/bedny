@@ -94,6 +94,26 @@ body::before {
     transform: scale(1.05);
 }
 
+#smenarnaLink {
+    position: fixed;
+    top: 125px;
+    right: 15px;
+    background: transparent;
+    border: 2px solid #00ff96;
+    border-radius: 25px;
+    padding: 8px 22px;
+    color: #00ff96;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 1001;
+    transition: transform 0.2s ease;
+}
+
+#smenarnaLink:hover {
+    transform: scale(1.05);
+}
+
 .boxes {
     display: flex;
     gap: 30px;
