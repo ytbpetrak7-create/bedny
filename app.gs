@@ -1776,6 +1776,12 @@
   }
 
   // ---------- Ceny pro smenarnu ----------
+  // Nazvy se v tabulkach pisou ruzne ("m4a1-s Nitro" vs "M4A1-S | Nitro"),
+  // proto se vsechno normalizuje: mala pismena, bez "|", jednotne mezery.
+  function normPriceKey(s) {
+    return String(s || "").toLowerCase().replace(/\s*\|\s*/g, " ").replace(/\s+/g, " ").trim();
+  }
+
   // Prodejni cena z beden ma prednost (to je cena, za kterou skin prodavame),
   // fallback je vykupni cena z DepositSkins.
   function buildSkinPriceMaps(ss) {
@@ -1791,8 +1797,8 @@
         var full = (wear && base.indexOf("(") === -1) ? base + " (" + wear + ")" : base;
         var p = Number(data[i][3]) || 0;
         if (!(p > 0)) continue;
-        var k1 = full.toLowerCase();
-        var k2 = base.toLowerCase();
+        var k1 = normPriceKey(full);
+        var k2 = normPriceKey(base);
         if (box[k1] === undefined || p > box[k1]) box[k1] = p;
         if (box[k2] === undefined || p > box[k2]) box[k2] = p;
       }
@@ -1800,20 +1806,50 @@
     var depData = getSheet(ss, "DepositSkins").getDataRange().getValues();
     for (var j = 1; j < depData.length; j++) {
       if (!depData[j][0]) continue;
-      var nm = depData[j][0].toString().trim().toLowerCase();
-      var price = Number(depData[j][1]) || 0;
-      if (price > 0 && dep[nm] === undefined) dep[nm] = price;
+      var dBase = depData[j][0].toString().trim();
+      var dWear = depData[j][2] ? depData[j][2].toString().trim() : "";
+      var dFull = (dWear && dBase.indexOf("(") === -1) ? dBase + " (" + dWear + ")" : dBase;
+      var dPrice = Number(depData[j][1]) || 0;
+      if (!(dPrice > 0)) continue;
+      var dk1 = normPriceKey(dFull);
+      var dk2 = normPriceKey(dBase);
+      if (dep[dk1] === undefined) dep[dk1] = dPrice;
+      if (dep[dk2] === undefined) dep[dk2] = dPrice;
     }
     return { box: box, dep: dep };
   }
 
+  function lookupInPriceMap(mapObj, name) {
+    var low = normPriceKey(name);
+    if (mapObj[low] !== undefined) return mapObj[low];
+    var base = normPriceKey(low.replace(/\s*\([^)]*\)\s*$/, ""));
+    if (mapObj[base] !== undefined) return mapObj[base];
+    return 0;
+  }
+
   function priceFromMaps(maps, name) {
-    var low = String(name || "").trim().toLowerCase();
-    if (maps.box[low] !== undefined) return maps.box[low];
-    if (maps.dep[low] !== undefined) return maps.dep[low];
-    var base = low.replace(/\s*\([^)]*\)\s*$/, "").trim();
-    if (maps.box[base] !== undefined) return maps.box[base];
-    if (maps.dep[base] !== undefined) return maps.dep[base];
+    var boxP = lookupInPriceMap(maps.box, name);
+    if (boxP > 0) return boxP;
+    return lookupInPriceMap(maps.dep, name);
+  }
+
+  // Jednotna cena pro smenarnu na obou stranach: vzdy "prodejni" hodnota (profit nasobic).
+  // 1) prodejni cena z beden  2) trh ze Skinportu  3) vykupni cena prepocitana na prodejni
+  function exchangePriceFor(maps, props, name, marketCzk) {
+    var profit = parseFloat(props.getProperty("priceEmpireProfitMultiplier") || "1.3");
+    var depM = parseFloat(props.getProperty("priceEmpireDepositMultiplier") || "0.7");
+    if (!(profit > 0)) profit = 1.3;
+    if (!(depM > 0)) depM = 0.7;
+
+    var boxP = lookupInPriceMap(maps.box, name);
+    if (boxP > 0) return Math.round(boxP * 100) / 100;
+
+    var market = Number(marketCzk) || 0;
+    if (market > 0) return Math.round(market * profit * 100) / 100;
+
+    var depP = lookupInPriceMap(maps.dep, name);
+    if (depP > 0) return Math.round((depP / depM) * profit * 100) / 100;
+
     return 0;
   }
 
@@ -1848,7 +1884,7 @@
 
     var sheet = getSheet(ss, "BotInventory");
     if (sheet.getLastRow() > 0) sheet.clear();
-    sheet.appendRow(["assetId", "name", "price", "image", "savedAt"]);
+    sheet.appendRow(["assetId", "name", "price", "image", "market", "savedAt"]);
 
     var rows = [];
     var seenAsset = {};
@@ -1866,10 +1902,11 @@
         name,
         Number(it.price) || 0,
         (it.image || "").toString(),
+        Number(it.market) || 0,
         new Date()
       ]);
     }
-    if (rows.length) sheet.getRange(2, 1, rows.length, 5).setValues(rows);
+    if (rows.length) sheet.getRange(2, 1, rows.length, 6).setValues(rows);
 
     // Zrus rezervace na assety, ktere uz v botove inventari nejsou (byly odeslany)
     var props = PropertiesService.getScriptProperties();
@@ -1887,33 +1924,35 @@
     var sheet = getSheet(ss, "BotInventory");
     var data = sheet.getDataRange().getValues();
     var props = PropertiesService.getScriptProperties();
-
-    // zpetna kompatibilita: dokud bot novy format neposle, pouzij stary snapshot
-    if (data.length < 2) {
-      var legacy = props.getProperty("botInventory");
-      if (!legacy) return "[]";
-      data = null;
-      try {
-        var legacyArr = JSON.parse(legacy);
-        var outLegacy = [];
-        for (var li = 0; li < legacyArr.length; li++) {
-          var l = legacyArr[li] || {};
-          if (!l.name) continue;
-          outLegacy.push({ name: l.name, price: Number(l.price) || 0, image: l.image || "", assetId: l.assetId || "", count: 1 });
-        }
-        return JSON.stringify(outLegacy);
-      } catch(e) { return "[]"; }
-    }
-
     var maps = buildSkinPriceMaps(ss);
     var res = getReservations(props);
     var out = [];
+
+    // zpetna kompatibilita: dokud bot neposle novy format (tabulka), pouzij stary snapshot
+    if (data.length < 2) {
+      var legacy = props.getProperty("botInventory");
+      if (!legacy) return "[]";
+      try {
+        var legacyArr = JSON.parse(legacy);
+        for (var li = 0; li < legacyArr.length; li++) {
+          var l = legacyArr[li] || {};
+          if (!l.name) continue;
+          if (l.assetId && res[String(l.assetId)]) continue;
+          var lp = exchangePriceFor(maps, props, l.name, 0);
+          if (!(lp > 0)) lp = Number(l.price) || 0;
+          out.push({ name: l.name, price: lp, image: l.image || "", assetId: l.assetId || "", count: 1 });
+        }
+        return JSON.stringify(out);
+      } catch(e) { return "[]"; }
+    }
+
     for (var i = 1; i < data.length; i++) {
       var name = data[i][1] ? data[i][1].toString().trim() : "";
       if (!name) continue;
       var assetId = data[i][0] ? data[i][0].toString().trim() : "";
       if (assetId && res[assetId]) continue;
-      var p = priceFromMaps(maps, name);
+      var market = Number(data[i][4]) || 0;
+      var p = exchangePriceFor(maps, props, name, market);
       if (!(p > 0)) p = Number(data[i][2]) || 0;
       out.push({
         name: name,
@@ -1955,6 +1994,7 @@
       var invData = invSheet.getDataRange().getValues();
       var maps = buildSkinPriceMaps(ss);
       var lockedMap = buildLockedMap(ss);
+      var props = PropertiesService.getScriptProperties();
 
       // 1) Overit vlastni skiny a spocitat jejich cenu
       var rows = String(removeRows).split(";").map(function(r) { return parseInt(r, 10) || 0; })
@@ -1971,7 +2011,7 @@
         if (!invName) return "NOT_FOUND";
         if (rowUser !== username.trim()) return "NOT_YOURS";
         if (lockedMap[invName.toLowerCase()]) return "ITEM_LOCKED:" + invName;
-        var ownPrice = priceFromMaps(maps, invName);
+        var ownPrice = exchangePriceFor(maps, props, invName, 0);
         if (!(ownPrice > 0)) return "NO_PRICE:" + invName;
         ownTotal += ownPrice;
         toDelete.push(r);
@@ -2021,7 +2061,7 @@
       var targetTotal = 0;
       for (var pk = 0; pk < picked.length; pk++) {
         var tp = Number(picked[pk].price) || 0;
-        if (!(tp > 0)) tp = priceFromMaps(maps, picked[pk].name);
+        if (!(tp > 0)) tp = exchangePriceFor(maps, props, picked[pk].name, 0);
         if (!(tp > 0)) return "NO_PRICE:" + picked[pk].name;
         targetTotal += tp;
       }
@@ -2037,13 +2077,13 @@
         usersSheet.getRange(userRow, 3).setValue(userPts + Math.abs(diff));
       }
 
-      var props = PropertiesService.getScriptProperties();
+      var propsRes = PropertiesService.getScriptProperties();
       for (var rv = 0; rv < picked.length; rv++) {
         if (picked[rv].assetId) {
           reserved[String(picked[rv].assetId)] = { u: username.trim(), at: Date.now(), item: picked[rv].name };
         }
       }
-      saveReservations(props, reserved);
+      saveReservations(propsRes, reserved);
 
       for (var ad = 0; ad < picked.length; ad++) {
         invSheet.appendRow([username, picked[ad].name, new Date()]);

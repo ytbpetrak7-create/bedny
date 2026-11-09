@@ -357,37 +357,61 @@ function splitNormName(s) {
   };
 }
 
-async function runSkinportPriceUpdate(names) {
-  console.log("💰 Stahuji ceny ze Skinportu (Steam ceny, 1 dotaz)...");
-  var sp = await fetchSkinportPrices();
-  if (sp.retry) { console.log("⏳ Skinport 429 – zkusím později."); return false; }
-  if (sp.error) { console.log("❌ Skinport: " + sp.error); return false; }
-  console.log("💰 Skinport: " + sp.count + " položek, " + Object.keys(sp.map).length + " s cenou");
+// Cache celyho Skinport trhu v pameti – diky ni umime ocenit i botuv inventar.
+var skinportCache = { at: 0, map: null, byBaseWear: null, byBase: null };
 
-  // Index podle zakladu+opotrebeni (pak najde i nazvy bez "|" a s jinym formatem)
+function buildSkinportIndexes(map) {
   var byBaseWear = {};
   var byBase = {};
   var key;
-  for (key in sp.map) {
+  for (key in map) {
     var parts = splitNormName(key);
     var bw = parts.base + "|" + parts.wear;
-    var price = sp.map[key];
+    var price = map[key];
     if (!(bw in byBaseWear) || price < byBaseWear[bw]) byBaseWear[bw] = price;
     if (!(parts.base in byBase) || price < byBase[parts.base]) byBase[parts.base] = price;
   }
+  return { byBaseWear: byBaseWear, byBase: byBase };
+}
+
+async function ensureSkinportCache(force) {
+  var maxAge = 12 * 3600 * 1000;
+  if (!force && skinportCache.map && (Date.now() - skinportCache.at) < maxAge) return skinportCache.map;
+  var sp = await fetchSkinportPrices();
+  if (!sp || sp.error || sp.retry || !sp.map) {
+    if (sp && sp.error) console.log("❌ Skinport cache: " + sp.error);
+    return skinportCache.map;
+  }
+  var idx = buildSkinportIndexes(sp.map);
+  skinportCache = { at: Date.now(), map: sp.map, byBaseWear: idx.byBaseWear, byBase: idx.byBase };
+  console.log("💰 Skinport cache: " + Object.keys(sp.map).length + " cen");
+  return skinportCache.map;
+}
+
+// Cena skinu v CZK podle Skinportu (vychazi ze Steam trhu), 0 = nenalezeno
+function skinportPriceFor(name) {
+  if (!skinportCache.map) return 0;
+  var p = skinportCache.map[String(name).toLowerCase()];
+  if (p > 0) return p;
+  var nm = splitNormName(name);
+  var bwKey = nm.base + "|" + nm.wear;
+  if (nm.wear && (bwKey in skinportCache.byBaseWear)) return skinportCache.byBaseWear[bwKey];
+  if (nm.base in skinportCache.byBase) return skinportCache.byBase[nm.base];
+  return 0;
+}
+
+async function runSkinportPriceUpdate(names) {
+  console.log("💰 Stahuji ceny ze Skinportu (Steam ceny, 1 dotaz)...");
+  var map = await ensureSkinportCache(true);
+  if (!map) { console.log("❌ Skinport: ceny se nepodařilo stáhnout, zkusím později."); return false; }
+  console.log("💰 Skinport: " + Object.keys(map).length + " položek s cenou");
 
   var fetched = 0, failed = 0;
   var batch = [];
   var notFoundSample = [];
   for (var i = 0; i < names.length; i++) {
     var name = names[i];
-    var p = sp.map[String(name).toLowerCase()];
-    if (p === undefined) {
-      var nm = splitNormName(name);
-      var bwKey = nm.base + "|" + nm.wear;
-      if (nm.wear && (bwKey in byBaseWear)) p = byBaseWear[bwKey];
-      else if (nm.base in byBase) p = byBase[nm.base];
-    }
+    var p = skinportPriceFor(name);
     if (p > 0) {
       batch.push({ n: name, p: Math.round(p * 100) / 100 });
       fetched++;
@@ -692,11 +716,20 @@ async function poll() {
       const accepted = typeof acceptedRes === "string" ? JSON.parse(acceptedRes) : acceptedRes;
       const priceMap = {};
       for (const a of accepted) { if (a.name && a.price > 0) priceMap[a.name.toLowerCase()] = a.price; }
+      // Ceny z trhu (Skinport) – diky nim umi smenarna ocenit i skiny, ktere nejsou v tabulkach
+      await ensureSkinportCache();
       const botItems = [];
       for (const item of botInv) {
         const name = item.market_hash_name || "";
         if (!name) continue;
-        botItems.push({ name: name, price: priceMap[name.toLowerCase()] || 0, image: item.icon_url_large ? "https://community.akamai.steamstatic.com/economy/image/" + item.icon_url_large : "", assetId: item.id, count: 1 });
+        botItems.push({
+          name: name,
+          price: priceMap[name.toLowerCase()] || 0,
+          market: Math.round(skinportPriceFor(name) * 100) / 100,
+          image: item.icon_url_large ? "https://community.akamai.steamstatic.com/economy/image/" + item.icon_url_large : "",
+          assetId: item.id,
+          count: 1
+        });
       }
       await gasPost(GAS_URL + "?action=saveBotInventory", { data: JSON.stringify(botItems) });
       console.log("Bot inventory saved: " + botItems.length + " items");
