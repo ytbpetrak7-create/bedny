@@ -1827,12 +1827,6 @@
     return 0;
   }
 
-  function priceFromMaps(maps, name) {
-    var boxP = lookupInPriceMap(maps.box, name);
-    if (boxP > 0) return boxP;
-    return lookupInPriceMap(maps.dep, name);
-  }
-
   // Jednotna cena pro smenarnu na obou stranach: vzdy "prodejni" hodnota (profit nasobic).
   // 1) prodejni cena z beden  2) trh ze Skinportu  3) vykupni cena prepocitana na prodejni
   function exchangePriceFor(maps, props, name, marketCzk) {

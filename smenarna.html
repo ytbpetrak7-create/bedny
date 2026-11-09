@@ -78,19 +78,6 @@ var selectedMy = [];
 var selectedTarget = [];
 var canWithdraw = true;
 
-async function checkWithdrawAllowed() {
-  try {
-    var raw = await callScript("getWithdrawStatus", { username: getCurrentUser() });
-    var j = JSON.parse(raw);
-    canWithdraw = !!j.allowed;
-  } catch(e) {
-    canWithdraw = true;
-  }
-  var el = document.getElementById("withdrawNotice");
-  if (el) el.style.display = canWithdraw ? "none" : "block";
-  updateSummary();
-}
-
 async function load() {
   var results = await Promise.all([
     getBoxInfo("Boxes1"),
