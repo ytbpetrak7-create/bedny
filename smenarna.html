@@ -92,26 +92,35 @@ async function checkWithdrawAllowed() {
 }
 
 async function load() {
-  var r1 = await getBoxInfo("Boxes1");
-  var r2 = await getBoxInfo("Boxes2");
-  JSON.parse(r1).forEach(function(x) {
-    var img = x.image || "";
-    if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
-    itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img, locked: Number(x.locked) === 1 };
-  });
-  JSON.parse(r2).forEach(function(x) {
-    var img = x.image || "";
-    if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
-    if (!itemMap[x.name.trim()]) itemMap[x.name.trim()] = { price: x.sellPrice || 0, image: img, locked: Number(x.locked) === 1 };
-  });
+  var results = await Promise.all([
+    getBoxInfo("Boxes1"),
+    getBoxInfo("Boxes2"),
+    getInventory(),
+    getBotInventory(),
+    callScript("getWithdrawStatus", { username: getCurrentUser() }).catch(function() { return null; })
+  ]);
 
-  var invResult = await getInventory();
-  myInv = JSON.parse(invResult);
+  function addPrices(raw) {
+    JSON.parse(raw).forEach(function(x) {
+      var img = x.image || "";
+      if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
+      var key = x.name.trim();
+      if (!itemMap[key]) itemMap[key] = { price: x.sellPrice || 0, image: img, locked: Number(x.locked) === 1 };
+    });
+  }
+  itemMap = {};
+  addPrices(results[0]);
+  addPrices(results[1]);
 
-  var botResult = await getBotInventory();
-  try { botInv = JSON.parse(botResult); } catch(e) { botInv = []; }
+  try { myInv = JSON.parse(results[2]); } catch(e) { myInv = []; }
+  try { botInv = JSON.parse(results[3]); } catch(e) { botInv = []; }
 
-  await checkWithdrawAllowed();
+  try {
+    var st = results[4];
+    if (st) canWithdraw = !!JSON.parse(st).allowed;
+  } catch(e) { canWithdraw = true; }
+  var notice = document.getElementById("withdrawNotice");
+  if (notice) notice.style.display = canWithdraw ? "none" : "block";
 
   buildBotGroups();
   renderMyItems();
