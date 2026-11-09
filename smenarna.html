@@ -113,6 +113,7 @@ async function load() {
 
   await checkWithdrawAllowed();
 
+  buildBotGroups();
   renderMyItems();
   renderAllItems();
   updateSummary();
@@ -282,7 +283,7 @@ function showInfo(msg) {
 }
 
 document.getElementById("exchangeBtn").onclick = doExchange;
-load().then(buildBotGroups).then(renderAllItems);
+load();
 </script>
 </body>
 </html>
