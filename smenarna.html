@@ -78,34 +78,49 @@ var selectedMy = [];
 var selectedTarget = [];
 var canWithdraw = true;
 
+async function safeCall(fn, fallback) {
+  for (var attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await fn();
+    } catch(e) {
+      if (attempt === 1) {
+        console.warn("Nacitani selhalo:", e && e.message);
+        return fallback;
+      }
+    }
+  }
+  return fallback;
+}
+
 async function load() {
   var results = await Promise.all([
-    getBoxInfo("Boxes1"),
-    getBoxInfo("Boxes2"),
-    getInventory(),
-    getBotInventory(),
-    callScript("getWithdrawStatus", { username: getCurrentUser() }).catch(function() { return null; })
+    safeCall(function() { return getBoxInfo("Boxes1").then(JSON.parse); }, []),
+    safeCall(function() { return getBoxInfo("Boxes2").then(JSON.parse); }, []),
+    safeCall(function() { return getInventory().then(JSON.parse); }, []),
+    safeCall(function() { return getBotInventory().then(JSON.parse); }, []),
+    safeCall(function() {
+      return callScript("getWithdrawStatus", { username: getCurrentUser() })
+        .then(function(raw) { return JSON.parse(raw); });
+    }, { allowed: true })
   ]);
 
-  function addPrices(raw) {
-    JSON.parse(raw).forEach(function(x) {
+  var addPrices = function(list) {
+    (list || []).forEach(function(x) {
+      if (!x || !x.name) return;
       var img = x.image || "";
       if (img && !img.startsWith("http")) img = "https://ytbpetrak7-create.github.io/bedny/" + img;
       var key = x.name.trim();
       if (!itemMap[key]) itemMap[key] = { price: x.sellPrice || 0, image: img, locked: Number(x.locked) === 1 };
     });
-  }
+  };
   itemMap = {};
   addPrices(results[0]);
   addPrices(results[1]);
 
-  try { myInv = JSON.parse(results[2]); } catch(e) { myInv = []; }
-  try { botInv = JSON.parse(results[3]); } catch(e) { botInv = []; }
+  myInv = Array.isArray(results[2]) ? results[2] : [];
+  botInv = Array.isArray(results[3]) ? results[3] : [];
+  canWithdraw = results[4] ? !!results[4].allowed : true;
 
-  try {
-    var st = results[4];
-    if (st) canWithdraw = !!JSON.parse(st).allowed;
-  } catch(e) { canWithdraw = true; }
   var notice = document.getElementById("withdrawNotice");
   if (notice) notice.style.display = canWithdraw ? "none" : "block";
 
