@@ -150,6 +150,8 @@ async function requestWithdraw(itemName, row) {
     canWithdraw = false;
     var el = document.getElementById("withdrawNotice");
     if (el) el.style.display = "block";
+  } else if (res === "ALREADY_REQUESTED") {
+    alert("Tento skin už je ve výdeji – čeká na odeslání botem. Nemusíš žádat znovu.");
   } else {
     alert("Chyba: " + res);
   }

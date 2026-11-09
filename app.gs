@@ -1032,7 +1032,18 @@
       }
     }
     if (foundRow === -1) return "NOT_FOUND";
-    
+
+    // Pojistka: stejny skin uz muze byt ve výdeji (treba hned po vymene ve smenarne)
+    var wSheet = getSheet(ss, "Withdrawals");
+    var wData = wSheet.getDataRange().getValues();
+    for (var wi = 1; wi < wData.length; wi++) {
+      if (wData[wi][0] && wData[wi][0].toString().trim() === username.trim() &&
+          wData[wi][1] && wData[wi][1].toString().trim() === itemName.trim() &&
+          wData[wi][2] && wData[wi][2].toString() !== "done") {
+        return "ALREADY_REQUESTED";
+      }
+    }
+
     var usersSheet = getSheet(ss, "Users");
     var userData = usersSheet.getDataRange().getValues();
     var tradeLink = "";
@@ -1043,7 +1054,6 @@
       }
     }
     
-    var wSheet = getSheet(ss, "Withdrawals");
     if (wSheet.getLastRow() === 0) {
       wSheet.appendRow(["username", "item", "status", "date", "tradeLink"]);
     }
