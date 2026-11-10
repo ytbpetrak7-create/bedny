@@ -597,7 +597,13 @@ function applyWheelState() {
 
   picReq.classList.remove("picOk", "picBad");
   if (!picGateOn) {
-    picReq.style.display = "none";
+    if (testActive) {
+      picReq.style.display = "flex";
+      picStatus.textContent = "TEST: žádná povinná profilovka není nastavená.";
+      picReq.classList.add("picBad");
+    } else {
+      picReq.style.display = "none";
+    }
   } else {
     picReq.style.display = "flex";
     if (testActive) {
