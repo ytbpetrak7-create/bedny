@@ -42,6 +42,22 @@ body::before {
 }
 .backBtn:hover { transform: scale(1.05); background: rgba(0,255,150,0.12); }
 
+.adminTestBtn {
+  position: fixed; top: 16px; left: 112px; z-index: 1001;
+  background: rgba(0,0,0,0.35); border: 2px dashed #ffd700;
+  color: #ffd700; font-family: inherit; font-size: 12px; font-weight: 700;
+  padding: 7px 12px; border-radius: 20px; cursor: pointer;
+  backdrop-filter: blur(6px); transition: all 0.2s;
+}
+.adminTestBtn:hover { background: rgba(255,215,0,0.12); }
+.adminTestBtn.active {
+  background: #ffd700; color: #2e2154; border-style: solid;
+  box-shadow: 0 0 18px rgba(255,215,0,0.5);
+}
+@media (max-width: 560px) {
+  .adminTestBtn { top: 56px; left: 16px; }
+}
+
 #topBar { position: fixed; top: 16px; right: 74px; z-index: 1000; }
 #pointsDisplay {
   background: rgba(0,0,0,0.35); border: 2px solid #00ff96;
@@ -368,6 +384,7 @@ body::before {
 <body>
 
 <a href="hlav.html" class="backBtn">← Zpět</a>
+<button id="adminTestBtn" class="adminTestBtn" style="display:none" title="Admin test: neřeší profilovku ani denní limit, výhra se nepřičte">🧪 TEST</button>
 <div id="topBar"><div id="pointsDisplay"></div></div>
 <div id="profilePic">P</div>
 
@@ -450,6 +467,14 @@ var spinning = false;
 var canSpin = false;
 var landedIndex = -1;
 
+var isAdminUser = false;
+var testMode = false;
+var wheelHasPrizes = false;
+var wheelSpunToday = false;
+var picGateOn = false;
+var picOkBase = false;
+var autoTestRequested = /[?&]test=1\b/.test(window.location.search);
+
 function escapeHtml(s) {
   return String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -503,6 +528,20 @@ async function loadWheelConfig() {
     setStatus("Nepodařilo se načíst kolo. Obnov stránku.", "err");
   }
 
+  // admin test rezim (jen pro adminy)
+  var adminRes = "NO";
+  try { adminRes = await isAdmin(); } catch(e) {}
+  isAdminUser = (adminRes === "YES");
+  var testBtn = document.getElementById("adminTestBtn");
+  if (isAdminUser) {
+    testBtn.style.display = "block";
+    testBtn.onclick = toggleTestMode;
+    if (autoTestRequested) {
+      testMode = true;
+      testBtn.classList.add("active");
+    }
+  }
+
   var configured = Array.isArray(cfg.prizes) ? cfg.prizes.filter(function(p) { return p; }) : [];
   wheelPrizes = configured.length ? configured : [
     { placeholder: true }, { placeholder: true }, { placeholder: true }, { placeholder: true },
@@ -510,11 +549,7 @@ async function loadWheelConfig() {
   ];
   buildReel();
 
-  setCounter(cfg.spunToday ? 0 : 1);
-
   var reqImg = document.getElementById("requiredPic");
-  var picReq = document.getElementById("picReq");
-  var picStatus = document.getElementById("picStatus");
 
   if (cfg.requiredPic) {
     reqImg.src = cfg.requiredPic;
@@ -532,37 +567,65 @@ async function loadWheelConfig() {
     }
   } catch(e) {}
 
-  var gateOn = !!cfg.requiredPic;
-  var picOk = !gateOn || !!(myPic && myPic === cfg.requiredPic);
-  var hasPrizes = configured.length > 0;
+  wheelHasPrizes = configured.length > 0;
+  wheelSpunToday = !!cfg.spunToday;
+  picGateOn = !!cfg.requiredPic;
+  picOkBase = !picGateOn || !!(myPic && myPic === cfg.requiredPic);
 
+  setCounter(wheelSpunToday ? 0 : 1);
+  applyWheelState();
+}
+
+function toggleTestMode() {
+  testMode = !testMode;
+  var btn = document.getElementById("adminTestBtn");
+  if (btn) btn.classList.toggle("active", testMode);
+  applyWheelState();
+}
+
+function applyWheelState() {
+  var picReq = document.getElementById("picReq");
+  var picStatus = document.getElementById("picStatus");
   var subtitle = document.getElementById("subtitle");
-  if (subtitle) subtitle.textContent = gateOn ? "Nastav si profilovku na Steamu a zatoč!" : "Zatoč kolem a vyhraj!";
+  var testActive = isAdminUser && testMode;
+
+  if (subtitle) {
+    subtitle.textContent = (picGateOn && !testActive)
+      ? "Nastav si profilovku na Steamu a zatoč!"
+      : "Zatoč kolem a vyhraj!";
+  }
 
   picReq.classList.remove("picOk", "picBad");
-  if (!gateOn) {
+  if (!picGateOn) {
     picReq.style.display = "none";
   } else {
     picReq.style.display = "flex";
-    if (!picOk) {
-      picStatus.textContent = "Nastav si tuto profilovku na Steamu!";
-      picReq.classList.add("picBad");
-    } else {
+    if (testActive) {
+      picStatus.textContent = "Admin TEST: profilovka se nekontroluje.";
+      picReq.classList.add("picOk");
+    } else if (picOkBase) {
       picStatus.textContent = "Profilovka sedí! Můžeš točit.";
       picReq.classList.add("picOk");
+    } else {
+      picStatus.textContent = "Nastav si tuto profilovku na Steamu!";
+      picReq.classList.add("picBad");
     }
   }
 
-  canSpin = picOk && hasPrizes && !cfg.spunToday;
+  var blockedByDaily = wheelSpunToday && !testActive;
+  var gateOk = !picGateOn || picOkBase || testActive;
+  canSpin = wheelHasPrizes && gateOk && !blockedByDaily;
 
-  if (!hasPrizes) {
+  if (!wheelHasPrizes) {
     setStatus("Kolo zatím není nastavené.", "err");
     setButton("disabled");
-  } else if (cfg.spunToday) {
+  } else if (blockedByDaily) {
     setStatus("Dnes už máš zatočeno. Zítra můžeš znovu!", "ok");
     setButton("disabled", "DNES UŽ TOČIT NELZE");
   } else if (canSpin) {
-    setStatus("Připraveno – zatoč kolem!", "");
+    setStatus(testActive
+      ? "Admin TEST – výhry se nepřičítají a denní limit se netočí."
+      : "Připraveno – zatoč kolem!", testActive ? "ok" : "");
     setButton("ready");
   } else {
     setStatus("Nejdřív si nastav požadovanou profilovku.", "err");
@@ -645,7 +708,10 @@ async function spin() {
 
   var data = null;
   try {
-    var res = await callScript("spinWheel", { username: getCurrentUser() });
+    var res = await callScript("spinWheel", {
+      username: getCurrentUser(),
+      test: (isAdminUser && testMode) ? 1 : 0
+    });
     data = JSON.parse(res);
   } catch(e) {
     data = { error: "Chyba spojení. Zkus to znovu." };
@@ -656,12 +722,12 @@ async function spin() {
     strip.classList.remove("spinning");
     machine.classList.remove("pull");
     lever.classList.remove("pull");
-    setButton(canSpin ? "ready" : "disabled");
-    setStatus((data && data.error) ? data.error : "Chyba. Zkus to znovu.", "err");
     if (data && data.error && /dnes/i.test(data.error)) {
-      canSpin = false;
-      setCounter(0);
-      setButton("disabled", "DNES UŽ TOČIT NELZE");
+      wheelSpunToday = true;
+      applyWheelState();
+    } else {
+      setButton(canSpin ? "ready" : "disabled");
+      setStatus((data && data.error) ? data.error : "Chyba. Zkus to znovu.", "err");
     }
     return;
   }
@@ -700,11 +766,12 @@ function finishSpin(data) {
   var label = data.label || fallback.label || "";
   var amount = Number(data.amount);
   if (isNaN(amount)) amount = Number(fallback.amount) || 0;
+  var isTest = !!data.test;
 
-  document.getElementById("prizeText").textContent = label;
+  document.getElementById("prizeText").textContent = isTest ? label + " – TEST" : label;
   var amountEl = document.getElementById("prizeAmount");
   if (amount > 0) {
-    amountEl.textContent = "+" + amount.toFixed(2) + " Kč";
+    amountEl.textContent = (isTest ? "" : "+") + amount.toFixed(2) + " Kč" + (isTest ? " (nepřičteno)" : "");
     amountEl.style.display = "block";
   } else {
     amountEl.textContent = "";
@@ -715,11 +782,18 @@ function finishSpin(data) {
   document.getElementById("machine").classList.remove("pull");
   document.getElementById("lever").classList.remove("pull");
 
-  canSpin = false;
-  setCounter(0);
-  setButton("disabled", "DNES UŽ TOČIT NELZE");
-  setStatus("Výhra připsána! Zítra můžeš znovu.", "ok");
-  updatePoints();
+  if (isTest) {
+    canSpin = true;
+    setButton("ready");
+    setStatus("Admin TEST – výhra se nepřičte. Můžeš testovat dál.", "ok");
+  } else {
+    canSpin = false;
+    wheelSpunToday = true;
+    setCounter(0);
+    setButton("disabled", "DNES UŽ TOČIT NELZE");
+    setStatus("Výhra připsána! Zítra můžeš znovu.", "ok");
+    updatePoints();
+  }
 }
 
 function removeWinHighlights() {

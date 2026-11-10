@@ -311,7 +311,8 @@
       result = "OK";
       break;
     case "spinWheel":
-      result = spinWheel(ss, params.username);
+      var wheelTest = params.test === true || params.test === "1" || params.test === "true";
+      result = spinWheel(ss, params.username, wheelTest);
       break;
     case "setPriceEmpireConfig":
       var propsPE = PropertiesService.getScriptProperties();
@@ -2242,13 +2243,22 @@
     }
   }
 
-  function spinWheel(ss, username) {
+  function spinWheel(ss, username, testMode) {
     if (!username) return JSON.stringify({ error: "MISSING" });
 
     var props = PropertiesService.getScriptProperties();
     var todayKey = Utilities.formatDate(new Date(), "Europe/Prague", "yyyyMMdd");
-    var lastSpin = props.getProperty("wheelSpin_" + username) || "";
-    if (lastSpin === todayKey) return JSON.stringify({ error: "Už jsi dnes točil! Zkus zítra." });
+
+    // Testovaci rezim smi jen admin: nelosuje se denni limit a nic se nepripisuje.
+    var isTest = false;
+    if (testMode) {
+      try { isTest = (isAdmin(ss, username) === "YES"); } catch(e) { isTest = false; }
+    }
+
+    if (!isTest) {
+      var lastSpin = props.getProperty("wheelSpin_" + username) || "";
+      if (lastSpin === todayKey) return JSON.stringify({ error: "Už jsi dnes točil! Zkus zítra." });
+    }
 
     var prizesRaw = props.getProperty("wheelPrizes") || "[]";
     var prizes = [];
@@ -2260,7 +2270,7 @@
     var prize = prizes[idx] || {};
     var amount = Number(prize.amount) || 0;
 
-    if (amount > 0) {
+    if (amount > 0 && !isTest) {
       var usersSheet = getSheet(ss, "Users");
       var data = usersSheet.getDataRange().getValues();
       for (var i = 1; i < data.length; i++) {
@@ -2272,9 +2282,9 @@
       }
     }
 
-    props.setProperty("wheelSpin_" + username, todayKey);
+    if (!isTest) props.setProperty("wheelSpin_" + username, todayKey);
 
-    return JSON.stringify({ ok: true, index: idx, amount: amount, label: prize.label || "" });
+    return JSON.stringify({ ok: true, index: idx, amount: amount, label: prize.label || "", test: isTest });
   }
 
   // Rucni spusteni v editoru Apps Scriptu (obejde deployment):

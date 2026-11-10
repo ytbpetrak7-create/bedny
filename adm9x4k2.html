@@ -125,6 +125,9 @@ async function loadAll() {
   html += '<div class="req-item">';
   html += '<p style="color:#fff;font-weight:bold;">Požadovaná profilovka (URL z Steamu)</p>';
   html += '<input id="wheelPic" type="text" placeholder="https://..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;margin:8px 0;font-size:14px;">';
+  html += '<img id="wheelPicPreview" alt="" style="display:none;width:56px;height:56px;border-radius:50%;border:2px solid #ffd700;object-fit:cover;margin-bottom:4px;">';
+  html += '<div style="color:#aaa;font-size:12px;">Náhled povinné profilovky, kterou musí mít hráč nastavenou na Steamu.</div>';
+  html += '<div style="margin-top:10px;"><a href="kolo.html?test=1" target="_blank" style="color:#00ff96;font-weight:bold;">🧪 Otestovat kolo jako admin</a> <span style="color:#aaa;font-size:12px;">(profilovka se nekontroluje, výhry se nepřičtou)</span></div>';
   html += '<p style="color:#fff;font-weight:bold;margin-top:10px;">Odměny (8 segmentů, JSON)</p>';
   html += '<textarea id="wheelPrizes" rows="6" style="width:100%;padding:8px;border-radius:6px;border:1px solid #0f3460;background:#0d0d1a;color:#fff;font-size:13px;font-family:monospace;">[{"label":"0.50 Kč","amount":0.5},{"label":"1 Kč","amount":1},{"label":"0.20 Kč","amount":0.2},{"label":"5 Kč","amount":5},{"label":"0.10 Kč","amount":0.1},{"label":"2 Kč","amount":2},{"label":"0.50 Kč","amount":0.5},{"label":"10 Kč","amount":10}]</textarea>';
   html += '<br><button class="btn-app" onclick="saveWheel()" style="margin-top:10px;">Uložit kolo</button>';
@@ -189,12 +192,16 @@ async function loadAll() {
 
   div.innerHTML = html;
 
+  var wheelPicInput = document.getElementById("wheelPic");
+  if (wheelPicInput) wheelPicInput.addEventListener("input", updateWheelPicPreview);
+
   loadBoxEditor();
 
   var wCfg = await callScript("getWheelConfig");
   try {
     var cfg = JSON.parse(wCfg);
     if (cfg.requiredPic) document.getElementById("wheelPic").value = cfg.requiredPic;
+    updateWheelPicPreview();
     if (cfg.prizes && cfg.prizes.length) document.getElementById("wheelPrizes").value = JSON.stringify(cfg.prizes, null, 2);
   } catch(e) {}
 
@@ -203,6 +210,20 @@ async function loadAll() {
 }
 
 function escHtml(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+function updateWheelPicPreview() {
+  var input = document.getElementById("wheelPic");
+  var img = document.getElementById("wheelPicPreview");
+  if (!input || !img) return;
+  var url = input.value.trim();
+  if (url) {
+    img.src = url;
+    img.style.display = "block";
+  } else {
+    img.removeAttribute("src");
+    img.style.display = "none";
+  }
+}
 
 var editBoxCurrent = "Boxes1";
 var editBoxItems = [];
