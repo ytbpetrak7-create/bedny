@@ -311,8 +311,16 @@
       result = "OK";
       break;
     case "spinWheel":
-      var wheelTest = params.test === true || params.test === "1" || params.test === "true";
+      var wt = params.test;
+      var wheelTest = (wt === true || wt === 1 || wt === "1" || wt === "true" || wt === "TRUE");
       result = spinWheel(ss, params.username, wheelTest);
+      break;
+    case "resetWheelSpin":
+      // Jen admin: smaze dnesni "uz toceno" u hrace (testovani / podpora).
+      if (isAdmin(ss, params.admin || params.username) !== "YES") { result = "NOT_ADMIN"; break; }
+      if (!params.target) { result = "MISSING_TARGET"; break; }
+      PropertiesService.getScriptProperties().deleteProperty("wheelSpin_" + params.target);
+      result = "OK";
       break;
     case "setPriceEmpireConfig":
       var propsPE = PropertiesService.getScriptProperties();
