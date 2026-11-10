@@ -292,7 +292,17 @@
       var propsW = PropertiesService.getScriptProperties();
       var wPrizes = propsW.getProperty("wheelPrizes") || "[]";
       var wPic = propsW.getProperty("wheelRequiredPic") || "";
-      result = JSON.stringify({ requiredPic: wPic, prizes: JSON.parse(wPrizes) });
+      var wList = [];
+      try {
+        var parsedW = JSON.parse(wPrizes);
+        if (Array.isArray(parsedW)) wList = parsedW;
+      } catch(e) { wList = []; }
+      var wSpun = false;
+      if (params.username) {
+        var todayW = Utilities.formatDate(new Date(), "Europe/Prague", "yyyyMMdd");
+        wSpun = (propsW.getProperty("wheelSpin_" + params.username) || "") === todayW;
+      }
+      result = JSON.stringify({ requiredPic: wPic, prizes: wList, spunToday: wSpun });
       break;
     case "setWheelConfig":
       var propsW2 = PropertiesService.getScriptProperties();
@@ -301,7 +311,7 @@
       result = "OK";
       break;
     case "spinWheel":
-      result = spinWheel(ss, params.username, parseInt(params.prizeIndex) || 0);
+      result = spinWheel(ss, params.username);
       break;
     case "setPriceEmpireConfig":
       var propsPE = PropertiesService.getScriptProperties();
@@ -2232,7 +2242,7 @@
     }
   }
 
-  function spinWheel(ss, username, prizeIndex) {
+  function spinWheel(ss, username) {
     if (!username) return JSON.stringify({ error: "MISSING" });
 
     var props = PropertiesService.getScriptProperties();
@@ -2241,11 +2251,13 @@
     if (lastSpin === todayKey) return JSON.stringify({ error: "Už jsi dnes točil! Zkus zítra." });
 
     var prizesRaw = props.getProperty("wheelPrizes") || "[]";
-    var prizes = JSON.parse(prizesRaw);
+    var prizes = [];
+    try { prizes = JSON.parse(prizesRaw) || []; } catch(e) { prizes = []; }
     if (!prizes.length) return JSON.stringify({ error: "Kolo není nastaveno" });
 
-    var idx = prizeIndex % prizes.length;
-    var prize = prizes[idx];
+    // Index losuje vzdy server – klient ho nemuze podstrcit.
+    var idx = Math.floor(Math.random() * prizes.length);
+    var prize = prizes[idx] || {};
     var amount = Number(prize.amount) || 0;
 
     if (amount > 0) {
@@ -2262,7 +2274,7 @@
 
     props.setProperty("wheelSpin_" + username, todayKey);
 
-    return JSON.stringify({ ok: true, amount: amount, label: prize.label || "" });
+    return JSON.stringify({ ok: true, index: idx, amount: amount, label: prize.label || "" });
   }
 
   // Rucni spusteni v editoru Apps Scriptu (obejde deployment):
