@@ -23,17 +23,25 @@ const community = new SteamCommunity();
 const manager = new TradeOfferManager({ steam: client, community: community, language: "en", pollInterval: 120000, cancelTime: 43200000 });
 
 const BOT = {
-  accountName: "pet7bot1",
-  password: "Petronel7",
+  accountName: process.env.BOT_ACCOUNT || "",
+  password: process.env.BOT_PASSWORD || "",
   sharedSecret: "",
   identitySecret: ""
 };
 try {
   const cfg = JSON.parse(fs.readFileSync("bot-config.json", "utf8"));
+  if (cfg.accountName) BOT.accountName = cfg.accountName;
+  if (cfg.password) BOT.password = cfg.password;
   if (cfg.sharedSecret) BOT.sharedSecret = cfg.sharedSecret;
   if (cfg.identitySecret) BOT.identitySecret = cfg.identitySecret;
   console.log("bot-config.json nacten");
-} catch(e) { console.log("bot-config.json nenalezen - vytvor ho podle navodu (sharedSecret + identitySecret)"); }
+} catch(e) { console.log("bot-config.json nenalezen - vytvor ho podle navodu (accountName, password, sharedSecret, identitySecret)"); }
+
+var pricesOnly = process.argv.includes("--prices");
+if (!pricesOnly && (!BOT.accountName || !BOT.password)) {
+  console.log("❌ Chybí accountName/password. Doplň je do bot-config.json (nebo env BOT_ACCOUNT/BOT_PASSWORD).");
+  process.exit(1);
+}
 
 client.on("steamGuard", (domain, callback, isEmail) => {
   const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });

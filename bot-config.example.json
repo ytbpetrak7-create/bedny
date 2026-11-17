@@ -1,4 +1,6 @@
 {
-  "sharedSecret": "SEMK_VLOZ_SHARED_SECRET",
-  "identitySecret": "SEMK_VLOZ_IDENTITY_SECRET"
+  "accountName": "pet7bot1",
+  "password": "SEM_VLOZ_HESLO_BOTA",
+  "sharedSecret": "SEM_VLOZ_SHARED_SECRET",
+  "identitySecret": "SEM_VLOZ_IDENTITY_SECRET"
 }
