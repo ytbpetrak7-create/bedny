@@ -2408,6 +2408,15 @@
 
     var priceMap = {};
     var baseMap = {};
+    var normMap = {};
+    var normName = function(s) {
+      return String(s == null ? "" : s).toLowerCase()
+        .replace(/★/g, "")
+        .replace(/statTrak™?/gi, "stattrak")
+        .replace(/\|/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    };
     for (var i = 0; i < items.length; i++) {
       var it = items[i] || {};
       var nm = it.market_hash_name;
@@ -2417,6 +2426,8 @@
       if (!(p > 0)) continue;
       var low = String(nm).toLowerCase();
       priceMap[low] = p;
+      var norm = normName(nm);
+      if (normMap[norm] === undefined || p < normMap[norm]) normMap[norm] = p;
       var base = low.replace(/\s*\(.*\)\s*$/, "").trim();
       if (baseMap[base] === undefined || p < baseMap[base]) baseMap[base] = p;
     }
@@ -2432,6 +2443,7 @@
       var mhn = info.base + ((info.wear && info.base.indexOf("(") === -1) ? " (" + info.wear + ")" : "");
       var lowName = mhn.toLowerCase();
       var price = priceMap[lowName];
+      if (price === undefined) price = normMap[normName(mhn)];
       if (price === undefined) price = baseMap[String(info.base).toLowerCase().trim()];
       if (price !== undefined && price > 0) {
         var val = Math.max(1, Math.round(price * sheetMultiplier(props, info.sheet)));
