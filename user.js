@@ -6,7 +6,9 @@ async function callScript(action, params = {}) {
   for (const key in params) {
     url.searchParams.set(key, params[key]);
   }
-  const response = await fetch(url.toString());
+  // Cache-buster: Google Apps Script odpovědi se jinak mohou držet v cache prohlížeče.
+  url.searchParams.set("_t", Date.now());
+  const response = await fetch(url.toString(), { cache: "no-store" });
   return response.text();
 }
 
