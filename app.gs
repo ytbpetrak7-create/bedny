@@ -2486,7 +2486,7 @@
         var b = b1Data[i][2].toString().trim();
         var w = b1Data[i][5] ? b1Data[i][5].toString().trim() : "";
         var full = (w && b.indexOf("(") === -1) ? b + " (" + w + ")" : b;
-        allNames[full] = { sheet: "Boxes1", row: i + 1, col: 4 };
+        allNames[full + "||Boxes1||" + (i + 1)] = { base: b, wear: w, sheet: "Boxes1", row: i + 1, col: 4 };
       }
     }
 
@@ -2497,14 +2497,18 @@
         var b = b2Data[i][2].toString().trim();
         var w = b2Data[i][5] ? b2Data[i][5].toString().trim() : "";
         var full = (w && b.indexOf("(") === -1) ? b + " (" + w + ")" : b;
-        allNames[full] = { sheet: "Boxes2", row: i + 1, col: 4 };
+        allNames[full + "||Boxes2||" + (i + 1)] = { base: b, wear: w, sheet: "Boxes2", row: i + 1, col: 4 };
       }
     }
 
     var depSheet = getSheet(ss, "DepositSkins");
     var depData = depSheet.getDataRange().getValues();
     for (var i = 1; i < depData.length; i++) {
-      if (depData[i][0]) allNames[depData[i][0].toString().trim()] = { sheet: "DepositSkins", row: i + 1, col: 2 };
+      if (depData[i][0]) {
+        var db = depData[i][0].toString().trim();
+        var dw = depData[i][2] ? depData[i][2].toString().trim() : "";
+        allNames[db + "||" + dw + "||DepositSkins||" + (i + 1)] = { base: db, wear: dw, sheet: "DepositSkins", row: i + 1, col: 2 };
+      }
     }
 
     var names = Object.keys(allNames);
@@ -2572,14 +2576,14 @@
       }
 
       for (var n = 0; n < names.length; n++) {
-        var skinName = names[n];
+        var info = allNames[names[n]];
+        var skinName = info.base + ((info.wear && info.base.indexOf("(") === -1) ? " (" + info.wear + ")" : "");
         var lowName = skinName.toLowerCase().trim();
         var price = priceMap[lowName];
         if (price === undefined) {
           var baseName = lowName.replace(/\s*\(.*\)\s*$/, "").trim();
           price = basePriceMap[baseName];
         }
-        var info = allNames[skinName];
         if (price !== undefined && price > 0) {
           var sheet = ss.getSheetByName(info.sheet);
           if (sheet) { sheet.getRange(info.row, info.col).setValue(Math.round(price * sheetMultiplier(props, info.sheet))); updated++; }
@@ -2710,7 +2714,7 @@
       if (b1Data[i][2]) {
         var b = b1Data[i][2].toString().trim();
         var w = b1Data[i][5] ? b1Data[i][5].toString().trim() : "";
-        allNames[b + "||" + w] = { base: b, wear: w, sheet: "Boxes1", row: i + 1, col: 4 };
+        allNames[b + "||" + w + "||Boxes1||" + (i + 1)] = { base: b, wear: w, sheet: "Boxes1", row: i + 1, col: 4 };
       }
     }
     var boxes2 = getSheet(ss, "Boxes2");
@@ -2719,7 +2723,7 @@
       if (b2Data[i][2]) {
         var b = b2Data[i][2].toString().trim();
         var w = b2Data[i][5] ? b2Data[i][5].toString().trim() : "";
-        allNames[b + "||" + w] = { base: b, wear: w, sheet: "Boxes2", row: i + 1, col: 4 };
+        allNames[b + "||" + w + "||Boxes2||" + (i + 1)] = { base: b, wear: w, sheet: "Boxes2", row: i + 1, col: 4 };
       }
     }
     var depSheet = getSheet(ss, "DepositSkins");
@@ -2728,7 +2732,7 @@
       if (depData[i][0]) {
         var b = depData[i][0].toString().trim();
         var w = depData[i][2] ? depData[i][2].toString().trim() : "";
-        allNames[b + "||" + w] = { base: b, wear: w, sheet: "DepositSkins", row: i + 1, col: 2 };
+        allNames[b + "||" + w + "||DepositSkins||" + (i + 1)] = { base: b, wear: w, sheet: "DepositSkins", row: i + 1, col: 2 };
       }
     }
     return allNames;
@@ -2933,8 +2937,8 @@
 
     var wears = [" (Field-Tested)", " (Minimal Wear)", " (Factory New)"];
     for (var n = 0; n < names.length; n++) {
-      var skinName = names[n];
-      var info = allNames[skinName];
+      var info = allNames[names[n]];
+      var skinName = info.base + ((info.wear && info.base.indexOf("(") === -1) ? " (" + info.wear + ")" : "");
       var hasWear = /\(.*\)\s*$/.test(skinName);
       var tries = hasWear ? [skinName] : (function(){ var a=[skinName]; for(var wi=0;wi<wears.length;wi++) a.push(skinName+wears[wi]); return a; })();
       var found = false;
