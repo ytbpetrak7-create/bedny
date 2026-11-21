@@ -346,6 +346,9 @@
     case "updatePricesFromPriceEmpire":
       result = updatePricesFromPriceEmpire(ss, params.source, params.currency, params.apiKey);
       break;
+    case "testSkinport":
+      result = testSkinportFetch();
+      break;
     case "getPriceNames":
       result = getPriceNames(ss);
       break;
@@ -2356,6 +2359,26 @@
     } catch (e) {
       return JSON.stringify({ error: "Chyba požadavku: " + e.message, url: url });
     }
+  }
+
+  function testSkinportFetch() {
+    try {
+      var res = UrlFetchApp.fetch("https://api.skinport.com/v1/items?app_id=730&currency=CZK", {
+        muteHttpExceptions: true,
+        headers: { "User-Agent": "Mozilla/5.0", "Accept-Encoding": "br" }
+      });
+      var code = res.getResponseCode();
+      var txt = res.getContentText() || "";
+      var items = null;
+      try { items = JSON.parse(txt); } catch(e) {}
+      return JSON.stringify({
+        code: code,
+        bytes: txt.length,
+        isArray: Array.isArray(items),
+        count: items && items.length,
+        head: txt.slice(0, 120)
+      });
+    } catch(e) { return JSON.stringify({ error: e.message }); }
   }
 
   function updatePricesFromPriceEmpire(ss, source, currency, paramKey) {
