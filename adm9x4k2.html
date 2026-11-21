@@ -144,7 +144,7 @@ async function loadAll() {
   html += '<option value="steam">Steam Market (PriceEmpire, placený klíč)</option>';
   html += '<option value="steamfree">Steam Market (zdarma, bez klíče) 🔥</option>';
   html += '<option value="csfloat">CSFloat (vlastní API klíč)</option>';
-  html += '<option value="skinport">Skinport</option>';
+  html += '<option value="skinport">Skinport (zdarma, doporučeno) ✅</option>';
   html += '<option value="csmoney">CS.MONEY</option>';
   html += '<option value="dmarket">DMarket</option>';
   html += '<option value="youpin">YouPin898</option>';
@@ -167,6 +167,7 @@ async function loadAll() {
   html += ' <span id="peMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '<br><br><button class="btn-app" onclick="updatePrices()" style="background:#ffd700;color:#1a1a2e;">Aktualizovat ceny ze všech tabulek</button>';
   html += ' <span id="peUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
+  html += '<div style="color:#aaa;font-size:12px;margin-top:6px;">Tip: <b>Skinport</b> stáhne celý trh jedním dotazem a je zdarma. „Steam Market (zdarma)“ Google často zablokuje (429) – pak se aktualizují jen jednotky položek.</div>';
   html += '<br><br><button class="btn-app" onclick="updateImages()" style="background:#4b9aff;color:#fff;">Aktualizovat obrázky (průhledné ze Steamu)</button>';
   html += ' <span id="imgUpdateMsg" style="color:#00ff96;font-size:13px;"></span>';
   html += '</div>';
@@ -520,7 +521,7 @@ async function updatePrices() {
       msg.textContent = "Dávka hotová: aktualizováno " + res.updated + " | Zpracováno " + res.nextOffset + "/" + res.total + ". Klikni znovu na „Aktualizovat ceny“ pro pokračování.";
       msg.style.color = "#ffd700";
     } else {
-      msg.textContent = "Hotovo! Aktualizováno: " + res.updated + "/" + res.total + " | Chyb: " + res.errors + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,3).join(", ") + ")" : "");
+      msg.textContent = "Hotovo! Aktualizováno: " + res.updated + "/" + res.total + " | Chyb: " + (res.errors || 0) + " | Nenalezeno: " + res.notFound.length + (res.notFound.length ? " (" + res.notFound.slice(0,3).join(", ") + ")" : "");
       msg.style.color = res.updated > 0 ? "#00ff96" : "#f80";
     }
   } catch(e) {

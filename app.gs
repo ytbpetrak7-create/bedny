@@ -344,7 +344,8 @@
       });
       break;
     case "updatePricesFromPriceEmpire":
-      result = updatePricesFromPriceEmpire(ss, params.source, params.currency, params.apiKey);
+      var peDry = params.dryRun === true || params.dryRun === 1 || params.dryRun === "1";
+      result = updatePricesFromPriceEmpire(ss, params.source, params.currency, params.apiKey, peDry);
       break;
     case "testSkinport":
       result = testSkinportFetch();
@@ -2381,7 +2382,84 @@
     } catch(e) { return JSON.stringify({ error: e.message }); }
   }
 
-  function updatePricesFromPriceEmpire(ss, source, currency, paramKey) {
+  // Ceny přímo ze Skinportu – zdarma, bez klíče, jeden dotaz vrátí celý trh.
+  // Stejný zdroj, který používá bot (suggested_price v požadované měně).
+  function updatePricesFromSkinport(ss, currency, dryRun) {
+    currency = (currency || "CZK").toString().toUpperCase();
+    var url = "https://api.skinport.com/v1/items?app_id=730&currency=" + encodeURIComponent(currency);
+    var res;
+    try {
+      res = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true,
+        headers: { "User-Agent": "Mozilla/5.0", "Accept-Encoding": "br" }
+      });
+    } catch(e) { return JSON.stringify({ error: "Skinport nedostupný: " + e.message }); }
+
+    var code = res.getResponseCode();
+    if (code !== 200) {
+      var body = res.getContentText() || "";
+      if (body.length > 200) body = body.substring(0, 200) + "...";
+      return JSON.stringify({ error: "Skinport HTTP " + code + " | " + body });
+    }
+
+    var items;
+    try { items = JSON.parse(res.getContentText()); } catch(e) { return JSON.stringify({ error: "Skinport parse: " + e.message }); }
+    if (!Array.isArray(items)) return JSON.stringify({ error: "Neočekávaná odpověď Skinportu" });
+
+    var priceMap = {};
+    var baseMap = {};
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i] || {};
+      var nm = it.market_hash_name;
+      if (!nm) continue;
+      var p = Number(it.suggested_price);
+      if (!(p > 0)) p = Number(it.min_price);
+      if (!(p > 0)) continue;
+      var low = String(nm).toLowerCase();
+      priceMap[low] = p;
+      var base = low.replace(/\s*\(.*\)\s*$/, "").trim();
+      if (baseMap[base] === undefined || p < baseMap[base]) baseMap[base] = p;
+    }
+    var fetched = items.length;
+    items = null;
+
+    var props = PropertiesService.getScriptProperties();
+    var all = collectPriceNames(ss);
+    var keys = Object.keys(all);
+    var updated = 0, notFound = [], sample = [];
+    for (var k = 0; k < keys.length; k++) {
+      var info = all[keys[k]];
+      var mhn = info.base + ((info.wear && info.base.indexOf("(") === -1) ? " (" + info.wear + ")" : "");
+      var lowName = mhn.toLowerCase();
+      var price = priceMap[lowName];
+      if (price === undefined) price = baseMap[String(info.base).toLowerCase().trim()];
+      if (price !== undefined && price > 0) {
+        var val = Math.max(1, Math.round(price * sheetMultiplier(props, info.sheet)));
+        if (dryRun) {
+          updated++;
+          if (sample.length < 10) sample.push({ name: mhn, skinport: price, final: val, sheet: info.sheet });
+        } else {
+          var sheet = ss.getSheetByName(info.sheet);
+          if (sheet) {
+            sheet.getRange(info.row, info.col).setValue(val);
+            updated++;
+          }
+        }
+      } else {
+        notFound.push(mhn);
+      }
+    }
+
+    return JSON.stringify({
+      ok: true, source: "skinport", currency: currency, dryRun: !!dryRun,
+      fetched: fetched, updated: updated, total: keys.length,
+      notFound: notFound.slice(0, 15), notFoundCount: notFound.length, sample: sample,
+      profitMultiplier: props.getProperty("priceEmpireProfitMultiplier") || "1.0",
+      depositMultiplier: props.getProperty("priceEmpireDepositMultiplier") || "0.7"
+    });
+  }
+
+  function updatePricesFromPriceEmpire(ss, source, currency, paramKey, dryRun) {
     var props = PropertiesService.getScriptProperties();
     source = source || props.getProperty("priceEmpireSource") || "buff163";
     currency = currency || props.getProperty("priceEmpireCurrency") || "CZK";
@@ -2419,6 +2497,10 @@
 
     var names = Object.keys(allNames);
     if (names.length === 0) return JSON.stringify({ error: "Žádné skiny v tabulkách" });
+
+    if (source === "skinport") {
+      return updatePricesFromSkinport(ss, currency, dryRun);
+    }
 
     if (source === "csfloat") {
       return updatePricesFromCSFloat(ss, names, allNames, currency);
